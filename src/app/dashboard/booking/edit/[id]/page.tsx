@@ -5,6 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
+import CustomerSearch from "@/components/CustomerSearch";
+import { Customer } from "@/types";
 import countryData from "../../../../../../libs/shared-utils/constants/country.json";
 import Link from "next/link";
 
@@ -66,6 +68,53 @@ export default function EditBookingPage() {
   const [saving, setSaving] = useState(false);
   const [isMealModalOpen, setIsMealModalOpen] = useState(false);
   const [showStopover, setShowStopover] = useState(false);
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [existingTravelerSelected, setExistingTravelerSelected] = useState(false);
+
+  const validateContactForm = () => {
+    const errors: { [key: string]: string } = {};
+    if (formData.contactType === 'new') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!formData.email || !emailRegex.test(formData.email)) {
+        errors.email = "Please enter a valid email address";
+      }
+      
+      const phoneRegex = /^\+?[\d\s-]{8,}$/;
+      if (!formData.phone || !phoneRegex.test(formData.phone)) {
+        errors.phone = "Please enter a valid phone number";
+      }
+
+      if (!formData.address || formData.address.length < 5) {
+        errors.address = "Address must be at least 5 characters long";
+      }
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleCustomerSelect = (customer: Customer) => {
+    setFormData(prev => ({
+      ...prev,
+      email: customer.email,
+      phone: customer.phone,
+      address: customer.address || "",
+      travellerFirstName: prev.travellerFirstName || customer.firstName,
+      travellerLastName: prev.travellerLastName || customer.lastName,
+    }));
+    setFormErrors({});
+  };
+  
+  const handleTravelerSelect = (customer: Customer) => {
+    setFormData(prev => ({
+      ...prev,
+      travellerFirstName: customer.firstName,
+      travellerLastName: customer.lastName,
+      email: prev.email || customer.email,
+      phone: prev.phone || customer.phone,
+      address: prev.address || customer.address || "",
+    }));
+    setExistingTravelerSelected(true);
+  };
   
   const [formData, setFormData] = useState<FormData>({
     email: "",
@@ -116,6 +165,7 @@ export default function EditBookingPage() {
     contactType: "existing",
     notes: "",
   });
+  const hideContactFields = formData.contactType === 'existing' || formData.customerType === 'existing' || existingTravelerSelected;
 
   useEffect(() => {
     if (id) {
@@ -250,6 +300,15 @@ export default function EditBookingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateContactForm()) {
+        const firstErrorField = document.querySelector('.error-field');
+        if (firstErrorField) {
+            firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+    }
+
     setSaving(true);
 
     try {
@@ -353,102 +412,150 @@ export default function EditBookingPage() {
               <div className="p-6">
                 {/* Contact Type Toggle */}
                 <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-100 flex gap-6">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input 
-                          type="radio" 
-                          name="contact-type" 
-                          value="existing"
-                          checked={formData.contactType === 'existing'}
-                          onChange={() => setFormData(prev => ({ ...prev, contactType: 'existing' }))}
-                          className="text-primary focus:ring-primary border-slate-300"
-                        />
-                        <span className="text-sm font-bold text-slate-700">Existing Contact</span>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                        <div className="relative flex items-center">
+                            <input 
+                              type="radio" 
+                              name="contact-type" 
+                              value="existing"
+                              checked={formData.contactType === 'existing'}
+                              onChange={() => {
+                                setFormData(prev => ({ ...prev, contactType: 'existing' }));
+                                setFormErrors({});
+                              }}
+                              className="peer h-4 w-4 text-primary border-slate-300 focus:ring-primary"
+                            />
+                        </div>
+                        <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">Existing Contact</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input 
-                          type="radio" 
-                          name="contact-type" 
-                          value="new"
-                          checked={formData.contactType === 'new'}
-                          onChange={() => setFormData(prev => ({ ...prev, contactType: 'new' }))}
-                          className="text-primary focus:ring-primary border-slate-300"
-                        />
-                        <span className="text-sm font-bold text-slate-700">New Contact</span>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                        <div className="relative flex items-center">
+                            <input 
+                              type="radio" 
+                              name="contact-type" 
+                              value="new"
+                              checked={formData.contactType === 'new'}
+                              onChange={() => setFormData(prev => ({ ...prev, contactType: 'new' }))}
+                              className="peer h-4 w-4 text-primary border-slate-300 focus:ring-primary"
+                            />
+                        </div>
+                        <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">New Contact</span>
                     </label>
                 </div>
 
                 {/* Search for Existing Contact */}
                 {formData.contactType === 'existing' && (
                     <div className="mb-6">
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span className="material-symbols-outlined text-slate-400 text-[18px]">search</span>
-                            </div>
-                            <input 
-                                type="text" 
-                                placeholder="Search existing contact by name, email or phone..." 
-                                className="block w-full h-10 rounded-lg border-slate-200 pl-10 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm"
-                            />
-                        </div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Search Customer</label>
+                        <CustomerSearch 
+                            onSelect={handleCustomerSelect} 
+                            className="w-full"
+                        />
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Email Address</label>
-                    <div className="relative rounded-md shadow-sm">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <span className="material-symbols-outlined text-slate-400 text-[18px]">email</span>
+                {!hideContactFields ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Email Address</label>
+                      <div className={`relative rounded-md shadow-sm ${formErrors.email ? 'error-field' : ''}`}>
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                          <span className="material-symbols-outlined text-slate-400 text-[18px]">email</span>
+                        </div>
+                        <input 
+                          className={`block w-full h-10 rounded-lg border pl-10 focus:ring sm:text-sm font-medium transition-colors ${
+                            formErrors.email 
+                              ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' 
+                              : 'border-slate-200 focus:border-primary focus:ring-primary/10'
+                          }`}
+                          id="email" 
+                          name="email" 
+                          type="email" 
+                          value={formData.email}
+                          onChange={(e) => {
+                            handleChange(e);
+                            if (formErrors.email) setFormErrors(prev => ({ ...prev, email: '' }));
+                          }}
+                          placeholder="customer@email.com"
+                        />
                       </div>
-                      <input 
-                        className="block w-full h-10 rounded-lg border-slate-200 pl-10 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium" 
-                        id="email" 
-                        name="email" 
-                        type="email" 
-                        value={formData.email}
-                        onChange={handleChange}
-                        placeholder="customer@email.com"
-                        required={formData.contactType === 'new'}
-                      />
+                      {formErrors.email && (
+                        <p className="mt-1 text-xs text-red-600 font-medium flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">error</span>
+                          {formErrors.email}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Phone Number</label>
+                      <div className={`relative rounded-md shadow-sm ${formErrors.phone ? 'error-field' : ''}`}>
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                          <span className="material-symbols-outlined text-slate-400 text-[18px]">phone</span>
+                        </div>
+                        <input 
+                          className={`block w-full h-10 rounded-lg border pl-10 focus:ring sm:text-sm font-medium transition-colors ${
+                            formErrors.phone 
+                              ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' 
+                              : 'border-slate-200 focus:border-primary focus:ring-primary/10'
+                          }`}
+                          id="phone" 
+                          name="phone" 
+                          type="tel" 
+                          value={formData.phone}
+                          onChange={(e) => {
+                            handleChange(e);
+                            if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: '' }));
+                          }}
+                          placeholder="+61 XXX XXX XXX"
+                        />
+                      </div>
+                      {formErrors.phone && (
+                        <p className="mt-1 text-xs text-red-600 font-medium flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">error</span>
+                          {formErrors.phone}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Address</label>
+                      <div className={`relative rounded-md shadow-sm ${formErrors.address ? 'error-field' : ''}`}>
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                          <span className="material-symbols-outlined text-slate-400 text-[18px]">home</span>
+                        </div>
+                        <input 
+                          className={`block w-full h-10 rounded-lg border pl-10 focus:ring sm:text-sm font-medium transition-colors ${
+                            formErrors.address 
+                              ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10' 
+                              : 'border-slate-200 focus:border-primary focus:ring-primary/10'
+                          }`}
+                          id="address" 
+                          name="address" 
+                          type="text" 
+                          value={formData.address}
+                          onChange={(e) => {
+                            handleChange(e);
+                            if (formErrors.address) setFormErrors(prev => ({ ...prev, address: '' }));
+                          }}
+                          placeholder="e.g. 123 Main St, City"
+                        />
+                      </div>
+                      {formErrors.address && (
+                        <p className="mt-1 text-xs text-red-600 font-medium flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">error</span>
+                          {formErrors.address}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Phone Number</label>
-                    <div className="relative rounded-md shadow-sm">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <span className="material-symbols-outlined text-slate-400 text-[18px]">phone</span>
-                      </div>
-                      <input 
-                        className="block w-full h-10 rounded-lg border-slate-200 pl-10 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium" 
-                        id="phone" 
-                        name="phone" 
-                        type="tel" 
-                        value={formData.phone}
-                        onChange={handleChange}
-                        placeholder="+61 XXX XXX XXX"
-                        required={formData.contactType === 'new'}
-                      />
+                ) : (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-start gap-3">
+                    <span className="material-symbols-outlined text-slate-500">visibility_off</span>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">Contact fields hidden</p>
+                      <p className="text-xs text-slate-600">Using existing contact or traveller details. You can switch back to New Contact to edit.</p>
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Address</label>
-                    <div className="relative rounded-md shadow-sm">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <span className="material-symbols-outlined text-slate-400 text-[18px]">home</span>
-                      </div>
-                      <input 
-                        className="block w-full h-10 rounded-lg border-slate-200 pl-10 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium" 
-                        id="address" 
-                        name="address" 
-                        type="text" 
-                        value={formData.address}
-                        onChange={handleChange}
-                        placeholder="e.g. 123 Main St, City"
-                        required={formData.contactType === 'new'}
-                      />
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -488,16 +595,11 @@ export default function EditBookingPage() {
 
                 {formData.customerType === 'existing' && (
                     <div className="mb-6">
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span className="material-symbols-outlined text-slate-400 text-[18px]">search</span>
-                            </div>
-                            <input 
-                                type="text" 
-                                placeholder="Search existing customer by name..." 
-                                className="block w-full h-10 rounded-lg border-slate-200 pl-10 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm"
-                            />
-                        </div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Search Traveller</label>
+                      <CustomerSearch 
+                        onSelect={handleTravelerSelect}
+                        className="w-full"
+                      />
                     </div>
                 )}
 

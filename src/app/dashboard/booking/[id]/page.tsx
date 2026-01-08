@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Booking } from "@/types";
@@ -16,6 +16,7 @@ export default function BookingDetailsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!bookingId) return;
     fetchBookingDetails();
   }, [bookingId]);
 
@@ -27,8 +28,17 @@ export default function BookingDetailsPage() {
         .eq("id", bookingId)
         .single();
 
-      if (error) throw error;
-      setBooking(data);
+      if (error) {
+        // If the error is "PGRST116" (JSON object requested, multiple (or no) rows returned), it means not found
+        if (error.code === 'PGRST116') {
+             // We will handle this in the render
+             setBooking(null);
+        } else {
+             throw error;
+        }
+      } else {
+        setBooking(data);
+      }
     } catch (err: unknown) {
       console.error("Error fetching booking:", err);
       let message = "Failed to load booking details";
@@ -49,17 +59,26 @@ export default function BookingDetailsPage() {
     );
   }
 
-  if (error || !booking) {
+  if (!booking && !error) {
+     return notFound();
+  }
+
+  if (error) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-          {error || "Booking not found"}
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center gap-3">
+          <span className="material-symbols-outlined">error</span>
+          <div>
+             <p className="font-bold">Error Loading Booking</p>
+             <p className="text-sm">{error}</p>
+          </div>
         </div>
         <button
           onClick={() => router.push("/dashboard/booking")}
-          className="mt-4 text-primary hover:underline"
+          className="mt-4 text-primary hover:underline font-bold flex items-center gap-2"
         >
-          ← Back to Bookings
+          <span className="material-symbols-outlined text-sm">arrow_back</span>
+          Back to Bookings
         </button>
       </div>
     );
