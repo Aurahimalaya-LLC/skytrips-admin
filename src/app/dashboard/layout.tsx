@@ -201,6 +201,27 @@ export default function DashboardLayout({
             <p className="text-sm font-medium leading-normal">Bookings</p>
           </Link>
 
+          {/* Manage Booking */}
+          <Link
+            href="/dashboard/manage-booking"
+            className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+              pathname === "/dashboard/manage-booking"
+                ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
+                : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
+            }`}
+          >
+            <span
+              className={`material-symbols-outlined ${
+                pathname === "/dashboard/manage-booking"
+                  ? "active-icon"
+                  : "group-hover:text-primary transition-colors"
+              }`}
+            >
+              edit_calendar
+            </span>
+            <p className="text-sm font-medium leading-normal">Manage Booking</p>
+          </Link>
+
           {/* Setting */}
           <Link
             href="/dashboard/settings"
