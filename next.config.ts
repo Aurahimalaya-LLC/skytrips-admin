@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
       fullUrl: false,
     },
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "tjrmemmsieltajotxddk.supabase.co",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

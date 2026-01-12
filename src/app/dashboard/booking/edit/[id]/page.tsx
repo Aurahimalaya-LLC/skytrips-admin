@@ -207,6 +207,8 @@ export default function EditBookingPage() {
     contactType: "existing",
     notes: "",
   });
+
+  // Airports and airlines autocompletion handled by dedicated components
   const hideContactFields = formData.contactType === 'existing';
 
   useEffect(() => {
@@ -954,34 +956,22 @@ export default function EditBookingPage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Origin (From)</label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span className="material-symbols-outlined text-slate-400 text-[18px]">flight_takeoff</span>
-                            </div>
-                            <input 
-                                className="block w-full h-10 rounded-lg border-slate-200 pl-10 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium"
-                                name="origin"
-                                value={formData.origin}
-                                onChange={handleChange}
-                                placeholder="City or Airport"
-                            />
-                        </div>
+                        <AirportAutocomplete
+                          label="Origin (From)"
+                          name="origin"
+                          value={formData.origin}
+                          onChange={handleChange}
+                          icon="flight_takeoff"
+                        />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Destination (To)</label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span className="material-symbols-outlined text-slate-400 text-[18px]">flight_land</span>
-                            </div>
-                            <input 
-                                className="block w-full h-10 rounded-lg border-slate-200 pl-10 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium"
-                                name="destination"
-                                value={formData.destination}
-                                onChange={handleChange}
-                                placeholder="City or Airport"
-                            />
-                        </div>
+                        <AirportAutocomplete
+                          label="Destination (To)"
+                          name="destination"
+                          value={formData.destination}
+                          onChange={handleChange}
+                          icon="flight_land"
+                        />
                     </div>
 
                     {showStopover && (
@@ -1040,12 +1030,12 @@ export default function EditBookingPage() {
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <span className="material-symbols-outlined text-slate-400 text-[18px]">airlines</span>
                                     </div>
-                                    <input 
-                                        className="block w-full h-10 rounded-lg border-slate-200 pl-10 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium"
-                                        name="airlines"
-                                        value={formData.airlines}
-                                        onChange={handleChange}
-                                        placeholder="Select Airline"
+                                    <AirlineAutocomplete
+                                      label="Airline"
+                                      name="airlines"
+                                      value={formData.airlines}
+                                      onChange={handleChange}
+                                      icon="airlines"
                                     />
                                 </div>
                             </div>

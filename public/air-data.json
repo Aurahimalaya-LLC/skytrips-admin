@@ -1,0 +1,27 @@
+{
+  "airports": [
+    { "code": "LHR" },
+    { "code": "JFK" },
+    { "code": "DXB" },
+    { "code": "SIN" },
+    { "code": "SYD" },
+    { "code": "CDG" },
+    { "code": "FRA" },
+    { "code": "HND" },
+    { "code": "SFO" },
+    { "code": "LAX" },
+    { "code": "EGLL" },
+    { "code": "KJFK" }
+  ],
+  "airlines": [
+    { "code": "EY", "name": "Etihad Airways" },
+    { "code": "EK", "name": "Emirates" },
+    { "code": "SQ", "name": "Singapore Airlines" },
+    { "code": "AF", "name": "Air France" },
+    { "code": "LH", "name": "Lufthansa" },
+    { "code": "AA", "name": "American Airlines" },
+    { "code": "UA", "name": "United Airlines" },
+    { "code": "BA", "name": "British Airways" },
+    { "code": "QF", "name": "Qantas" }
+  ]
+}

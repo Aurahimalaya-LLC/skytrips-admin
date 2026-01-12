@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Customer } from "@/types";
 import CustomerForm from "@/components/CustomerForm";
+// Import functionality removed
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -17,6 +18,7 @@ export default function CustomersPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   
   const [isFormOpen, setIsFormOpen] = useState(false);
+  // Import state removed
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   const [sortConfig, setSortConfig] = useState<{ key: keyof Customer | 'name' | 'totalMiles' | 'totalSpend' | 'lastLogin'; direction: 'asc' | 'desc' }>({ key: 'id', direction: 'asc' });
@@ -34,6 +36,21 @@ export default function CustomersPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("public:customers")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "customers" },
+        () => {
+          fetchCustomers();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
   const fetchCustomers = async () => {
     setLoading(true);
     setError(null);
@@ -150,8 +167,9 @@ export default function CustomersPage() {
     fetchCustomers();
   };
 
-  const getStatusBadge = (isActive: string) => {
-    if (isActive === "true" || isActive === "Active") {
+  const getStatusBadge = (isActive: string | boolean) => {
+    const activeStr = typeof isActive === "boolean" ? (isActive ? "true" : "false") : isActive;
+    if (activeStr === "true" || activeStr === "Active") {
       return (
         <span className="inline-flex items-center rounded-full bg-success/20 px-2.5 py-0.5 text-xs font-medium text-success">
           Active
@@ -210,6 +228,7 @@ export default function CustomersPage() {
           <span className="material-symbols-outlined text-[20px]">add</span>
           <span>Add Customer</span>
         </button>
+        {/* Import buttons removed */}
       </div>
 
       {/* Filters and Search Toolbar */}
@@ -462,10 +481,14 @@ export default function CustomersPage() {
       <CustomerForm 
         isOpen={isFormOpen} 
         onClose={() => setIsFormOpen(false)} 
-        onSuccess={handleFormSuccess}
+        onSuccess={() => {
+          fetchCustomers();
+          setIsFormOpen(false);
+        }}
         customerToEdit={selectedCustomer}
       />
+      
+      {/* Import modals removed */}
     </div>
   );
 }
-

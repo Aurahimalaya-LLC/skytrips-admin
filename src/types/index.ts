@@ -38,6 +38,20 @@ export interface Booking {
   updated_at?: string;
 }
 
+export interface Address {
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
+export interface Passport {
+  number: string;
+  expiryDate: string;
+  issueCountry: string;
+}
+
 export interface Customer {
   id?: number;
   firstName: string;
@@ -47,13 +61,13 @@ export interface Customer {
   dateOfBirth: string;
   gender: string;
   userType: string;
-  isActive: string;
+  isActive: string | boolean;
   country: string;
-  address: any;
+  address: Address;
   phoneCountryCode: string;
-  isDisabled: string;
-  isVerified: string;
-  passport: any;
+  isDisabled: string | boolean;
+  isVerified: string | boolean;
+  passport: Passport;
   socialProvider: string;
   socialId: string;
   referralCode: string;
@@ -61,4 +75,12 @@ export interface Customer {
   totalSpend?: number;
   lastLogin?: string;
   created_at?: string;
+  // New fields from schema enhancement
+  preferences?: Record<string, unknown>;
+  loyaltyTier?: string;
+  loyaltyPoints?: number;
+  source?: string;
+  preferredLanguage?: string;
+  preferredCurrency?: string;
+  marketingConsent?: boolean;
 }

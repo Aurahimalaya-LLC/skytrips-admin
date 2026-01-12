@@ -476,7 +476,7 @@ export default function CustomerDetailsPage() {
                   flight
                 </span>
                 <span className="text-xs font-semibold">
-                  {customer.userType || "Traveler"}
+                  {customer.userType === "USER" ? "customer" : (customer.userType || "Traveler")}
                 </span>
               </div>
               {customer.socialProvider === "google" && (

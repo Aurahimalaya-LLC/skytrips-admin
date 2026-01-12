@@ -16,6 +16,7 @@ export default function DashboardLayout({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
   useEffect(() => {
     checkAuth();
@@ -23,18 +24,47 @@ export default function DashboardLayout({
     // Listen for auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       // Only redirect if not using static admin
       const isStaticAdmin = localStorage.getItem("isAdmin") === "true";
-      if (!session && !isStaticAdmin) {
-        router.push("/");
+      
+      // Handle explicit sign out
+      if (event === "SIGNED_OUT") {
+        if (!isStaticAdmin) {
+          router.push("/");
+        }
+        return;
       }
+
+      // For other cases where session might be missing (e.g. initial load),
+      // we let checkAuth handle the verification to avoid race conditions.
+      // If we redirect here immediately on !session, it might conflict with
+      // the session recovery process.
     });
 
     return () => {
       subscription.unsubscribe();
     };
   }, [router]);
+
+  useEffect(() => {
+    try {
+      const persisted = localStorage.getItem("sidebarCollapsed");
+      if (persisted) {
+        setSidebarCollapsed(persisted === "true");
+      }
+    } catch {}
+  }, []);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("sidebarCollapsed", String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   const checkAuth = async () => {
     try {
@@ -96,8 +126,13 @@ export default function DashboardLayout({
   return (
     <div className="bg-background font-display text-foreground h-screen overflow-hidden flex w-full transition-colors duration-300">
       {/* Side Navigation */}
-      <aside className="w-64 bg-sidebar border-r border-sidebar-border flex-col hidden md:flex h-full flex-shrink-0 z-20 transition-colors duration-300">
-        <div className="p-6 pb-2">
+      <aside
+        className={`${
+          sidebarCollapsed ? "w-20" : "w-64"
+        } bg-sidebar border-r border-sidebar-border flex-col hidden md:flex h-full flex-shrink-0 z-20 transition-[width,background,color] duration-300 ease-in-out`}
+        aria-label="Sidebar navigation"
+      >
+        <div className={`p-6 pb-2 ${sidebarCollapsed ? "px-4" : ""}`}>
           <div
             className="flex items-center gap-3 cursor-pointer"
             onClick={() => router.push("/dashboard")}
@@ -109,21 +144,38 @@ export default function DashboardLayout({
                   'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBITXaAg6zaUCIOjUTE68Ge0G4SmMV4Pv3Lcqnku1BN_EltI3RchuZZ2qNbptNXQqdfZeXiyDf1piWwfpuBC1nvCEdNcp4CvSAUrRlEn1kFwiNird4P5EFYVdH-3Fom70VdDFXNpoxIMrLapPyNuPU3TR4PgFcQQ6AaQg9BOOy5Rtntf9UeV6IsH7QHo9zwL2Qe-kwKhfCcFDen2t2Fnw9utzNilh-XO-UZoKpYoQ8K-VJOKnyj20c1yEcAnYbxQXI_SbVjKO-Pzts")',
               }}
             ></div>
-            <h1 className="text-primary text-xl font-black leading-normal tracking-tight">
+            <h1
+              className={`text-primary text-xl font-black leading-normal tracking-tight ${
+                sidebarCollapsed ? "sr-only" : ""
+              }`}
+            >
               SkyTrips
             </h1>
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className="ml-auto p-2 rounded-lg hover:bg-muted text-sidebar-foreground transition-colors"
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!sidebarCollapsed}
+            >
+              <span className="material-symbols-outlined">
+                {sidebarCollapsed ? "chevron_right" : "chevron_left"}
+              </span>
+            </button>
           </div>
         </div>
 
-        <nav className="flex flex-col gap-2 px-4 mt-6 flex-1 overflow-y-auto">
+        <nav className={`flex flex-col gap-2 ${sidebarCollapsed ? "px-2" : "px-4"} mt-6 flex-1 overflow-y-auto`}>
           {/* Dashboard */}
           <Link
             href="/dashboard"
-            className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname === "/dashboard"
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
                 : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
             }`}
+            aria-label="Dashboard"
+            title="Dashboard"
           >
             <span
               className={`material-symbols-outlined ${
@@ -134,39 +186,45 @@ export default function DashboardLayout({
             >
               dashboard
             </span>
-            <p className="text-sm font-medium leading-normal">Dashboard</p>
+            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Dashboard</p>
           </Link>
 
           {/* Flights */}
           <Link
             href="#"
-            className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted text-sidebar-foreground hover:text-foreground transition-colors group"
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg hover:bg-muted text-sidebar-foreground hover:text-foreground transition-colors group`}
+            aria-label="Flights"
+            title="Flights"
           >
             <span className="material-symbols-outlined group-hover:text-primary transition-colors">
               flight
             </span>
-            <p className="text-sm font-medium leading-normal">Flights</p>
+            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Flights</p>
           </Link>
 
           {/* Hotels */}
           <Link
             href="#"
-            className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted text-sidebar-foreground hover:text-foreground transition-colors group"
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg hover:bg-muted text-sidebar-foreground hover:text-foreground transition-colors group`}
+            aria-label="Hotels"
+            title="Hotels"
           >
             <span className="material-symbols-outlined group-hover:text-primary transition-colors">
               hotel
             </span>
-            <p className="text-sm font-medium leading-normal">Hotels</p>
+            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Hotels</p>
           </Link>
 
           {/* Customers */}
           <Link
             href="/dashboard/customers"
-            className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname === "/dashboard/customers"
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
                 : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
             }`}
+            aria-label="Customers"
+            title="Customers"
           >
             <span
               className={`material-symbols-outlined ${
@@ -177,17 +235,19 @@ export default function DashboardLayout({
             >
               group
             </span>
-            <p className="text-sm font-medium leading-normal">Customers</p>
+            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Customers</p>
           </Link>
 
           {/* Bookings */}
           <Link
             href="/dashboard/booking"
-            className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname === "/dashboard/booking"
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
                 : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
             }`}
+            aria-label="Bookings"
+            title="Bookings"
           >
             <span
               className={`material-symbols-outlined ${
@@ -198,17 +258,19 @@ export default function DashboardLayout({
             >
               confirmation_number
             </span>
-            <p className="text-sm font-medium leading-normal">Bookings</p>
+            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Bookings</p>
           </Link>
 
           {/* Manage Booking */}
           <Link
             href="/dashboard/manage-booking"
-            className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname === "/dashboard/manage-booking"
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
                 : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
             }`}
+            aria-label="Manage Booking"
+            title="Manage Booking"
           >
             <span
               className={`material-symbols-outlined ${
@@ -219,17 +281,42 @@ export default function DashboardLayout({
             >
               edit_calendar
             </span>
-            <p className="text-sm font-medium leading-normal">Manage Booking</p>
+            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Manage Booking</p>
+          </Link>
+
+          {/* Media Management */}
+          <Link
+            href="/dashboard/media"
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
+              pathname === "/dashboard/media"
+                ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
+                : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
+            }`}
+            aria-label="Media Management"
+            title="Media Management"
+          >
+            <span
+              className={`material-symbols-outlined ${
+                pathname === "/dashboard/media"
+                  ? "active-icon"
+                  : "group-hover:text-primary transition-colors"
+              }`}
+            >
+              perm_media
+            </span>
+            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Media Management</p>
           </Link>
 
           {/* Setting */}
           <Link
             href="/dashboard/settings"
-            className={`flex items-center gap-3 px-3 py-3 rounded-lg ml-6 transition-all ${
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg ${sidebarCollapsed ? "" : "ml-6"} transition-all ${
               pathname === "/dashboard/settings"
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
                 : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
             }`}
+            aria-label="Settings"
+            title="Settings"
           >
             <span
               className={`material-symbols-outlined ${
@@ -240,17 +327,19 @@ export default function DashboardLayout({
             >
               settings
             </span>
-            <p className="text-sm font-medium leading-normal">Setting</p>
+            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Setting</p>
           </Link>
         </nav>
 
-        <div className="p-4 mt-auto">
+        <div className={`p-4 mt-auto ${sidebarCollapsed ? "px-2" : ""}`}>
           <div
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-destructive/10 text-sidebar-foreground hover:text-destructive cursor-pointer transition-colors"
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg hover:bg-destructive/10 text-sidebar-foreground hover:text-destructive cursor-pointer transition-colors`}
+            aria-label="Sign Out"
+            title="Sign Out"
           >
             <span className="material-symbols-outlined">logout</span>
-            <p className="text-sm font-medium leading-normal">Sign Out</p>
+            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Sign Out</p>
           </div>
         </div>
       </aside>
@@ -261,7 +350,7 @@ export default function DashboardLayout({
         <header className="flex items-center justify-between whitespace-nowrap bg-background border-b border-border px-6 py-4 flex-shrink-0 z-10 shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-4">
             {/* Mobile Menu Button */}
-            <button className="md:hidden p-2 text-muted-foreground">
+            <button className="md:hidden p-2 text-muted-foreground" aria-label="Open menu">
               <span className="material-symbols-outlined">menu</span>
             </button>
             <div className="flex flex-col">
@@ -275,23 +364,6 @@ export default function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-6">
-            {/* Search */}
-            <label className="hidden md:flex flex-col min-w-64 h-10">
-              <div className="flex w-full flex-1 items-stretch rounded-lg h-full bg-muted focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-                <div className="text-muted-foreground flex items-center justify-center pl-4 pr-2">
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: "20px" }}
-                  >
-                    search
-                  </span>
-                </div>
-                <input
-                  className="w-full bg-transparent border-none text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0 text-sm font-normal"
-                  placeholder="Search bookings, users..."
-                />
-              </div>
-            </label>
 
             {/* Actions */}
             <div className="flex items-center gap-3">

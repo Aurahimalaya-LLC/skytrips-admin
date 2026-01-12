@@ -43,7 +43,7 @@ export default function LoginPage() {
         // Check for static admin session first
         const isStaticAdmin = localStorage.getItem("isAdmin") === "true";
         if (isStaticAdmin) {
-          router.push("/dashboard");
+          router.replace("/dashboard");
           return;
         }
 
@@ -56,7 +56,7 @@ export default function LoginPage() {
           // Check if user has admin role
           const adminStatus = await isUserAdmin(session.user.id);
           if (adminStatus) {
-            router.push("/dashboard");
+            router.replace("/dashboard");
             return;
           } else {
             // User is authenticated but not an admin
@@ -97,7 +97,7 @@ export default function LoginPage() {
       ) {
         // Static admin login - set session and redirect
         localStorage.setItem("isAdmin", "true");
-        router.push("/dashboard");
+        router.replace("/dashboard");
         router.refresh();
         return;
       }
@@ -122,7 +122,7 @@ export default function LoginPage() {
 
         if (adminStatus) {
           // Admin user - redirect to dashboard
-          router.push("/dashboard");
+          router.replace("/dashboard");
           router.refresh();
         } else {
           // Not an admin - sign out and show error
@@ -130,9 +130,10 @@ export default function LoginPage() {
           setError("Access denied. Admin privileges required.");
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login error:", err);
-      setError(err.message || "An error occurred during login");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred during login";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -160,9 +161,10 @@ export default function LoginPage() {
         setIsGoogleLoading(false);
       }
       // Don't set loading to false here as user will be redirected
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Google login error:", err);
-      setError(err.message || "An error occurred during Google login");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred during Google login";
+      setError(errorMessage);
       setIsGoogleLoading(false);
     }
   };
