@@ -11,9 +11,32 @@ export async function GET(_: Request, { params }: { params: Promise<{ uid: strin
   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let fullBookings: any[] = [];
+  const bookingIds = new Set<number>();
+
+  // 1. Collect IDs from manual refs
   if (refs.data && refs.data.length > 0) {
-    const bookingIds = refs.data.map(r => r.booking_id);
-    const bookingsRes = await supabase.from("bookings").select("*").in("id", bookingIds);
+    refs.data.forEach(r => bookingIds.add(r.booking_id));
+  }
+
+  // 2. Fetch bookings directly linked by agency name (issuedthroughagency)
+  if (data.agency_name) {
+    const nameRes = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("issuedthroughagency", data.agency_name);
+    
+    if (nameRes.data) {
+      nameRes.data.forEach((b: { id: number }) => bookingIds.add(b.id));
+    }
+  }
+
+  // 3. Fetch full details for all collected IDs
+  if (bookingIds.size > 0) {
+    const bookingsRes = await supabase
+      .from("bookings")
+      .select("*")
+      .in("id", Array.from(bookingIds))
+      .order("created_at", { ascending: false }); // Show recent first
     fullBookings = bookingsRes.data || [];
   }
 
@@ -21,7 +44,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ uid: strin
     agency: data, 
     bookings: refs.data || [], 
     fullBookings: fullBookings,
-    stats: { totalBookings: refs.data?.length || 0 } 
+    stats: { totalBookings: fullBookings.length } 
   });
 }
 
