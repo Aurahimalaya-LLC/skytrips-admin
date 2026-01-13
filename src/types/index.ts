@@ -35,6 +35,7 @@ export interface Booking {
   payment: string;
   travelDate?: string;
   travellers?: Traveller[];
+  customer?: Customer;
   created_at?: string;
   updated_at?: string;
 }

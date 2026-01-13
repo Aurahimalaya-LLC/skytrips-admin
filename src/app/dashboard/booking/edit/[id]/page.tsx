@@ -11,7 +11,6 @@ import Link from "next/link";
 import { Customer, Traveller } from "@/types";
 import countryData from "../../../../../../libs/shared-utils/constants/country.json";
 
-
 const toAddressString = (addr: any): string => {
   if (!addr) return "";
   if (typeof addr === "string") return addr;
@@ -623,6 +622,7 @@ export default function EditBookingPage() {
         customerType: formData.customerType,
         contactType: formData.contactType,
         notes: formData.notes,
+        customer: selectedCustomer || undefined, // Include full customer snapshot
       };
 
       // Exclude address specifically as requested by error log
@@ -688,6 +688,7 @@ export default function EditBookingPage() {
         "extraluggage",
         "customerid",
         "travellers", // Must be present in DB schema cache
+        "customer",
       ];
 
       const mapAndFilterPayload = (data: any) => {

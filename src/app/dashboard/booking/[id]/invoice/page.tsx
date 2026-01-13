@@ -28,10 +28,10 @@ export default function InvoicePage() {
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-             setBooking(null);
+        if (error.code === "PGRST116") {
+          setBooking(null);
         } else {
-             throw error;
+          throw error;
         }
       } else {
         setBooking(data);
@@ -57,7 +57,7 @@ export default function InvoicePage() {
   }
 
   if (!booking && !error) {
-     return notFound();
+    return notFound();
   }
 
   if (error) {
@@ -65,9 +65,13 @@ export default function InvoicePage() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-6">
         <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center max-w-md w-full">
           <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="material-symbols-outlined text-red-500 text-3xl">error</span>
+            <span className="material-symbols-outlined text-red-500 text-3xl">
+              error
+            </span>
           </div>
-          <h3 className="text-lg font-bold text-slate-900 mb-2">Error Loading Invoice</h3>
+          <h3 className="text-lg font-bold text-slate-900 mb-2">
+            Error Loading Invoice
+          </h3>
           <p className="text-slate-500 mb-6">{error}</p>
           <button
             onClick={() => router.back()}
@@ -84,12 +88,14 @@ export default function InvoicePage() {
 
   // Calculate financials
   const sellingPrice = Number(booking.sellingPrice) || 0;
-  
+
   // Parse addons from prices object
-  const addons = booking.prices ? Object.entries(booking.prices).map(([key, value]) => ({
-    name: key.charAt(0).toUpperCase() + key.slice(1),
-    price: Number(value)
-  })) : [];
+  const addons = booking.prices
+    ? Object.entries(booking.prices).map(([key, value]) => ({
+        name: key.charAt(0).toUpperCase() + key.slice(1),
+        price: Number(value),
+      }))
+    : [];
 
   const addonsTotal = addons.reduce((sum, item) => sum + item.price, 0);
   const subtotal = sellingPrice + addonsTotal;
@@ -98,9 +104,29 @@ export default function InvoicePage() {
   const grandTotal = subtotal + tax - discount;
 
   // Generate Invoice Number (Mock logic if not in DB)
-  const invoiceNumber = `INV-2021-${String(booking.id).padStart(3, '0')}`;
-  const issueDate = booking.created_at ? new Date(booking.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  const dueDate = booking.created_at ? new Date(booking.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); // Same day due for flights usually
+  const invoiceNumber = `INV-2021-${String(booking.id).padStart(3, "0")}`;
+  const issueDate = booking.created_at
+    ? new Date(booking.created_at).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : new Date().toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+  const dueDate = booking.created_at
+    ? new Date(booking.created_at).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : new Date().toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }); // Same day due for flights usually
 
   const handlePrint = () => {
     window.print();
@@ -111,186 +137,269 @@ export default function InvoicePage() {
       {/* Navigation / Actions - Hidden in Print */}
       <div className="max-w-4xl mx-auto mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <nav className="flex text-sm text-slate-500">
-          <button onClick={() => router.back()} className="hover:text-slate-800 transition-colors flex items-center gap-1">
-            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          <button
+            onClick={() => router.back()}
+            className="hover:text-slate-800 transition-colors flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              arrow_back
+            </span>
             Back to Booking
           </button>
           <span className="mx-2 text-slate-300">/</span>
           <span className="text-primary font-bold">Invoice</span>
         </nav>
         <div className="flex gap-3">
-            <button 
-                onClick={handlePrint}
-                className="inline-flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
-            >
-                <span className="material-symbols-outlined text-[20px] mr-2">print</span>
-                Download PDF
-            </button>
-            <button className="inline-flex items-center px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-sm hover:bg-blue-600 transition-all active:scale-95">
-                <span className="material-symbols-outlined text-[20px] mr-2">send</span>
-                Send Email
-            </button>
+          <button
+            onClick={handlePrint}
+            className="inline-flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
+          >
+            <span className="material-symbols-outlined text-[20px] mr-2">
+              print
+            </span>
+            Download PDF
+          </button>
+          <button className="inline-flex items-center px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-sm hover:bg-blue-600 transition-all active:scale-95">
+            <span className="material-symbols-outlined text-[20px] mr-2">
+              send
+            </span>
+            Send Email
+          </button>
         </div>
       </div>
 
       {/* Invoice Container */}
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden print:shadow-none print:rounded-none print:w-full print:max-w-none">
-        
         {/* Header Section */}
         <div className="p-8 md:p-12 border-b border-slate-100">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center text-white font-black text-2xl">S</div>
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight">SkyHigh Agency</h1>
-                        <p className="text-sm text-slate-500 font-medium">Your Trusted Travel Partner</p>
-                    </div>
-                </div>
-                <div className="text-left md:text-right">
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">INVOICE</h2>
-                    <p className="text-lg font-bold text-slate-500">#{invoiceNumber}</p>
-                    <div className="mt-2 inline-block px-3 py-1 bg-amber-100 text-amber-700 text-xs font-black rounded-full border border-amber-200 uppercase tracking-wide print:border-slate-300 print:bg-transparent print:text-slate-900">
-                        {booking.paymentStatus || "PENDING"}
-                    </div>
-                </div>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center text-white font-black text-2xl">
+                S
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                  SkyHigh Agency
+                </h1>
+                <p className="text-sm text-slate-500 font-medium">
+                  Your Trusted Travel Partner
+                </p>
+              </div>
             </div>
+            <div className="text-left md:text-right">
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">
+                INVOICE
+              </h2>
+              <p className="text-lg font-bold text-slate-500">
+                #{invoiceNumber}
+              </p>
+              <div className="mt-2 inline-block px-3 py-1 bg-amber-100 text-amber-700 text-xs font-black rounded-full border border-amber-200 uppercase tracking-wide print:border-slate-300 print:bg-transparent print:text-slate-900">
+                {booking.paymentStatus || "PENDING"}
+              </div>
+            </div>
+          </div>
 
-            <div className="mt-12">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Company Information</h3>
-                <address className="not-italic text-sm text-slate-600 space-y-1">
-                    <p className="font-bold text-slate-900">SkyHigh Agency Ltd.</p>
-                    <p>123 Sky Tower, Aviation Street</p>
-                    <p>Singapore, 018956</p>
-                    <p>Tax ID: SG-99887766</p>
-                    <p>support@skyhigh.com</p>
-                </address>
-            </div>
+          <div className="mt-12">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+              Company Information
+            </h3>
+            <address className="not-italic text-sm text-slate-600 space-y-1">
+              <p className="font-bold text-slate-900">SkyHigh Agency Ltd.</p>
+              <p>123 Sky Tower, Aviation Street</p>
+              <p>Singapore, 018956</p>
+              <p>Tax ID: SG-99887766</p>
+              <p>support@skyhigh.com</p>
+            </address>
+          </div>
         </div>
 
         {/* Bill To & Invoice Details Section */}
         <div className="p-8 md:p-12 bg-slate-50/50 border-b border-slate-100">
-            <div className="flex flex-col md:flex-row justify-between gap-12">
-                {/* Billed To */}
-                <div className="flex-1">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">BILLED TO</h3>
-                    <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-                        <h4 className="text-xl font-bold text-slate-900 mb-3">{booking.travellerFirstName} {booking.travellerLastName}</h4>
-                        <div className="space-y-2 text-sm text-slate-600">
-                            <p className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-[18px] text-slate-400">email</span>
-                                {booking.email || "sarita.p@example.com"}
-                            </p>
-                            <p className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-[18px] text-slate-400">phone</span>
-                                {booking.phone || "+61 412 345 678"}
-                            </p>
-                            <p className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-[18px] text-slate-400">location_on</span>
-                                15 Swanston Street, Melbourne, VIC 3000, Australia
-                            </p>
-                        </div>
-                    </div>
+          <div className="flex flex-col md:flex-row justify-between gap-12">
+            {/* Billed To */}
+            <div className="flex-1">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                BILLED TO
+              </h3>
+              <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+                <h4 className="text-xl font-bold text-slate-900 mb-3">
+                  {booking.travellerFirstName} {booking.travellerLastName}
+                </h4>
+                <div className="space-y-2 text-sm text-slate-600">
+                  <p className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-slate-400">
+                      email
+                    </span>
+                    {booking.customer?.email || booking.email || "N/A"}
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-slate-400">
+                      phone
+                    </span>
+                    {booking.customer?.phone || booking.phone || "N/A"}
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-slate-400">
+                      location_on
+                    </span>
+                    15 Swanston Street, Melbourne, VIC 3000, Australia
+                  </p>
                 </div>
-
-                {/* Invoice Details Grid */}
-                <div className="flex-1">
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-10">
-                        <div>
-                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">ISSUE DATE</h3>
-                            <p className="text-base font-bold text-slate-900">{issueDate}</p>
-                        </div>
-                        <div>
-                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">PAYMENT DUE DATE</h3>
-                            <p className="text-base font-bold text-slate-900">{dueDate}</p>
-                        </div>
-                        <div>
-                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">BOOKING REFERENCE</h3>
-                            <p className="text-base font-bold text-slate-900">#{booking.id}</p>
-                        </div>
-                        <div>
-                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">PNR</h3>
-                            <span className="inline-block px-3 py-1 bg-slate-100 text-slate-900 text-sm font-bold rounded-lg border border-slate-200 uppercase font-mono tracking-wider">
-                                {booking.PNR}
-                            </span>
-                        </div>
-                    </div>
-                </div>
+              </div>
             </div>
+
+            {/* Invoice Details Grid */}
+            <div className="flex-1">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-10">
+                <div>
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                    ISSUE DATE
+                  </h3>
+                  <p className="text-base font-bold text-slate-900">
+                    {issueDate}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                    PAYMENT DUE DATE
+                  </h3>
+                  <p className="text-base font-bold text-slate-900">
+                    {dueDate}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                    BOOKING REFERENCE
+                  </h3>
+                  <p className="text-base font-bold text-slate-900">
+                    #{booking.id}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                    PNR
+                  </h3>
+                  <span className="inline-block px-3 py-1 bg-slate-100 text-slate-900 text-sm font-bold rounded-lg border border-slate-200 uppercase font-mono tracking-wider">
+                    {booking.PNR}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Items Table */}
         <div className="p-8 md:p-12">
-            <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                    <thead>
-                        <tr className="border-b-2 border-slate-100">
-                            <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest w-1/2">Description</th>
-                            <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Unit Price</th>
-                            <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-center">Qty</th>
-                            <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody className="text-sm">
-                        {/* Main Flight Item */}
-                        <tr className="border-b border-slate-50 group">
-                            <td className="py-4 pr-4">
-                                <p className="font-bold text-slate-900">Flight: {booking.origin} to {booking.destination}</p>
-                                <p className="text-slate-500 text-xs mt-1">{booking.airlines} ({booking.flightNumber}) - {booking.flightClass} Class</p>
-                            </td>
-                            <td className="py-4 text-right font-medium text-slate-600">${sellingPrice.toFixed(2)}</td>
-                            <td className="py-4 text-center font-medium text-slate-600">1</td>
-                            <td className="py-4 text-right font-bold text-slate-900">${sellingPrice.toFixed(2)}</td>
-                        </tr>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b-2 border-slate-100">
+                  <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest w-1/2">
+                    Description
+                  </th>
+                  <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">
+                    Unit Price
+                  </th>
+                  <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-center">
+                    Qty
+                  </th>
+                  <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {/* Main Flight Item */}
+                <tr className="border-b border-slate-50 group">
+                  <td className="py-4 pr-4">
+                    <p className="font-bold text-slate-900">
+                      Flight: {booking.origin} to {booking.destination}
+                    </p>
+                    <p className="text-slate-500 text-xs mt-1">
+                      {booking.airlines} ({booking.flightNumber}) -{" "}
+                      {booking.flightClass} Class
+                    </p>
+                  </td>
+                  <td className="py-4 text-right font-medium text-slate-600">
+                    ${sellingPrice.toFixed(2)}
+                  </td>
+                  <td className="py-4 text-center font-medium text-slate-600">
+                    1
+                  </td>
+                  <td className="py-4 text-right font-bold text-slate-900">
+                    ${sellingPrice.toFixed(2)}
+                  </td>
+                </tr>
 
-                        {/* Add-ons */}
-                        {addons.map((addon, index) => (
-                            <tr key={index} className="border-b border-slate-50 group">
-                                <td className="py-4 pr-4">
-                                    <p className="font-bold text-slate-900">{addon.name}</p>
-                                    <p className="text-slate-500 text-xs mt-1">Additional Service</p>
-                                </td>
-                                <td className="py-4 text-right font-medium text-slate-600">${addon.price.toFixed(2)}</td>
-                                <td className="py-4 text-center font-medium text-slate-600">1</td>
-                                <td className="py-4 text-right font-bold text-slate-900">${addon.price.toFixed(2)}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                {/* Add-ons */}
+                {addons.map((addon, index) => (
+                  <tr key={index} className="border-b border-slate-50 group">
+                    <td className="py-4 pr-4">
+                      <p className="font-bold text-slate-900">{addon.name}</p>
+                      <p className="text-slate-500 text-xs mt-1">
+                        Additional Service
+                      </p>
+                    </td>
+                    <td className="py-4 text-right font-medium text-slate-600">
+                      ${addon.price.toFixed(2)}
+                    </td>
+                    <td className="py-4 text-center font-medium text-slate-600">
+                      1
+                    </td>
+                    <td className="py-4 text-right font-bold text-slate-900">
+                      ${addon.price.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-            {/* Summary */}
-            <div className="mt-8 flex flex-col md:flex-row justify-end">
-                <div className="w-full md:w-1/3 space-y-3">
-                    <div className="flex justify-between text-sm">
-                        <span className="font-bold text-slate-500">Subtotal</span>
-                        <span className="font-bold text-slate-900">${subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                        <span className="font-bold text-slate-500">Tax (Included)</span>
-                        <span className="font-bold text-slate-900">${tax.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                        <span className="font-bold text-slate-500">Discount</span>
-                        <span className="font-bold text-slate-900">-${discount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-xl pt-4 border-t-2 border-slate-100">
-                        <span className="font-black text-slate-900">Grand Total</span>
-                        <span className="font-black text-primary">${grandTotal.toFixed(2)}</span>
-                    </div>
-                    <div className="text-right text-xs text-slate-400 mt-2">
-                        All prices are in USD
-                    </div>
-                </div>
+          {/* Summary */}
+          <div className="mt-8 flex flex-col md:flex-row justify-end">
+            <div className="w-full md:w-1/3 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="font-bold text-slate-500">Subtotal</span>
+                <span className="font-bold text-slate-900">
+                  ${subtotal.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="font-bold text-slate-500">Tax (Included)</span>
+                <span className="font-bold text-slate-900">
+                  ${tax.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="font-bold text-slate-500">Discount</span>
+                <span className="font-bold text-slate-900">
+                  -${discount.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between text-xl pt-4 border-t-2 border-slate-100">
+                <span className="font-black text-slate-900">Grand Total</span>
+                <span className="font-black text-primary">
+                  ${grandTotal.toFixed(2)}
+                </span>
+              </div>
+              <div className="text-right text-xs text-slate-400 mt-2">
+                All prices are in USD
+              </div>
             </div>
+          </div>
         </div>
 
         {/* Footer */}
         <div className="p-8 md:p-12 bg-slate-50 border-t border-slate-100 text-center">
-            <h4 className="font-bold text-slate-900 mb-2">Thank you for booking with SkyHigh Agency!</h4>
-            <p className="text-sm text-slate-500 max-w-2xl mx-auto">
-                Please note that this invoice is computer generated and is valid without a signature. 
-                For any billing inquiries, please contact our support team at support@skyhigh.com or call +1 800 123 4567 within 7 days of receiving this invoice.
-            </p>
+          <h4 className="font-bold text-slate-900 mb-2">
+            Thank you for booking with SkyHigh Agency!
+          </h4>
+          <p className="text-sm text-slate-500 max-w-2xl mx-auto">
+            Please note that this invoice is computer generated and is valid
+            without a signature. For any billing inquiries, please contact our
+            support team at support@skyhigh.com or call +1 800 123 4567 within 7
+            days of receiving this invoice.
+          </p>
         </div>
       </div>
     </div>

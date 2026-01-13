@@ -91,8 +91,13 @@ export default function BookingModal({
 }: BookingModalProps) {
   const [isMealModalOpen, setIsMealModalOpen] = useState(false);
   const [showStopover, setShowStopover] = useState(false);
-  const [searchingTravellerIndex, setSearchingTravellerIndex] = useState<number | null>(null);
-  
+  const [searchingTravellerIndex, setSearchingTravellerIndex] = useState<
+    number | null
+  >(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null
+  );
+
   const [formData, setFormData] = useState<FormData>({
     email: "sarita.p@example.com",
     phone: "+61 412 345 678",
@@ -192,6 +197,9 @@ export default function BookingModal({
           (booking as any).customerId ||
           undefined,
       }));
+      if ((booking as any).customer) {
+        setSelectedCustomer((booking as any).customer as unknown as Customer);
+      }
       if (booking.stopoverLocation) {
         setShowStopover(true);
       }
@@ -209,7 +217,7 @@ export default function BookingModal({
             passportExpiry: "",
             nationality: "Australian",
             dob: "",
-          }
+          },
         ],
         travellerFirstName: "",
         travellerLastName: "",
@@ -301,15 +309,16 @@ export default function BookingModal({
   };
 
   const handleCustomerSelect = (customer: Customer) => {
+    setSelectedCustomer(customer);
     if (searchingTravellerIndex !== null) {
       // Update specific traveller
       setFormData((prev) => {
         const newTravellers = [...prev.travellers];
         if (!newTravellers[searchingTravellerIndex]) {
           newTravellers[searchingTravellerIndex] = {
-             id: Date.now().toString(),
-             firstName: "",
-             lastName: "",
+            id: Date.now().toString(),
+            firstName: "",
+            lastName: "",
           };
         }
         newTravellers[searchingTravellerIndex] = {
@@ -322,9 +331,9 @@ export default function BookingModal({
           nationality: customer.country || "Nepalese",
           customerId: customer.id,
         };
-        
+
         const updates: any = { travellers: newTravellers };
-        
+
         // Sync primary if index 0
         if (searchingTravellerIndex === 0) {
           updates.travellerFirstName = customer.firstName;
@@ -333,14 +342,14 @@ export default function BookingModal({
           updates.passportExpiry = customer.passport?.expiryDate || "";
           updates.dob = customer.dateOfBirth || "";
           updates.nationality = customer.country || "Nepalese";
-          
+
           // Also sync contact info if needed
           updates.email = prev.email || customer.email;
           updates.phone = prev.phone || customer.phone;
           updates.customerid = customer.id?.toString();
           updates.customerType = "existing";
         }
-        
+
         return { ...prev, ...updates };
       });
       setSearchingTravellerIndex(null);
@@ -362,20 +371,22 @@ export default function BookingModal({
       passportNumber: customer.passport?.number || prev.passportNumber,
       passportExpiry: customer.passport?.expiryDate || prev.passportExpiry,
       dob: customer.dateOfBirth || prev.dob,
-      
+
       // Update first traveller in array too
-      travellers: prev.travellers.map((t, i) => 
-        i === 0 ? {
-          ...t,
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          passportNumber: customer.passport?.number || t.passportNumber,
-          passportExpiry: customer.passport?.expiryDate || t.passportExpiry,
-          dob: customer.dateOfBirth || t.dob,
-          nationality: customer.country || t.nationality,
-          customerId: customer.id
-        } : t
-      )
+      travellers: prev.travellers.map((t, i) =>
+        i === 0
+          ? {
+              ...t,
+              firstName: customer.firstName,
+              lastName: customer.lastName,
+              passportNumber: customer.passport?.number || t.passportNumber,
+              passportExpiry: customer.passport?.expiryDate || t.passportExpiry,
+              dob: customer.dateOfBirth || t.dob,
+              nationality: customer.country || t.nationality,
+              customerId: customer.id,
+            }
+          : t
+      ),
     }));
   };
 
@@ -483,6 +494,7 @@ export default function BookingModal({
       stopoverLocation: formData.stopoverLocation,
       customerid: formData.customerid,
       travellers: formData.travellers, // Include travellers array
+      customer: selectedCustomer || undefined, // Add customer snapshot
       // Add custom fields that might not be in Booking interface yet but are in state
       ...({
         customerType: formData.customerType,
@@ -681,7 +693,10 @@ export default function BookingModal({
                     </div>
                     <div className="p-8">
                       {formData.travellers.map((traveller, index) => (
-                        <div key={traveller.id || index} className="mb-8 p-6 bg-slate-50/50 rounded-xl border border-slate-100 relative group">
+                        <div
+                          key={traveller.id || index}
+                          className="mb-8 p-6 bg-slate-50/50 rounded-xl border border-slate-100 relative group"
+                        >
                           <div className="flex justify-between items-center mb-6">
                             <h4 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-sm">
@@ -694,7 +709,9 @@ export default function BookingModal({
                                 type="button"
                                 onClick={() =>
                                   setSearchingTravellerIndex(
-                                    searchingTravellerIndex === index ? null : index
+                                    searchingTravellerIndex === index
+                                      ? null
+                                      : index
                                   )
                                 }
                                 className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1 ${
@@ -749,7 +766,11 @@ export default function BookingModal({
                                   className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium pl-4 uppercase"
                                   value={traveller.firstName}
                                   onChange={(e) =>
-                                    handleTravellerChange(index, "firstName", e.target.value)
+                                    handleTravellerChange(
+                                      index,
+                                      "firstName",
+                                      e.target.value
+                                    )
                                   }
                                   disabled={isReadOnly}
                                   placeholder="Given Name"
@@ -763,7 +784,11 @@ export default function BookingModal({
                                   className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium pl-4 uppercase"
                                   value={traveller.lastName}
                                   onChange={(e) =>
-                                    handleTravellerChange(index, "lastName", e.target.value)
+                                    handleTravellerChange(
+                                      index,
+                                      "lastName",
+                                      e.target.value
+                                    )
                                   }
                                   disabled={isReadOnly}
                                   placeholder="Surname"
@@ -787,7 +812,11 @@ export default function BookingModal({
                                       className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium uppercase"
                                       value={traveller.passportNumber || ""}
                                       onChange={(e) =>
-                                        handleTravellerChange(index, "passportNumber", e.target.value)
+                                        handleTravellerChange(
+                                          index,
+                                          "passportNumber",
+                                          e.target.value
+                                        )
                                       }
                                       disabled={isReadOnly}
                                       placeholder="e.g. A1234567X"
@@ -803,7 +832,11 @@ export default function BookingModal({
                                     type="date"
                                     value={traveller.passportExpiry || ""}
                                     onChange={(e) =>
-                                      handleTravellerChange(index, "passportExpiry", e.target.value)
+                                      handleTravellerChange(
+                                        index,
+                                        "passportExpiry",
+                                        e.target.value
+                                      )
                                     }
                                     disabled={isReadOnly}
                                   />
@@ -818,7 +851,11 @@ export default function BookingModal({
                                     className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
                                     value={traveller.nationality || "Nepalese"}
                                     onChange={(e) =>
-                                      handleTravellerChange(index, "nationality", e.target.value)
+                                      handleTravellerChange(
+                                        index,
+                                        "nationality",
+                                        e.target.value
+                                      )
                                     }
                                     disabled={isReadOnly}
                                   >
@@ -838,7 +875,11 @@ export default function BookingModal({
                                     type="date"
                                     value={traveller.dob || ""}
                                     onChange={(e) =>
-                                      handleTravellerChange(index, "dob", e.target.value)
+                                      handleTravellerChange(
+                                        index,
+                                        "dob",
+                                        e.target.value
+                                      )
                                     }
                                     disabled={isReadOnly}
                                   />
@@ -854,7 +895,9 @@ export default function BookingModal({
                         onClick={addTraveller}
                         className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-primary hover:text-primary hover:bg-blue-50/50 transition-all flex items-center justify-center gap-2"
                       >
-                        <span className="material-symbols-outlined">person_add</span>
+                        <span className="material-symbols-outlined">
+                          person_add
+                        </span>
                         Add Another Traveller
                       </button>
                     </div>

@@ -30,11 +30,11 @@ export default function BookingDetailsPage() {
 
       if (error) {
         // If the error is "PGRST116" (JSON object requested, multiple (or no) rows returned), it means not found
-        if (error.code === 'PGRST116') {
-             // We will handle this in the render
-             setBooking(null);
+        if (error.code === "PGRST116") {
+          // We will handle this in the render
+          setBooking(null);
         } else {
-             throw error;
+          throw error;
         }
       } else {
         setBooking(data);
@@ -60,7 +60,7 @@ export default function BookingDetailsPage() {
   }
 
   if (!booking && !error) {
-     return notFound();
+    return notFound();
   }
 
   if (error) {
@@ -69,8 +69,8 @@ export default function BookingDetailsPage() {
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center gap-3">
           <span className="material-symbols-outlined">error</span>
           <div>
-             <p className="font-bold">Error Loading Booking</p>
-             <p className="text-sm">{error}</p>
+            <p className="font-bold">Error Loading Booking</p>
+            <p className="text-sm">{error}</p>
           </div>
         </div>
         <button
@@ -85,23 +85,26 @@ export default function BookingDetailsPage() {
   }
 
   // Calculate financials
-  const costPrice = Number(booking.buyingPrice) || 710.00;
+  const costPrice = Number(booking.buyingPrice) || 710.0;
   const sellingPrice = Number(booking.sellingPrice) || 836.99;
-  
-  let addonsTotal = 85.00;
+
+  let addonsTotal = 85.0;
   if (booking.prices) {
-    addonsTotal = Object.values(booking.prices).reduce<number>((acc, val) => acc + Number(val), 0);
+    addonsTotal = Object.values(booking.prices).reduce<number>(
+      (acc, val) => acc + Number(val),
+      0
+    );
   }
 
   const grandTotal = sellingPrice + addonsTotal; // Adjust calculation logic as needed based on data model
-  // Note: If sellingPrice is the base, and grandTotal includes add-ons. 
-  // Let's assume Grand Total = Selling Price (Base) + Addons. 
-  // Reference image shows: Cost Price $710, Add-ons $85, Selling Price $836.99 (Base?), Grand Total $795.00? 
+  // Note: If sellingPrice is the base, and grandTotal includes add-ons.
+  // Let's assume Grand Total = Selling Price (Base) + Addons.
+  // Reference image shows: Cost Price $710, Add-ons $85, Selling Price $836.99 (Base?), Grand Total $795.00?
   // Wait, Reference image math: Cost 710, Add-ons 85, Selling 836.99. Grand Total 795.00? That doesn't sum up.
   // Let's stick to the visual layout and display available data.
   // Ideally: Grand Total = Selling Price (which usually includes base + margin).
   // I will use reasonable fallbacks to match the visual structure.
-  
+
   const profitMargin = (grandTotal - costPrice).toFixed(2);
 
   return (
@@ -109,13 +112,23 @@ export default function BookingDetailsPage() {
       {/* Header & Breadcrumbs */}
       <div className="mb-8">
         <nav className="flex text-sm text-slate-500 mb-2">
-          <Link href="/dashboard" className="hover:text-slate-700 transition-colors">Dashboard</Link>
+          <Link
+            href="/dashboard"
+            className="hover:text-slate-700 transition-colors"
+          >
+            Dashboard
+          </Link>
           <span className="mx-2 text-slate-300">/</span>
-          <Link href="/dashboard/booking" className="hover:text-slate-700 transition-colors">Bookings</Link>
+          <Link
+            href="/dashboard/booking"
+            className="hover:text-slate-700 transition-colors"
+          >
+            Bookings
+          </Link>
           <span className="mx-2 text-slate-300">/</span>
           <span className="text-primary font-bold">View</span>
         </nav>
-        
+
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
@@ -130,22 +143,32 @@ export default function BookingDetailsPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <button 
-              onClick={() => router.push(`/dashboard/booking/edit/${bookingId}`)}
+            <button
+              onClick={() =>
+                router.push(`/dashboard/booking/edit/${bookingId}`)
+              }
               className="inline-flex items-center px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
             >
-              <span className="material-symbols-outlined text-[20px] mr-2 text-slate-500">edit</span>
+              <span className="material-symbols-outlined text-[20px] mr-2 text-slate-500">
+                edit
+              </span>
               Edit Details
             </button>
-            <button 
-              onClick={() => router.push(`/dashboard/booking/${bookingId}/invoice`)}
+            <button
+              onClick={() =>
+                router.push(`/dashboard/booking/${bookingId}/invoice`)
+              }
               className="inline-flex items-center px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
             >
-              <span className="material-symbols-outlined text-[20px] mr-2 text-slate-500">receipt_long</span>
+              <span className="material-symbols-outlined text-[20px] mr-2 text-slate-500">
+                receipt_long
+              </span>
               View Invoice
             </button>
             <button className="inline-flex items-center px-4 py-2.5 bg-primary text-white text-sm font-bold rounded-lg shadow-sm hover:bg-blue-600 transition-all active:scale-95">
-              <span className="material-symbols-outlined text-[20px] mr-2">print</span>
+              <span className="material-symbols-outlined text-[20px] mr-2">
+                print
+              </span>
               Print Booking
             </button>
           </div>
@@ -155,12 +178,13 @@ export default function BookingDetailsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content (Left Column) */}
         <div className="lg:col-span-2 space-y-6">
-          
           {/* Customer Contact Details */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-slate-400">contact_mail</span>
+                <span className="material-symbols-outlined text-slate-400">
+                  contact_mail
+                </span>
                 Customer Contact Details
               </h3>
               <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-blue-50 text-primary border border-blue-100">
@@ -170,17 +194,25 @@ export default function BookingDetailsPage() {
             <div className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Email Address</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                    Email Address
+                  </label>
                   <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                    <span className="material-symbols-outlined text-slate-400 text-[18px]">email</span>
-                    {booking.email || "sarita.p@example.com"}
+                    <span className="material-symbols-outlined text-slate-400 text-[18px]">
+                      email
+                    </span>
+                    {booking.customer?.email || booking.email || "N/A"}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Phone Number</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                    Phone Number
+                  </label>
                   <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                    <span className="material-symbols-outlined text-slate-400 text-[18px]">phone</span>
-                    {booking.phone || "+61 412 345 678"}
+                    <span className="material-symbols-outlined text-slate-400 text-[18px]">
+                      phone
+                    </span>
+                    {booking.customer?.phone || booking.phone || "N/A"}
                   </div>
                 </div>
               </div>
@@ -191,7 +223,9 @@ export default function BookingDetailsPage() {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-slate-400">person</span>
+                <span className="material-symbols-outlined text-slate-400">
+                  person
+                </span>
                 Traveller Information
               </h3>
               <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-blue-50 text-primary border border-blue-100">
@@ -332,7 +366,9 @@ export default function BookingDetailsPage() {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-slate-400">flight_takeoff</span>
+                <span className="material-symbols-outlined text-slate-400">
+                  flight_takeoff
+                </span>
                 Route & Trip Details
               </h3>
               <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-slate-100 text-slate-600 border border-slate-200">
@@ -343,43 +379,77 @@ export default function BookingDetailsPage() {
               <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
                 <div className="flex-1 bg-slate-50 rounded-xl p-4 w-full border border-slate-100">
                   <div className="flex items-center gap-2 text-slate-400 mb-2">
-                    <span className="material-symbols-outlined text-[18px]">flight_takeoff</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Origin</span>
+                    <span className="material-symbols-outlined text-[18px]">
+                      flight_takeoff
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">
+                      Origin
+                    </span>
                   </div>
-                  <div className="text-xl font-black text-slate-900">{booking.origin}</div>
-                  <div className="text-sm font-medium text-slate-500 mt-1">Wed, 11 Aug 2021</div>
+                  <div className="text-xl font-black text-slate-900">
+                    {booking.origin}
+                  </div>
+                  <div className="text-sm font-medium text-slate-500 mt-1">
+                    Wed, 11 Aug 2021
+                  </div>
                 </div>
 
                 <div className="flex flex-col items-center justify-center px-4 text-slate-300">
-                  <span className="material-symbols-outlined text-2xl">arrow_forward</span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Direct</span>
+                  <span className="material-symbols-outlined text-2xl">
+                    arrow_forward
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest mt-1">
+                    Direct
+                  </span>
                 </div>
 
                 <div className="flex-1 bg-slate-50 rounded-xl p-4 w-full border border-slate-100">
                   <div className="flex items-center gap-2 text-slate-400 mb-2">
-                    <span className="material-symbols-outlined text-[18px]">flight_land</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Destination</span>
+                    <span className="material-symbols-outlined text-[18px]">
+                      flight_land
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">
+                      Destination
+                    </span>
                   </div>
-                  <div className="text-xl font-black text-slate-900">{booking.destination}</div>
-                  <div className="text-sm font-medium text-slate-500 mt-1">Wed, 11 Aug 2021</div>
+                  <div className="text-xl font-black text-slate-900">
+                    {booking.destination}
+                  </div>
+                  <div className="text-sm font-medium text-slate-500 mt-1">
+                    Wed, 11 Aug 2021
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 py-6 border-t border-b border-slate-100">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Airline</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                    Airline
+                  </label>
                   <div className="flex items-center gap-2">
-                    <span className="size-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">SQ</span>
-                    <p className="text-sm font-bold text-slate-900">{booking.airlines}</p>
+                    <span className="size-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">
+                      SQ
+                    </span>
+                    <p className="text-sm font-bold text-slate-900">
+                      {booking.airlines}
+                    </p>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Flight Number</label>
-                  <p className="text-sm font-bold text-slate-900">{booking.flightNumber || "SQ218"}</p>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                    Flight Number
+                  </label>
+                  <p className="text-sm font-bold text-slate-900">
+                    {booking.flightNumber || "SQ218"}
+                  </p>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Class</label>
-                  <p className="text-sm font-bold text-slate-900">{booking.flightClass || "Economy"}</p>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                    Class
+                  </label>
+                  <p className="text-sm font-bold text-slate-900">
+                    {booking.flightClass || "Economy"}
+                  </p>
                 </div>
               </div>
 
@@ -387,16 +457,24 @@ export default function BookingDetailsPage() {
                 <div className="mt-6">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Stopovers</h4>
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      Stopovers
+                    </h4>
                   </div>
                   <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-4 flex justify-between items-center">
                     <div>
-                      <p className="text-sm font-bold text-slate-900">{booking.stopoverLocation}</p>
+                      <p className="text-sm font-bold text-slate-900">
+                        {booking.stopoverLocation}
+                      </p>
                       <p className="text-xs text-slate-500">Changi Airport</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] text-slate-500"><span className="font-bold">Arr:</span> 11 Aug 2021</p>
-                      <p className="text-[10px] text-slate-500"><span className="font-bold">Dep:</span> 12 Aug 2021</p>
+                      <p className="text-[10px] text-slate-500">
+                        <span className="font-bold">Arr:</span> 11 Aug 2021
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        <span className="font-bold">Dep:</span> 12 Aug 2021
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -408,7 +486,9 @@ export default function BookingDetailsPage() {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-slate-400">extension</span>
+                <span className="material-symbols-outlined text-slate-400">
+                  extension
+                </span>
                 Add-ons & Services
               </h3>
             </div>
@@ -419,73 +499,116 @@ export default function BookingDetailsPage() {
                   <div className="col-span-4">Details</div>
                   <div className="col-span-2 text-right">Price</div>
                 </div>
-                
+
                 {/* Mock Add-ons if none in booking data */}
                 <div className="grid grid-cols-12 text-sm items-center py-2 border-b border-slate-50">
-                  <div className="col-span-6 font-bold text-slate-900">Meals</div>
+                  <div className="col-span-6 font-bold text-slate-900">
+                    Meals
+                  </div>
                   <div className="col-span-4 text-slate-500">Standard Meal</div>
-                  <div className="col-span-2 text-right font-bold text-slate-900">$15.00</div>
+                  <div className="col-span-2 text-right font-bold text-slate-900">
+                    $15.00
+                  </div>
                 </div>
                 <div className="grid grid-cols-12 text-sm items-center py-2 border-b border-slate-50">
-                  <div className="col-span-6 font-bold text-slate-900">Seat Selection</div>
+                  <div className="col-span-6 font-bold text-slate-900">
+                    Seat Selection
+                  </div>
                   <div className="col-span-4 text-slate-500">Seat 12A</div>
-                  <div className="col-span-2 text-right font-bold text-slate-900">$25.00</div>
+                  <div className="col-span-2 text-right font-bold text-slate-900">
+                    $25.00
+                  </div>
                 </div>
                 <div className="grid grid-cols-12 text-sm items-center py-2 border-b border-slate-50">
-                  <div className="col-span-6 font-bold text-slate-900">Extra Luggage</div>
+                  <div className="col-span-6 font-bold text-slate-900">
+                    Extra Luggage
+                  </div>
                   <div className="col-span-4 text-slate-500">20kg Extra</div>
-                  <div className="col-span-2 text-right font-bold text-slate-900">$45.00</div>
+                  <div className="col-span-2 text-right font-bold text-slate-900">
+                    $45.00
+                  </div>
                 </div>
                 <div className="grid grid-cols-12 text-sm items-center py-2">
-                  <div className="col-span-6 font-bold text-slate-900">Frequent Flyer</div>
-                  <div className="col-span-4 text-slate-500">{booking.frequentFlyer || "AA-12345678"}</div>
-                  <div className="col-span-2 text-right font-bold text-slate-900">-</div>
+                  <div className="col-span-6 font-bold text-slate-900">
+                    Frequent Flyer
+                  </div>
+                  <div className="col-span-4 text-slate-500">
+                    {booking.frequentFlyer || "AA-12345678"}
+                  </div>
+                  <div className="col-span-2 text-right font-bold text-slate-900">
+                    -
+                  </div>
                 </div>
 
                 <div className="flex justify-end items-center pt-4 border-t border-slate-100 bg-slate-50/50 -mx-6 -mb-6 p-6 mt-4">
-                  <span className="text-sm font-bold text-slate-900 mr-8">Add-ons Subtotal</span>
-                  <span className="text-lg font-black text-blue-600">${addonsTotal.toFixed(2)}</span>
+                  <span className="text-sm font-bold text-slate-900 mr-8">
+                    Add-ons Subtotal
+                  </span>
+                  <span className="text-lg font-black text-blue-600">
+                    ${addonsTotal.toFixed(2)}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-
         </div>
 
         {/* Sidebar (Right Column) */}
         <div className="space-y-6">
-          
           {/* Booking Details Card */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/30">
-              <h3 className="text-base font-bold text-slate-900">Booking Details</h3>
+              <h3 className="text-base font-bold text-slate-900">
+                Booking Details
+              </h3>
             </div>
             <div className="p-5 space-y-5">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Booking ID</label>
-                <p className="text-sm font-bold text-slate-900">#{booking.id}</p>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                  Booking ID
+                </label>
+                <p className="text-sm font-bold text-slate-900">
+                  #{booking.id}
+                </p>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">PNR Reference</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                  PNR Reference
+                </label>
                 <span className="inline-block px-2 py-0.5 text-xs font-bold bg-slate-100 text-slate-700 rounded border border-slate-200 mt-1">
                   {booking.PNR || "68YKCD"}
                 </span>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Issued Through Agency</label>
-                <p className="text-sm font-bold text-slate-900">{booking.agency || "SkyHigh Agency Ltd."}</p>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                  Issued Through Agency
+                </label>
+                <p className="text-sm font-bold text-slate-900">
+                  {booking.agency || "SkyHigh Agency Ltd."}
+                </p>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Handled By</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                  Handled By
+                </label>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="size-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold">
-                    {booking.handledBy ? booking.handledBy.split(' ').map((n: string) => n[0]).join('') : "JD"}
+                    {booking.handledBy
+                      ? booking.handledBy
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")
+                      : "JD"}
                   </div>
-                  <p className="text-sm font-bold text-slate-900">{booking.handledBy || "John Doe"}</p>
+                  <p className="text-sm font-bold text-slate-900">
+                    {booking.handledBy || "John Doe"}
+                  </p>
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Booking Status</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                  Booking Status
+                </label>
                 <div className="mt-1">
                   <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
                     {booking.status || "Confirmed"}
@@ -503,11 +626,15 @@ export default function BookingDetailsPage() {
             <div className="p-5">
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Currency</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                    Currency
+                  </label>
                   <p className="text-sm font-bold text-slate-900">USD</p>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Payment Status</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                    Payment Status
+                  </label>
                   <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded border border-amber-200">
                     {booking.paymentStatus || "Pending"}
                   </span>
@@ -516,48 +643,73 @@ export default function BookingDetailsPage() {
 
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Payment Method</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                    Payment Method
+                  </label>
                   <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                    <span className="material-symbols-outlined text-slate-400 text-[16px]">credit_card</span>
+                    <span className="material-symbols-outlined text-slate-400 text-[16px]">
+                      credit_card
+                    </span>
                     {booking.paymentMethod || "Credit Card"}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Transaction ID</label>
-                  <p className="text-xs font-bold text-slate-900 break-all">{booking.transactionId || "TXN-12345678-ABCD-90"}</p>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                    Transaction ID
+                  </label>
+                  <p className="text-xs font-bold text-slate-900 break-all">
+                    {booking.transactionId || "TXN-12345678-ABCD-90"}
+                  </p>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Date of Payment</label>
-                  <p className="text-sm font-bold text-slate-900">{booking.dateOfPayment || "10 Aug 2021"}</p>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                    Date of Payment
+                  </label>
+                  <p className="text-sm font-bold text-slate-900">
+                    {booking.dateOfPayment || "10 Aug 2021"}
+                  </p>
                 </div>
               </div>
 
               <div className="border-t border-dashed border-slate-200 py-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500 font-medium">Cost Price</span>
-                  <span className="font-bold text-slate-900">${costPrice.toFixed(2)}</span>
+                  <span className="font-bold text-slate-900">
+                    ${costPrice.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500 font-medium">Add-ons</span>
-                  <span className="font-bold text-slate-900">${addonsTotal.toFixed(2)}</span>
+                  <span className="font-bold text-slate-900">
+                    ${addonsTotal.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 font-medium">Selling Price</span>
-                  <span className="font-bold text-slate-900 line-through decoration-slate-400 decoration-2">${sellingPrice.toFixed(2)}</span>
+                  <span className="text-slate-500 font-medium">
+                    Selling Price
+                  </span>
+                  <span className="font-bold text-slate-900 line-through decoration-slate-400 decoration-2">
+                    ${sellingPrice.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-base pt-2">
                   <span className="font-black text-slate-900">Grand Total</span>
-                  <span className="font-black text-blue-600">${grandTotal.toFixed(2)}</span>
+                  <span className="font-black text-blue-600">
+                    ${grandTotal.toFixed(2)}
+                  </span>
                 </div>
               </div>
 
               <div className="bg-emerald-50 rounded-lg p-3 flex justify-between items-center border border-emerald-100">
-                <span className="text-xs font-bold text-emerald-700">Profit Margin</span>
-                <span className="text-sm font-black text-emerald-700">${profitMargin}</span>
+                <span className="text-xs font-bold text-emerald-700">
+                  Profit Margin
+                </span>
+                <span className="text-sm font-black text-emerald-700">
+                  ${profitMargin}
+                </span>
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </main>
