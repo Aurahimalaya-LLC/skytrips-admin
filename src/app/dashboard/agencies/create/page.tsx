@@ -21,6 +21,7 @@ export default function AgencyCreatePage() {
     postal_code: "",
     country: "",
     iata_code: "",
+    notes: "",
   });
 
   const isValidStep1 = form.agency_name.trim().length > 0 && form.contact_person.trim().length > 0 && form.number.trim().length > 0 && form.agency_name.length <= 100 && form.contact_person.length <= 50;
@@ -217,16 +218,16 @@ export default function AgencyCreatePage() {
             <h2 className="text-xl font-bold text-slate-900">Agency Terms & Conditions</h2>
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">Internal Notes or Custom Terms</label>
-            <textarea 
-              className="w-full h-32 rounded-xl border-slate-200 bg-white p-4 text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium resize-none"
-              placeholder="Enter specific contractual terms, commission rates, or important notes about this partnership..."
-              value={form.iata_code} // Reusing iata_code field for notes based on visual match or just mapping correctly
-              onChange={(e) => setForm({ ...form, iata_code: e.target.value })}
-            ></textarea>
-            <p className="text-xs text-slate-400 mt-2 font-medium">Only visible to administrators and management staff.</p>
-          </div>
+        <div>
+          <label className="block text-sm font-bold text-slate-700 mb-2">Internal Notes or Custom Terms</label>
+          <textarea 
+            className="w-full h-32 rounded-xl border-slate-200 bg-white p-4 text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium resize-none"
+            placeholder="Enter specific contractual terms, commission rates, or important notes about this partnership..."
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          ></textarea>
+          <p className="text-xs text-slate-400 mt-2 font-medium">Only visible to administrators and management staff.</p>
+        </div>
         </div>
 
         {/* Footer Actions */}

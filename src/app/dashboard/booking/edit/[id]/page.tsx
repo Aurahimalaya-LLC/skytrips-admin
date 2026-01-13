@@ -11,6 +11,12 @@ import Link from "next/link";
 import { Customer, Traveller } from "@/types";
 import countryData from "../../../../../../libs/shared-utils/constants/country.json";
 
+type Agency = {
+  uid: string;
+  agency_name: string;
+  status: string;
+};
+
 const toAddressString = (addr: any): string => {
   if (!addr) return "";
   if (typeof addr === "string") return addr;
@@ -76,11 +82,17 @@ interface FormData {
   notes: string; // New field
 }
 
-export default function EditBookingPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EditBookingPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
   const { id } = use(params);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [agenciesLoading, setAgenciesLoading] = useState(false);
   const [isMealModalOpen, setIsMealModalOpen] = useState(false);
   const [showStopover, setShowStopover] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
@@ -114,6 +126,34 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
       } -> ${newId}`
     );
   };
+
+  useEffect(() => {
+    const loadAgencies = async () => {
+      setAgenciesLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: "1",
+          pageSize: "100",
+          q: "",
+          status: "active",
+          sortKey: "agency_name",
+          sortDir: "asc",
+        });
+        const res = await fetch(`/api/agencies?${params.toString()}`);
+        const j = await res.json();
+        if (!res.ok) {
+          console.error("Failed to load agencies", j.error);
+          return;
+        }
+        setAgencies(j.data || []);
+      } catch (e) {
+        console.error("Failed to load agencies", e);
+      } finally {
+        setAgenciesLoading(false);
+      }
+    };
+    loadAgencies();
+  }, []);
 
   const validateForm = () => {
     const errors: { [key: string]: string } = {};
@@ -418,7 +458,10 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
           },
           frequentFlyer: data.frequentFlyer || "",
           pnr: data.PNR || "",
-          agency: data.agency || "SkyHigh Agency Ltd.",
+          agency:
+            data.agency ||
+            (data as any).issuedthroughagency ||
+            "SkyHigh Agency Ltd.",
           handledBy: data.handledBy || "John Doe",
           status: data.status || "Confirmed",
           paymentStatus: data.paymentStatus || "Pending",
@@ -1823,12 +1866,16 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
                     value={formData.agency}
                     onChange={handleChange}
                   >
-                    <option value="SkyHigh Agency Ltd.">
-                      SkyHigh Agency Ltd.
+                    <option value="">
+                      {agenciesLoading
+                        ? "Loading agencies..."
+                        : "Select issuing agency"}
                     </option>
-                    <option value="Global Travels Inc.">
-                      Global Travels Inc.
-                    </option>
+                    {agencies.map((agency) => (
+                      <option key={agency.uid} value={agency.agency_name}>
+                        {agency.agency_name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>

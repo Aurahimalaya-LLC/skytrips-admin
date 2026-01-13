@@ -7,6 +7,12 @@ import CustomerSearch from "@/components/CustomerSearch";
 import countryData from "../../../../libs/shared-utils/constants/country.json";
 import { Booking, Customer, Traveller } from "@/types";
 
+type Agency = {
+  uid: string;
+  agency_name: string;
+  status: string;
+};
+
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -97,6 +103,8 @@ export default function BookingModal({
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [agenciesLoading, setAgenciesLoading] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     email: "sarita.p@example.com",
@@ -151,6 +159,35 @@ export default function BookingModal({
     customerType: "existing",
     contactType: "existing",
   });
+
+  useEffect(() => {
+    const loadAgencies = async () => {
+      setAgenciesLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: "1",
+          pageSize: "100",
+          q: "",
+          status: "active",
+          sortKey: "agency_name",
+          sortDir: "asc",
+        });
+        const res = await fetch(`/api/agencies?${params.toString()}`);
+        const j = await res.json();
+        if (!res.ok) {
+          console.error("Failed to load agencies", j.error);
+          return;
+        }
+        setAgencies(j.data || []);
+      } catch (e) {
+        console.error("Failed to load agencies", e);
+      } finally {
+        setAgenciesLoading(false);
+      }
+    };
+
+    loadAgencies();
+  }, []);
 
   useEffect(() => {
     if (booking) {
@@ -1313,8 +1350,16 @@ export default function BookingModal({
                           onChange={handleChange}
                           disabled={isReadOnly}
                         >
-                          <option>SkyHigh Agency Ltd.</option>
-                          <option>Global Travels Inc.</option>
+                          <option value="">
+                            {agenciesLoading
+                              ? "Loading agencies..."
+                              : "Select issuing agency"}
+                          </option>
+                          {agencies.map((agency) => (
+                            <option key={agency.uid} value={agency.agency_name}>
+                              {agency.agency_name}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div>
