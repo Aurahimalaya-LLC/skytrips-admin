@@ -859,7 +859,7 @@ export default function EditBookingPage({
                           ? {
                               email: selectedCustomer.email || "",
                               phone: selectedCustomer.phone || "",
-                              address: selectedCustomer.address || "",
+                              address: toAddressString(selectedCustomer.address || ""),
                             }
                           : {}),
                       }));
