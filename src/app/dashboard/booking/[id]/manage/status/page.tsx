@@ -1,11 +1,11 @@
 "use client";
-
+import { use } from "react";
 import { useParams } from "next/navigation";
 import { Timeline, TimelineEvent } from "@/components/booking-management/Timeline";
 
-export default function RequestStatusPage() {
-  const params = useParams();
-  const bookingId = params?.id as string || "BK-8842";
+export default function RequestStatusPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const bookingId = id || "BK-8842";
 
   const timelineEvents: TimelineEvent[] = [
     {

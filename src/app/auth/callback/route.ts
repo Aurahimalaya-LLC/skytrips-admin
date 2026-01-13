@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { env } from "@/lib/env";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -7,9 +8,14 @@ export async function GET(request: Request) {
   const origin = requestUrl.origin;
 
   if (code) {
+    if (!env.isValid) {
+      console.error("Missing Supabase configuration");
+      return NextResponse.redirect(`${origin}/?error=config_error`);
+    }
+
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      env.supabase.url,
+      env.supabase.anonKey
     );
 
     try {

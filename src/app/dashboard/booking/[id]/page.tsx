@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter, notFound } from "next/navigation";
+import { useState, useEffect, use } from "react";
+import { useRouter, notFound } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Booking } from "@/types";
 
-export default function BookingDetailsPage() {
-  const params = useParams();
+export default function BookingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
-  const bookingId = params.id as string;
+  const bookingId = id;
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);

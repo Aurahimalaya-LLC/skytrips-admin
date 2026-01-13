@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-// Initialize server-side Supabase client (can use service role if needed, but keeping it simple with standard envs)
-// Ideally, use createServerClient from @supabase/ssr for Auth context, but we'll use standard client for this simplified API wrapper
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { getAdminClient } from "@/lib/supabase-server";
 
 export async function GET(request: NextRequest) {
+  const supabase = getAdminClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Server configuration missing" }, { status: 500 });
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const search = searchParams.get("search");

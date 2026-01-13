@@ -1,15 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
+import { env } from "./env";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!env.isValid) {
   console.error(
     "Missing Supabase environment variables. Please check your .env.local file."
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(
+  env.supabase.url || "https://placeholder.supabase.co",
+  env.supabase.anonKey || "placeholder"
+);
 
 // Helper function to check if user is admin
 export async function isUserAdmin(userId: string): Promise<boolean> {

@@ -307,10 +307,33 @@ export default function DashboardLayout({
             <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Media Management</p>
           </Link>
 
+          {/* Agency */}
+          <Link
+            href="/dashboard/agencies"
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
+              pathname === "/dashboard/agencies"
+                ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
+                : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
+            }`}
+            aria-label="Agency"
+            title="Agency"
+          >
+            <span
+              className={`material-symbols-outlined ${
+                pathname === "/dashboard/agencies"
+                  ? "active-icon"
+                  : "group-hover:text-primary transition-colors"
+              }`}
+            >
+              domain
+            </span>
+            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Agency</p>
+          </Link>
+
           {/* Setting */}
           <Link
             href="/dashboard/settings"
-            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg ${sidebarCollapsed ? "" : "ml-6"} transition-all ${
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname === "/dashboard/settings"
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
                 : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"

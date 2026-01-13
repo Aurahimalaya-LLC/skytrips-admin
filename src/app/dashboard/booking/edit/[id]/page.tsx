@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState, useEffect, use } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
@@ -77,9 +77,9 @@ interface FormData {
   notes: string; // New field
 }
 
-export default function EditBookingPage() {
+export default function EditBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const { id } = useParams();
+  const { id } = use(params);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isMealModalOpen, setIsMealModalOpen] = useState(false);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Booking } from "@/types";
+import { Booking, ManageBooking } from "@/types";
 import { useRouter } from "next/navigation";
 
 export default function ManageBookingPage() {
@@ -17,12 +17,37 @@ export default function ManageBookingPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isContentVisible, setIsContentVisible] = useState(false);
+  const [manageRows, setManageRows] = useState<ManageBooking[]>([]);
+  const [manageLoading, setManageLoading] = useState(false);
+  const [manageError, setManageError] = useState<string | null>(null);
 
   const [actionStates, setActionStates] = useState<Record<string, 'select_booking' | 'cancel_booking'>>({});
 
   useEffect(() => {
     if (isContentVisible) {
       fetchBookings();
+      fetchManageRows();
+      const channel = supabase
+        .channel("manage-booking")
+        .on("postgres_changes", { event: "*", schema: "public", table: "manage_booking" }, (payload) => {
+          setManageRows((prev) => {
+            const next = [...prev];
+            if (payload.eventType === "INSERT") {
+              next.unshift(payload.new as ManageBooking);
+            } else if (payload.eventType === "UPDATE") {
+              const idx = next.findIndex((r) => r.uid === (payload.new as ManageBooking).uid);
+              if (idx >= 0) next[idx] = payload.new as ManageBooking;
+            } else if (payload.eventType === "DELETE") {
+              const idx = next.findIndex((r) => r.uid === (payload.old as ManageBooking).uid);
+              if (idx >= 0) next.splice(idx, 1);
+            }
+            return next;
+          });
+        })
+        .subscribe();
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [isContentVisible]);
 
@@ -56,6 +81,30 @@ export default function ManageBookingPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchManageRows = async () => {
+    setManageLoading(true);
+    setManageError(null);
+    try {
+      const { data, error } = await supabase
+        .from("manage_booking")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setManageRows((data as ManageBooking[]) || []);
+    } catch (err: unknown) {
+      console.error("Manage rows fetch error:", err);
+      const msg = err instanceof Error ? err.message : "Failed to load manage booking rows";
+      setManageError(msg);
+    } finally {
+      setManageLoading(false);
+    }
+  };
+
+  const maskUid = (uid: string) => {
+    if (!uid || uid.length <= 8) return uid;
+    return `${uid.slice(0, 4)}••••••${uid.slice(-4)}`;
   };
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -189,6 +238,51 @@ export default function ManageBookingPage() {
           </div>
         </div>
       )}
+
+      {/* Manage Booking Table */}
+      <div className="mt-6 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900">Manage Booking Records</h2>
+          {manageLoading && (
+            <div className="flex items-center gap-2 text-slate-500">
+              <span className="size-4 border-2 border-slate-300 border-t-primary rounded-full animate-spin"></span>
+              Loading…
+            </div>
+          )}
+        </div>
+        {manageError && (
+          <div className="px-6 py-4 bg-red-50 text-red-700 border-b border-red-200">
+            {manageError}
+          </div>
+        )}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-4">Booking ID</th>
+                <th className="px-6 py-4">UID</th>
+                <th className="px-6 py-4">Created</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {manageRows.map((row) => (
+                <tr key={row.uid} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-6 py-3 font-mono text-primary">#{row.booking_id}</td>
+                  <td className="px-6 py-3 text-slate-700">{maskUid(row.uid)}</td>
+                  <td className="px-6 py-3 text-slate-600">{new Date(row.created_at).toLocaleString()}</td>
+                </tr>
+              ))}
+              {!manageLoading && manageRows.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-6 py-6 text-center text-slate-500">
+                    No manage booking records yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Results Section Container */}
       <div

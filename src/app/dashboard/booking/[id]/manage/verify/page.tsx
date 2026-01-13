@@ -1,12 +1,12 @@
 "use client";
-
+import { use } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { FinancialCard } from "@/components/booking-management/FinancialCard";
 
-export default function VerificationPage() {
+export default function VerificationPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const params = useParams();
-  const bookingId = params?.id as string || "BK-8842";
+  const { id } = use(params);
+  const bookingId = id || "BK-8842";
 
   return (
     <div className="max-w-7xl mx-auto w-full font-display pb-12">

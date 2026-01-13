@@ -566,7 +566,11 @@ export default function BookingPage() {
                             </span>
                           </button>
                         </div>
-                        <BookingRowMenu bookingId={booking.id} onRefund={() => router.push(`/dashboard/booking/${booking.id}/manage/status?action=refund`)} onReissue={() => router.push(`/dashboard/booking/${booking.id}/manage/status?action=reissue`)} />
+                        <BookingRowMenu
+                          booking={booking}
+                          onRefund={() => router.push(`/dashboard/booking/${booking.id}/manage/status?action=refund`)}
+                          onReissue={() => router.push(`/dashboard/booking/${booking.id}/manage/status?action=reissue`)}
+                        />
                       </div>
                     </td>
                   </tr>

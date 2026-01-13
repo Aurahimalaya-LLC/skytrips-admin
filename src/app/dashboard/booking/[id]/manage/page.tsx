@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState, use } from "react";
+import { useRouter } from "next/navigation";
 import { FlightHeader } from "@/components/booking-management/FlightHeader";
 
-export default function ManagementActionPage() {
+export default function ManagementActionPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const params = useParams();
-  const bookingId = params?.id as string || "BK-8842";
+  const { id } = use(params);
+  const bookingId = id || "BK-8842";
 
   const [formData, setFormData] = useState({
     requestedBy: "Alex Morgan",
