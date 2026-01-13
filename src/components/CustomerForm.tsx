@@ -60,7 +60,7 @@ export default function CustomerForm({ isOpen, onClose, onSuccess, customerToEdi
         dateOfBirth: customerToEdit.dateOfBirth || "",
         gender: customerToEdit.gender || "",
         country: customerToEdit.country || "",
-        isActive: customerToEdit.isActive || "true",
+        isActive: customerToEdit.isActive !== undefined ? String(customerToEdit.isActive) : "true",
         userType: customerToEdit.userType || "Traveler",
         address: {
           street: address.street || "",

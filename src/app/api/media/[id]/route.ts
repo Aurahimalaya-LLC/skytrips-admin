@@ -41,6 +41,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const supabase = getAdminClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Server configuration missing" }, { status: 500 });
+  }
   const mediaId = (await params).id;
 
   try {
