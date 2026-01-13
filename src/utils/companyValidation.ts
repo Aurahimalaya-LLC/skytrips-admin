@@ -53,10 +53,13 @@ export const standardizePhoneNumber = (value: string, country: CountryCode = 'US
 
 export const validatePhone = (value: string, country: CountryCode = 'US'): boolean => {
     try {
-        return isValidPhoneNumber(value, country);
+        if (isValidPhoneNumber(value, country)) return true;
     } catch (e) {
-        return false;
+        // ignore
     }
+    // Fallback: Allow basic phone formats if strict validation fails
+    // At least 3 characters, allowing numbers, spaces, dashes, plus, parentheses
+    return /^[0-9+\-\s()]{3,}$/.test(value);
 };
 
 // --- Migration Utility ---

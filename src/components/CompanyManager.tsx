@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { CompanyProfile, CompanyFormData, ContactMethod, PhoneNumber } from "@/types/company";
-import { validateAddress, validatePhone, standardizePhoneNumber, migrateLegacyAddress } from "@/utils/companyValidation";
+import { validateAddress, validatePhone } from "@/utils/companyValidation";
 
 // --- Components ---
 
@@ -23,6 +23,7 @@ const ContactList = ({ items, icon }: { items: (ContactMethod | PhoneNumber)[]; 
 export default function CompanyManager() {
   // State
   const [companies, setCompanies] = useState<CompanyProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -42,84 +43,114 @@ export default function CompanyManager() {
   const [formData, setFormData] = useState<CompanyFormData>(initialFormState);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Load from LocalStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("company_profiles");
-    if (saved) {
-      let loadedData = JSON.parse(saved);
-      // Migration Logic (Simple check for legacy structure)
-      if (loadedData.length > 0 && 'zipCode' in loadedData[0].address) {
-          console.log("Migrating legacy data...");
-          loadedData = loadedData.map((c: any) => ({
-              ...c,
-              address: migrateLegacyAddress(c.address),
-              phones: c.phones.map((p: any) => ({
-                  ...p,
-                  standardizedValue: p.value, // Fallback
-                  countryCode: 'US'
-              }))
-          }));
-          localStorage.setItem("company_profiles", JSON.stringify(loadedData));
+  // Fetch Companies
+  const fetchCompanies = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // Fetch ALL companies (active + deleted) so we can toggle views client-side
+      const res = await fetch(`/api/companies?showDeleted=true`);
+      if (res.ok) {
+        const data = await res.json();
+        setCompanies(data);
+      } else {
+        console.error("Failed to fetch companies");
       }
-      setCompanies(loadedData);
-    } else {
-        // Seed initial data if empty
-        const initialData: CompanyProfile[] = [
-            {
-                id: '1',
-                name: 'Acme Corp',
-                address: { street: '123 Tech Blvd', city: 'San Francisco', state: 'CA', postalCode: '94105', country: 'USA' },
-                emails: [{ id: '1', label: 'Support', value: 'support@acme.com' }],
-                phones: [{ id: '1', label: 'Main', value: '+1 (555) 012-3456', standardizedValue: '+15550123456', countryCode: 'US' }],
-                website: 'https://acme.com',
-                isHeadquarters: true,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            }
-        ];
-        setCompanies(initialData);
-        localStorage.setItem("company_profiles", JSON.stringify(initialData));
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  // Save to LocalStorage
   useEffect(() => {
-    localStorage.setItem("company_profiles", JSON.stringify(companies));
-  }, [companies]);
+    fetchCompanies();
+  }, [fetchCompanies]);
 
   // --- Actions ---
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) return;
 
-    if (editingId) {
-      setCompanies(prev => prev.map(c => c.id === editingId ? { ...c, ...formData, updatedAt: new Date().toISOString() } : c));
-    } else {
-      const newCompany: CompanyProfile = {
-        ...formData,
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setCompanies(prev => [...prev, newCompany]);
-    }
-    closeModal();
-  };
+    try {
+      if (editingId) {
+        const res = await fetch(`/api/companies/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        
+        if (res.ok) {
+          const updated = await res.json();
+          setCompanies(prev => prev.map(c => c.id === editingId ? updated : c));
+          closeModal();
+        } else {
+          alert("Failed to update company");
+        }
+      } else {
+        const res = await fetch('/api/companies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
 
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this profile?")) {
-        setCompanies(prev => prev.map(c => c.id === id ? { ...c, deletedAt: new Date().toISOString() } : c));
-    }
-  };
-
-  const handleRestore = (id: string) => {
-      setCompanies(prev => prev.map(c => c.id === id ? { ...c, deletedAt: undefined } : c));
-  };
-
-  const handleHardDelete = (id: string) => {
-      if (confirm("This will permanently remove the data. Continue?")) {
-        setCompanies(prev => prev.filter(c => c.id !== id));
+        if (res.ok) {
+          const created = await res.json();
+          setCompanies(prev => [created, ...prev]);
+          closeModal();
+        } else {
+          alert("Failed to create company");
+        }
       }
+    } catch (error) {
+      console.error("Error saving company:", error);
+      alert("An error occurred while saving");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to delete this profile?")) {
+      try {
+        const res = await fetch(`/api/companies/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          // Optimistic update or refetch
+          setCompanies(prev => prev.filter(c => c.id !== id)); 
+          // Note: If we are in "Active" view, removing it is correct.
+          // If we want to move it to trash, we might need to re-fetch if we are showing mixed.
+          // But currently handleDelete is soft delete.
+          fetchCompanies();
+        }
+      } catch (error) {
+        console.error("Error deleting company:", error);
+      }
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      const res = await fetch(`/api/companies/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deletedAt: null }),
+      });
+      if (res.ok) {
+        fetchCompanies();
+      }
+    } catch (error) {
+      console.error("Error restoring company:", error);
+    }
+  };
+
+  const handleHardDelete = async (id: string) => {
+    if (confirm("This will permanently remove the data. Continue?")) {
+      try {
+        const res = await fetch(`/api/companies/${id}?hard=true`, { method: 'DELETE' });
+        if (res.ok) {
+          setCompanies(prev => prev.filter(c => c.id !== id));
+        }
+      } catch (error) {
+        console.error("Error permanently deleting company:", error);
+      }
+    }
   };
 
   const validateForm = () => {
@@ -127,7 +158,8 @@ export default function CompanyManager() {
     if (!formData.name.trim()) errors.name = "Company name is required";
     if (formData.name.length > 100) errors.name = "Company name too long";
     
-    // Check duplicates
+    // Check duplicates (Client-side check on currently loaded companies)
+    // Note: This might need to be server-side if not all companies are loaded
     const isDuplicate = companies.some(c => c.name.toLowerCase() === formData.name.toLowerCase() && c.id !== editingId && !c.deletedAt);
     if (isDuplicate) errors.name = "Company name already exists";
 
@@ -222,6 +254,14 @@ export default function CompanyManager() {
   const handleSort = (key: any) => {
       setSortConfig(curr => ({ key, direction: curr.key === key && curr.direction === 'asc' ? 'desc' : 'asc' }));
   };
+
+  if (isLoading && companies.length === 0) {
+      return (
+          <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+      );
+  }
 
   return (
     <div className="space-y-6">
@@ -575,16 +615,19 @@ export default function CompanyManager() {
                                         }}
                                         placeholder="Label"
                                     />
-                                    <input 
-                                        className="flex-1 h-9 px-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary/20 text-sm"
-                                        value={phone.value}
-                                        onChange={e => {
-                                            const newPhones = [...formData.phones];
-                                            newPhones[idx].value = e.target.value;
-                                            setFormData(prev => ({ ...prev, phones: newPhones }));
-                                        }}
-                                        placeholder="Phone Number"
-                                    />
+                                    <div className="flex-1 relative">
+                                        <input 
+                                            className={`w-full h-9 px-3 rounded-lg border ${formErrors[`phone_${idx}`] ? 'border-red-300' : 'border-slate-200'} focus:ring-2 focus:ring-primary/20 text-sm`}
+                                            value={phone.value}
+                                            onChange={e => {
+                                                const newPhones = [...formData.phones];
+                                                newPhones[idx].value = e.target.value;
+                                                setFormData(prev => ({ ...prev, phones: newPhones }));
+                                            }}
+                                            placeholder="Phone Number"
+                                        />
+                                        {formErrors[`phone_${idx}`] && <span className="absolute right-2 top-2.5 text-red-500 material-symbols-outlined text-[16px]" title={formErrors[`phone_${idx}`]}>error</span>}
+                                    </div>
                                      <button 
                                         onClick={() => setFormData(prev => ({ ...prev, phones: prev.phones.filter((_, i) => i !== idx) }))}
                                         className="p-2 text-slate-400 hover:text-red-500 transition-colors"
