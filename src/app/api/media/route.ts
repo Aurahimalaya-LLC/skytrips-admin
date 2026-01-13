@@ -48,6 +48,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   // Note: File uploads are typically better handled client-side with Supabase Storage to avoid server limits,
   // but we can implement metadata creation here.
+  const supabase = getAdminClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Server configuration missing" }, { status: 500 });
+  }
+
   try {
     const body = await request.json();
     const { title, file_path, mime_type, file_size, uploaded_by } = body;
