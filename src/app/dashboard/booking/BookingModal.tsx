@@ -229,6 +229,7 @@ export default function BookingModal({
         addons: (booking as any).addons || prev.addons,
         prices: (booking as any).prices || prev.prices,
         stopoverLocation: booking.stopoverLocation || "",
+        agency: (booking as any).issuedthroughagency || booking.agency || "N/A",
         customerid:
           (booking as any).customerid ||
           (booking as any).customerId ||

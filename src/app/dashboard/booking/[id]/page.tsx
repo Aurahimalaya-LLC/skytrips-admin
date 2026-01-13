@@ -6,7 +6,11 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Booking } from "@/types";
 
-export default function BookingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function BookingDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const router = useRouter();
   const bookingId = id;
@@ -584,7 +588,9 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
                   Issued Through Agency
                 </label>
                 <p className="text-sm font-bold text-slate-900">
-                  {booking.agency || "SkyHigh Agency Ltd."}
+                  {(booking as any).issuedthroughagency ||
+                    booking.agency ||
+                    "SkyHigh Agency Ltd."}
                 </p>
               </div>
               <div>

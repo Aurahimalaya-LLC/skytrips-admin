@@ -5,7 +5,11 @@ import { useRouter, notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Booking } from "@/types";
 
-export default function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
+export default function InvoicePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const router = useRouter();
   const bookingId = id;
@@ -179,7 +183,9 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
               </div>
               <div>
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                  SkyHigh Agency
+                  {(booking as any).issuedthroughagency ||
+                    booking.agency ||
+                    "SkyHigh Agency"}
                 </h1>
                 <p className="text-sm text-slate-500 font-medium">
                   Your Trusted Travel Partner
@@ -204,7 +210,11 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
               Company Information
             </h3>
             <address className="not-italic text-sm text-slate-600 space-y-1">
-              <p className="font-bold text-slate-900">SkyHigh Agency Ltd.</p>
+              <p className="font-bold text-slate-900">
+                {(booking as any).issuedthroughagency ||
+                  booking.agency ||
+                  "SkyHigh Agency Ltd."}
+              </p>
               <p>123 Sky Tower, Aviation Street</p>
               <p>Singapore, 018956</p>
               <p>Tax ID: SG-99887766</p>
@@ -392,7 +402,11 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
         {/* Footer */}
         <div className="p-8 md:p-12 bg-slate-50 border-t border-slate-100 text-center">
           <h4 className="font-bold text-slate-900 mb-2">
-            Thank you for booking with SkyHigh Agency!
+            Thank you for booking with{" "}
+            {(booking as any).issuedthroughagency ||
+              booking.agency ||
+              "SkyHigh Agency"}
+            !
           </h4>
           <p className="text-sm text-slate-500 max-w-2xl mx-auto">
             Please note that this invoice is computer generated and is valid

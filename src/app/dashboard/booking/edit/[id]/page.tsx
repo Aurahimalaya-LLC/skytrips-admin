@@ -459,8 +459,8 @@ export default function EditBookingPage({
           frequentFlyer: data.frequentFlyer || "",
           pnr: data.PNR || "",
           agency:
-            data.agency ||
             (data as any).issuedthroughagency ||
+            data.agency ||
             "SkyHigh Agency Ltd.",
           handledBy: data.handledBy || "John Doe",
           status: data.status || "Confirmed",
