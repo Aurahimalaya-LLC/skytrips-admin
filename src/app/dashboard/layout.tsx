@@ -311,7 +311,7 @@ export default function DashboardLayout({
           <Link
             href="/dashboard/agencies"
             className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
-              pathname === "/dashboard/agencies"
+              pathname.startsWith("/dashboard/agencies")
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
                 : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
             }`}
@@ -320,7 +320,7 @@ export default function DashboardLayout({
           >
             <span
               className={`material-symbols-outlined ${
-                pathname === "/dashboard/agencies"
+                pathname.startsWith("/dashboard/agencies")
                   ? "active-icon"
                   : "group-hover:text-primary transition-colors"
               }`}
@@ -328,6 +328,29 @@ export default function DashboardLayout({
               domain
             </span>
             <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Agency</p>
+          </Link>
+
+          {/* User Management */}
+          <Link
+            href="/dashboard/users"
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
+              pathname.startsWith("/dashboard/users")
+                ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
+                : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
+            }`}
+            aria-label="Users"
+            title="Users"
+          >
+            <span
+              className={`material-symbols-outlined ${
+                pathname.startsWith("/dashboard/users")
+                  ? "active-icon"
+                  : "group-hover:text-primary transition-colors"
+              }`}
+            >
+              group
+            </span>
+            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Users</p>
           </Link>
 
           {/* Setting */}
