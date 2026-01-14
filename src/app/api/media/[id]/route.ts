@@ -1,64 +1,81 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getAdminClient } from "@/lib/supabase-server";
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { env } from "@/lib/env";
 
 export async function PUT(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = getAdminClient();
-  if (!supabase) {
-    return NextResponse.json({ error: "Server configuration missing" }, { status: 500 });
-  }
-  const mediaId = (await params).id;
-
   try {
+    const id = (await params).id;
     const body = await request.json();
-    const { title, alt_text, caption, description } = body;
 
-    const { data, error } = await supabase
+    const supabaseAdmin = createClient(
+      env.supabase.url,
+      env.supabase.serviceRoleKey || env.supabase.anonKey
+    );
+
+    const { data, error } = await supabaseAdmin
       .from("media")
-      .update({
-        title,
-        alt_text,
-        caption,
-        description,
-      })
-      .eq("media_id", mediaId)
+      .update(body)
+      .eq("media_id", id)
       .select()
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      throw error;
     }
 
-    return NextResponse.json({ data });
-  } catch (error) {
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(data);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
   }
 }
 
 export async function DELETE(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = getAdminClient();
-  if (!supabase) {
-    return NextResponse.json({ error: "Server configuration missing" }, { status: 500 });
-  }
-  const mediaId = (await params).id;
-
   try {
-    const { error } = await supabase
+    const id = (await params).id;
+    const { searchParams } = new URL(request.url);
+    const filePath = searchParams.get("path");
+
+    const supabaseAdmin = createClient(
+      env.supabase.url,
+      env.supabase.serviceRoleKey || env.supabase.anonKey
+    );
+
+    // 1. Delete from Storage (if path provided)
+    if (filePath) {
+      const { error: storageError } = await supabaseAdmin.storage
+        .from("media")
+        .remove([filePath]);
+      
+      if (storageError) {
+        console.warn("Storage delete failed:", storageError);
+        // Continue to delete from DB
+      }
+    }
+
+    // 2. Delete from DB
+    const { error } = await supabaseAdmin
       .from("media")
       .delete()
-      .eq("media_id", mediaId);
+      .eq("media_id", id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      throw error;
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
   }
 }

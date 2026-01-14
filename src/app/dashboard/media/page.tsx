@@ -15,7 +15,9 @@ export default function MediaPage() {
     type: "all",
     category: "all",
   });
-  const [connectionStatus, setConnectionStatus] = useState<"checking" | "connected" | "mock">("checking");
+  const [connectionStatus, setConnectionStatus] = useState<
+    "checking" | "connected" | "mock"
+  >("checking");
 
   useEffect(() => {
     fetchFiles();
@@ -28,11 +30,11 @@ export default function MediaPage() {
       setFiles(data);
       // Determine status based on whether mock data was returned
       // A simple heuristic is to check if mediaService.useMockData is true, but it's private.
-      // We can infer or just assume "connected" if we got here without throwing, 
+      // We can infer or just assume "connected" if we got here without throwing,
       // but mediaService handles fallback internally.
       // Let's add a visual indicator if we are in mock mode?
       // For now, assume connected if successful.
-      setConnectionStatus("connected"); 
+      setConnectionStatus("connected");
     } catch (err) {
       console.error("Unexpected error:", err);
       setConnectionStatus("mock");
@@ -59,25 +61,29 @@ export default function MediaPage() {
   const handleUpdate = async (fileId: string, updates: Partial<MediaFile>) => {
     const updatedFile = await mediaService.updateFile(fileId, updates);
     if (updatedFile) {
-      setFiles((prev) => prev.map((f) => (f.media_id === fileId ? updatedFile : f)));
+      setFiles((prev) =>
+        prev.map((f) => (f.media_id === fileId ? updatedFile : f))
+      );
     } else {
       throw new Error("Failed to update file");
     }
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto flex flex-col gap-6 p-6 h-full">
+    <div className="max-w-[1200px] mx-auto flex flex-col gap-6 p-6 h-full mb-20">
       <div className="flex justify-between items-center">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
               Media Management
             </h1>
-            <div className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
-              connectionStatus === "connected" 
-                ? "bg-green-50 text-green-700 border-green-200" 
-                : "bg-amber-50 text-amber-700 border-amber-200"
-            }`}>
+            <div
+              className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                connectionStatus === "connected"
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : "bg-amber-50 text-amber-700 border-amber-200"
+              }`}
+            >
               {connectionStatus === "connected" ? "Connected" : "Offline Mode"}
             </div>
           </div>
@@ -112,7 +118,10 @@ export default function MediaPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full overflow-hidden">
         {/* Sidebar / Uploader */}
         <div className="lg:col-span-1 flex flex-col gap-6">
-          <MediaUploader onUploadSuccess={handleUploadSuccess} />
+          <MediaUploader
+            onUploadSuccess={handleUploadSuccess}
+            onUploadComplete={() => fetchFiles()}
+          />
           <MediaFilter filters={filters} setFilters={setFilters} />
         </div>
 
