@@ -7,9 +7,12 @@ interface InviteUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onInvite: (data: any) => Promise<void>;
+  initialData?: { id?: string; fullName?: string; email?: string; role?: Role };
+  title?: string;
+  submitLabel?: string;
 }
 
-export function InviteUserModal({ isOpen, onClose, onInvite }: InviteUserModalProps) {
+export function InviteUserModal({ isOpen, onClose, onInvite, initialData, title, submitLabel }: InviteUserModalProps) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [selectedRole, setSelectedRole] = useState<Role>("super_admin");
@@ -26,14 +29,20 @@ export function InviteUserModal({ isOpen, onClose, onInvite }: InviteUserModalPr
     return () => window.removeEventListener("keydown", handleEscape);
   }, [isOpen, onClose]);
 
-  // Focus trap could be implemented here, but simple return focus is requested
+  useEffect(() => {
+    if (isOpen) {
+      setFullName(initialData?.fullName || "");
+      setEmail(initialData?.email || "");
+      setSelectedRole(initialData?.role || "super_admin");
+    }
+  }, [isOpen, initialData]);
   
   if (!isOpen) return null;
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await onInvite({ fullName, email, role: selectedRole, mfaEnabled });
+      await onInvite({ id: initialData?.id, fullName, email, role: selectedRole, mfaEnabled });
       onClose();
     } catch (error) {
       console.error(error);
@@ -62,7 +71,7 @@ export function InviteUserModal({ isOpen, onClose, onInvite }: InviteUserModalPr
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-8 py-6">
           <h2 id="modal-title" className="text-xl font-bold text-slate-900">
-            Invite New User
+            {title || "Invite New User"}
           </h2>
           <button
             onClick={onClose}
@@ -219,7 +228,7 @@ export function InviteUserModal({ isOpen, onClose, onInvite }: InviteUserModalPr
           </div>
 
           {/* MFA Toggle */}
-          <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+          {/* <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-4">
             <div className="flex items-center gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm text-teal-700">
                 <span className="material-symbols-outlined">verified_user</span>
@@ -244,7 +253,7 @@ export function InviteUserModal({ isOpen, onClose, onInvite }: InviteUserModalPr
                 }`}
               />
             </button>
-          </div>
+          </div> */}
         </div>
 
         {/* Footer */}
@@ -260,7 +269,7 @@ export function InviteUserModal({ isOpen, onClose, onInvite }: InviteUserModalPr
             disabled={isSubmitting}
             className="rounded-lg bg-teal-700 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-teal-800 disabled:opacity-50 transition-all"
           >
-            {isSubmitting ? "Sending..." : "Send Invitation"}
+            {isSubmitting ? "Saving..." : (submitLabel || "Send Invitation")}
           </button>
         </div>
       </div>
