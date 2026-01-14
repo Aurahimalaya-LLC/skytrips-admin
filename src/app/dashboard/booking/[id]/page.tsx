@@ -169,11 +169,16 @@ export default function BookingDetailsPage({
               </span>
               View Invoice
             </button>
-            <button className="inline-flex items-center px-4 py-2.5 bg-primary text-white text-sm font-bold rounded-lg shadow-sm hover:bg-blue-600 transition-all active:scale-95">
-              <span className="material-symbols-outlined text-[20px] mr-2">
-                print
+            <button
+              onClick={() =>
+                router.push(`/dashboard/booking/${bookingId}/eticket`)
+              }
+              className="inline-flex items-center px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[20px] mr-2 text-slate-500">
+                airplane_ticket
               </span>
-              Print Booking
+              View E-Ticket
             </button>
           </div>
         </div>
