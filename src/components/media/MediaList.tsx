@@ -10,15 +10,25 @@ interface MediaListProps {
   files: MediaFile[];
   loading: boolean;
   viewMode: "grid" | "list";
-  onDelete: (id: string, path: string) => void;
-  onUpdate: (id: string, updates: Partial<MediaFile>) => Promise<void>;
+  onDelete?: (id: string, path: string) => void;
+  onUpdate?: (id: string, updates: Partial<MediaFile>) => Promise<void>;
+  onSelect?: (file: MediaFile) => void;
+  selectionMode?: boolean;
 }
 
-export function MediaList({ files, loading, viewMode, onDelete, onUpdate }: MediaListProps) {
+export function MediaList({ files, loading, viewMode, onDelete, onUpdate, onSelect, selectionMode = false }: MediaListProps) {
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [editingFile, setEditingFile] = useState<MediaFile | null>(null);
 
   const selectedFile = selectedFileId ? files.find((f) => f.media_id === selectedFileId) || null : null;
+
+  const handleFileClick = (file: MediaFile) => {
+    if (selectionMode && onSelect) {
+      onSelect(file);
+    } else {
+      setSelectedFileId(file.media_id);
+    }
+  };
 
   if (loading) {
     return (
@@ -62,7 +72,7 @@ export function MediaList({ files, loading, viewMode, onDelete, onUpdate }: Medi
               {/* Thumbnail */}
               <div
                 className="aspect-square cursor-pointer"
-                onClick={() => setSelectedFileId(file.media_id)}
+                onClick={() => handleFileClick(file)}
               >
                 <MediaThumbnail file={file} />
               </div>
@@ -74,25 +84,27 @@ export function MediaList({ files, loading, viewMode, onDelete, onUpdate }: Medi
                 </p>
                 <div className="flex justify-between items-center mt-1">
                   <span className="text-xs text-slate-500">{formatSize(file.file_size)}</span>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={(e) => handleEditClick(e, file)}
-                      className="text-slate-400 hover:text-primary transition-colors p-1"
-                      title="Edit Details"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">edit</span>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(file.media_id, file.file_path);
-                      }}
-                      className="text-slate-400 hover:text-red-500 transition-colors p-1"
-                      title="Delete"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">delete</span>
-                    </button>
-                  </div>
+                  {!selectionMode && (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={(e) => handleEditClick(e, file)}
+                        className="text-slate-400 hover:text-primary transition-colors p-1"
+                        title="Edit Details"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete?.(file.media_id, file.file_path);
+                        }}
+                        className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                        title="Delete"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -123,7 +135,7 @@ export function MediaList({ files, loading, viewMode, onDelete, onUpdate }: Medi
                       </div>
                       <span
                         className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate max-w-[200px] cursor-pointer hover:underline"
-                        onClick={() => setSelectedFileId(file.media_id)}
+                        onClick={() => handleFileClick(file)}
                       >
                         {file.title}
                       </span>
@@ -135,22 +147,24 @@ export function MediaList({ files, loading, viewMode, onDelete, onUpdate }: Medi
                     {new Date(file.created_at).toLocaleDateString()}
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <div className="flex justify-end gap-1">
-                      <button
-                        onClick={(e) => handleEditClick(e, file)}
-                        className="text-slate-400 hover:text-primary transition-colors p-1"
-                        title="Edit Details"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">edit</span>
-                      </button>
-                      <button
-                        onClick={() => onDelete(file.media_id, file.file_path)}
-                        className="text-slate-400 hover:text-red-500 transition-colors p-1"
-                        title="Delete"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
-                      </button>
-                    </div>
+                    {!selectionMode && (
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={(e) => handleEditClick(e, file)}
+                          className="text-slate-400 hover:text-primary transition-colors p-1"
+                          title="Edit Details"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">edit</span>
+                        </button>
+                        <button
+                          onClick={() => onDelete?.(file.media_id, file.file_path)}
+                          className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                          title="Delete"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

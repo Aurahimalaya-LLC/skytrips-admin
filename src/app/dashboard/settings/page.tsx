@@ -3,13 +3,15 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import CompanyManager from "@/components/CompanyManager";
+import { MediaSelectorModal } from "@/components/media/MediaSelectorModal";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("company");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-
+  const [isLogoSelectorOpen, setIsLogoSelectorOpen] = useState(false);
+  
   // Settings State
   const [settings, setSettings] = useState({
     companyName: "Curent",
@@ -26,18 +28,6 @@ export default function SettingsPage() {
     // In a real app, fetch settings from DB
     // fetchSettings();
   }, []);
-
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Create preview
-    const objectUrl = URL.createObjectURL(file);
-    setLogoPreview(objectUrl);
-
-    // In a real app, upload to Supabase Storage
-    // const { data, error } = await supabase.storage.from('logos').upload(...)
-  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -130,28 +120,16 @@ export default function SettingsPage() {
                     )}
                   </div>
 
-                  {/* Upload Area */}
-                  <div className="border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center p-6 hover:bg-muted/50 transition-colors cursor-pointer relative">
-                    <input
-                      type="file"
-                      accept="image/png, image/jpeg, image/gif"
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                      onChange={handleLogoUpload}
-                    />
+                  {/* Selection Area */}
+                  <div 
+                    onClick={() => setIsLogoSelectorOpen(true)}
+                    className="border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center p-6 hover:bg-muted/50 transition-colors cursor-pointer relative"
+                  >
                     <div className="p-3 bg-primary/10 rounded-full mb-3 text-primary">
-                      <span className="material-symbols-outlined text-[24px]">
-                        cloud_upload
-                      </span>
+                        <span className="material-symbols-outlined text-[24px]">photo_library</span>
                     </div>
-                    <p className="text-sm font-medium text-primary mb-1">
-                      Upload a file{" "}
-                      <span className="text-muted-foreground font-normal">
-                        or drag and drop
-                      </span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      PNG, JPG, GIF up to 5MB
-                    </p>
+                    <p className="text-sm font-medium text-primary mb-1">Select from Library</p>
+                    <p className="text-xs text-muted-foreground">Browse available logos & icons</p>
                   </div>
                 </div>
               </div>
@@ -228,6 +206,16 @@ export default function SettingsPage() {
           Save Settings
         </button>
       </div>
+
+      <MediaSelectorModal 
+        isOpen={isLogoSelectorOpen} 
+        onClose={() => setIsLogoSelectorOpen(false)}
+        onSelect={(file) => {
+          setLogoPreview(file.url || null);
+          setSettings(prev => ({ ...prev, logoUrl: file.url || "" }));
+          setIsLogoSelectorOpen(false);
+        }}
+      />
     </div>
   );
 }
