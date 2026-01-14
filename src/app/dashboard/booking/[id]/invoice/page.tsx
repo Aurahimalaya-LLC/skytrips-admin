@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import Image from "next/image";
 import { useRouter, notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Booking } from "@/types";
@@ -24,6 +25,8 @@ export default function InvoicePage({
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(
     null
   );
+  const [settingsCompanyName, setSettingsCompanyName] = useState<string>("");
+  const [settingsLogoUrl, setSettingsLogoUrl] = useState<string>("");
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -31,6 +34,8 @@ export default function InvoicePage({
         const res = await fetch("/api/settings");
         if (!res.ok) return;
         const data = await res.json();
+        setSettingsCompanyName(data.company_name || "");
+        setSettingsLogoUrl(data.logo_url || "");
         const profiles = (data.company_profiles || []) as CompanyProfile[];
         setCompanyProfiles(profiles);
         if (!selectedCompanyId && profiles.length > 0) {
@@ -228,20 +233,32 @@ export default function InvoicePage({
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden print:shadow-none print:rounded-none print:w-full print:max-w-none">
         {/* Header Section */}
         <div className="p-8 md:p-12 border-b border-slate-100">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+          <div className="flex flex-row justify-between items-center gap-8">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center text-white font-black text-2xl">
-                S
+              <div className="w-12 h-12 rounded-lg overflow-hidden bg-primary flex items-center justify-center text-white font-black text-2xl">
+                {settingsLogoUrl ? (
+                  <Image
+                    src={settingsLogoUrl}
+                    alt={settingsCompanyName || "Company Logo"}
+                    width={48}
+                    height={48}
+                    className="w-12 h-12 object-cover"
+                  />
+                ) : (
+                  "S"
+                )}
               </div>
               <div>
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                  {(booking as BookingWithAgency).issuedthroughagency ||
+                  {settingsCompanyName ||
+                    (selectedCompany && selectedCompany.name) ||
+                    (booking as BookingWithAgency).issuedthroughagency ||
                     booking.agency ||
                     "SkyHigh Agency"}
                 </h1>
-                <p className="text-sm text-slate-500 font-medium">
+                {/* <p className="text-sm text-slate-500 font-medium">
                   Your Trusted Travel Partner
-                </p>
+                </p> */}
               </div>
             </div>
             <div className="text-left md:text-right">
