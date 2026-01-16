@@ -33,7 +33,14 @@ export interface Booking {
   transactionId?: string;
   dateOfPayment?: string;
   payment: string;
-  travelDate?: string;
+  travelDate?: string; // Keeping for backward compatibility if needed, or can be deprecated
+  departureDate?: string;
+  returnDate?: string;
+  arrivalDate?: string;
+  passportIssueDate?: string;
+  placeOfIssue?: string;
+  currency?: string;
+  issuedthroughagency?: string;
   travellers?: Traveller[];
   customer?: Customer;
   created_at?: string;

@@ -322,7 +322,7 @@ export default function BookingDetailsPage({
                         Passport Number
                       </label>
                       <p className="text-sm font-bold text-slate-900">
-                        {booking.passportNumber || "A1234567X"}
+                        {booking.passportNumber || "N/A"}
                       </p>
                     </div>
                     <div>
@@ -330,7 +330,7 @@ export default function BookingDetailsPage({
                         Passport Expiry Date
                       </label>
                       <p className="text-sm font-bold text-slate-900">
-                        {booking.passportExpiry || "2029-05-20"}
+                        {booking.passportExpiry || "N/A"}
                       </p>
                     </div>
                     <div>
@@ -338,7 +338,7 @@ export default function BookingDetailsPage({
                         Date of Birth
                       </label>
                       <p className="text-sm font-bold text-slate-900">
-                        {booking.dob || "1985-03-15"}
+                        {booking.dob || "N/A"}
                       </p>
                     </div>
                     <div>
@@ -346,7 +346,7 @@ export default function BookingDetailsPage({
                         Passport Issue Date
                       </label>
                       <p className="text-sm font-bold text-slate-900">
-                        2019-05-20
+                        {booking.passportIssueDate || "N/A"}
                       </p>
                     </div>
                     <div>
@@ -354,7 +354,7 @@ export default function BookingDetailsPage({
                         Place of Issue
                       </label>
                       <p className="text-sm font-bold text-slate-900">
-                        Kathmandu
+                        {booking.placeOfIssue || "N/A"}
                       </p>
                     </div>
                     <div>
@@ -362,7 +362,7 @@ export default function BookingDetailsPage({
                         Nationality
                       </label>
                       <p className="text-sm font-bold text-slate-900">
-                        {booking.nationality || "Nepalese"}
+                        {booking.nationality || "N/A"}
                       </p>
                     </div>
                   </div>
@@ -399,7 +399,9 @@ export default function BookingDetailsPage({
                     {booking.origin}
                   </div>
                   <div className="text-sm font-medium text-slate-500 mt-1">
-                    Wed, 11 Aug 2021
+                    {booking.departureDate ||
+                      booking.travelDate ||
+                      "Wed, 11 Aug 2021"}
                   </div>
                 </div>
 
@@ -408,7 +410,7 @@ export default function BookingDetailsPage({
                     arrow_forward
                   </span>
                   <span className="text-[10px] font-bold uppercase tracking-widest mt-1">
-                    Direct
+                    {booking.tripType === "Round Trip" ? "Return" : "Direct"}
                   </span>
                 </div>
 
@@ -425,7 +427,9 @@ export default function BookingDetailsPage({
                     {booking.destination}
                   </div>
                   <div className="text-sm font-medium text-slate-500 mt-1">
-                    Wed, 11 Aug 2021
+                    {booking.returnDate ||
+                      booking.arrivalDate ||
+                      "Wed, 11 Aug 2021"}
                   </div>
                 </div>
               </div>
@@ -593,7 +597,7 @@ export default function BookingDetailsPage({
                   Issued Through Agency
                 </label>
                 <p className="text-sm font-bold text-slate-900">
-                  {(booking as any).issuedthroughagency ||
+                  {booking.issuedthroughagency ||
                     booking.agency ||
                     "SkyHigh Agency Ltd."}
                 </p>
@@ -640,7 +644,9 @@ export default function BookingDetailsPage({
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                     Currency
                   </label>
-                  <p className="text-sm font-bold text-slate-900">USD</p>
+                  <p className="text-sm font-bold text-slate-900">
+                    {booking.currency || "USD"}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
