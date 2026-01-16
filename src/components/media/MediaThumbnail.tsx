@@ -36,7 +36,19 @@ export function MediaThumbnail({ file, onClick, className = "", objectFit = "cov
     setHasError(true);
   };
 
-  if (isImage && file.url && !hasError) {
+  if (isImage && !hasError) {
+    // Clean up URL: Remove whitespace and ensure it's a valid string
+    let imageUrl = (file.url || "").trim();
+    
+    // Check if URL is valid before rendering
+    if (!imageUrl) {
+      return (
+        <div className={`flex items-center justify-center bg-slate-100 dark:bg-slate-800 ${className}`}>
+           <span className="text-xs text-slate-400">No URL</span>
+        </div>
+      );
+    }
+
     return (
       <div 
         className={`relative w-full h-full bg-slate-100 dark:bg-slate-800 overflow-hidden ${className}`}
@@ -47,14 +59,13 @@ export function MediaThumbnail({ file, onClick, className = "", objectFit = "cov
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
           </div>
         )}
-        <Image
-          src={file.url}
+        {/* Fallback img tag if Next.js Image fails for some reason, though unoptimized should handle it */}
+        <img
+          src={imageUrl}
           alt={file.alt_text || file.title}
-          fill
-          className={`object-${objectFit} transition-opacity duration-300 ${isLoading ? "opacity-0" : "opacity-100"}`}
+          className={`w-full h-full object-${objectFit} transition-opacity duration-300 ${isLoading ? "opacity-0" : "opacity-100"}`}
           onLoad={handleLoad}
           onError={handleError}
-          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
         />
       </div>
     );

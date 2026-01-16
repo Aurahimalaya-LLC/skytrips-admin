@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 import { CompanyProfile } from "@/types/company";
 
-// Create a Supabase client with the Service Role Key to bypass RLS for API operations
 const supabaseAdmin = createClient(
   env.supabase.url,
   env.supabase.serviceRoleKey || env.supabase.anonKey
@@ -31,7 +30,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Map DB fields to TS interface
   const companies: CompanyProfile[] = (data || []).map((item: any) => ({
     id: item.id,
     name: item.name,

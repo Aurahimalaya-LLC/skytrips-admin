@@ -15,14 +15,16 @@ export function MediaFilter({ filters, setFilters }: MediaFilterProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm space-y-4">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border  border-slate-200 dark:border-slate-800 p-4 shadow-sm space-y-4 ">
       <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm uppercase tracking-wider">
         Filters
       </h3>
 
       {/* Search */}
       <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1">Search</label>
+        <label className="block text-xs font-medium text-slate-500 mb-1">
+          Search
+        </label>
         <div className="relative">
           <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">
             search
@@ -39,7 +41,9 @@ export function MediaFilter({ filters, setFilters }: MediaFilterProps) {
 
       {/* Type Filter */}
       <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1">File Type</label>
+        <label className="block text-xs font-medium text-slate-500 mb-1">
+          File Type
+        </label>
         <select
           value={filters.type}
           onChange={(e) => handleChange("type", e.target.value)}
@@ -55,7 +59,9 @@ export function MediaFilter({ filters, setFilters }: MediaFilterProps) {
 
       {/* Category Filter */}
       <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1">Category</label>
+        <label className="block text-xs font-medium text-slate-500 mb-1">
+          Category
+        </label>
         <select
           value={filters.category}
           onChange={(e) => handleChange("category", e.target.value)}

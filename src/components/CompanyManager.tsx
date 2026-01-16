@@ -48,7 +48,7 @@ export default function CompanyManager() {
     setIsLoading(true);
     try {
       // Fetch ALL companies (active + deleted) so we can toggle views client-side
-      const res = await fetch(`/api/companies?showDeleted=true`);
+      const res = await fetch(`/api/companies?showDeleted=false`);
       if (res.ok) {
         const data = await res.json();
         setCompanies(data);

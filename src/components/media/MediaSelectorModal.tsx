@@ -7,13 +7,15 @@ import { mediaService, MediaFile } from "@/lib/media-service";
 interface MediaSelectorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (file: MediaFile) => void;
+  onSelect: (file: MediaFile | MediaFile[]) => void;
+  multiple?: boolean;
 }
 
-export function MediaSelectorModal({ isOpen, onClose, onSelect }: MediaSelectorModalProps) {
+export function MediaSelectorModal({ isOpen, onClose, onSelect, multiple = false }: MediaSelectorModalProps) {
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedFiles, setSelectedFiles] = useState<MediaFile[]>([]);
   const [filters, setFilters] = useState({
     search: "",
     type: "all",
@@ -23,8 +25,15 @@ export function MediaSelectorModal({ isOpen, onClose, onSelect }: MediaSelectorM
   useEffect(() => {
     if (isOpen) {
       fetchFiles();
+      setSelectedFiles([]);
     }
-  }, [isOpen, filters]);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchFiles();
+    }
+  }, [filters]);
 
   const fetchFiles = async () => {
     setLoading(true);
@@ -38,6 +47,27 @@ export function MediaSelectorModal({ isOpen, onClose, onSelect }: MediaSelectorM
     }
   };
 
+  const handleSelect = (file: MediaFile) => {
+    if (multiple) {
+      setSelectedFiles((prev) => {
+        const isSelected = prev.some((f) => f.media_id === file.media_id);
+        if (isSelected) {
+          return prev.filter((f) => f.media_id !== file.media_id);
+        } else {
+          return [...prev, file];
+        }
+      });
+    } else {
+      onSelect(file);
+      onClose(); // Single select closes immediately
+    }
+  };
+
+  const handleConfirm = () => {
+    onSelect(selectedFiles);
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -48,7 +78,7 @@ export function MediaSelectorModal({ isOpen, onClose, onSelect }: MediaSelectorM
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 z-10">
           <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">photo_library</span>
-            Select Media
+            Select Media {multiple && selectedFiles.length > 0 && `(${selectedFiles.length})`}
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
             <span className="material-symbols-outlined">close</span>
@@ -132,7 +162,8 @@ export function MediaSelectorModal({ isOpen, onClose, onSelect }: MediaSelectorM
              loading={loading} 
              viewMode={viewMode}
              selectionMode={true}
-             onSelect={onSelect}
+             selectedIds={selectedFiles.map(f => f.media_id)}
+             onSelect={handleSelect}
            />
         </div>
         
@@ -141,12 +172,23 @@ export function MediaSelectorModal({ isOpen, onClose, onSelect }: MediaSelectorM
           <p className="text-xs text-slate-500">
             {files.length} items found
           </p>
-          <button 
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            {multiple && (
+              <button 
+                onClick={handleConfirm}
+                disabled={selectedFiles.length === 0}
+                className="px-4 py-2 text-sm font-bold text-white bg-primary hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Select ({selectedFiles.length})
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

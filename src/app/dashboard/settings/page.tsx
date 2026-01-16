@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { MediaFile } from "@/lib/media-service";
 import CompanyManager from "@/components/CompanyManager";
 import PaymentMethodsManager from "@/components/settings/PaymentMethodsManager";
 import { MediaSelectorModal } from "@/components/media/MediaSelectorModal";
@@ -11,8 +12,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [isLogoSelectorOpen, setIsLogoSelectorOpen] = useState(false);
-  
+  const [activeSelector, setActiveSelector] = useState<
+    "logo" | "favicon" | null
+  >(null);
+
   // Settings State
   const [settings, setSettings] = useState({
     companyName: "Curent",
@@ -26,9 +29,62 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    // In a real app, fetch settings from DB
-    // fetchSettings();
+    fetchSettings();
   }, []);
+
+  const fetchSettings = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/settings");
+      if (res.ok) {
+        const data = await res.json();
+        setSettings({
+          companyName: data.company_name || "Curent",
+          companyEmail: data.company_email || "",
+          companyPhone: data.company_phone || "",
+          currency: data.currency || "USD",
+          dateFormat: data.date_format || "MM/DD/YYYY",
+          notifications: data.notifications ?? true,
+          logoUrl: data.logo_url || "",
+          faviconUrl: data.favicon_url || "",
+        });
+        setLogoPreview(data.logo_url || null);
+      }
+    } catch (error) {
+      console.error("Failed to fetch settings", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company_name: settings.companyName,
+          company_email: settings.companyEmail,
+          company_phone: settings.companyPhone,
+          currency: settings.currency,
+          date_format: settings.dateFormat,
+          notifications: settings.notifications,
+          logo_url: settings.logoUrl,
+          favicon_url: settings.faviconUrl,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to save");
+
+      // Optional: Show success feedback
+    } catch (error) {
+      console.error(error);
+      alert("Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -127,15 +183,21 @@ export default function SettingsPage() {
                   </div>
 
                   {/* Selection Area */}
-                  <div 
-                    onClick={() => setIsLogoSelectorOpen(true)}
+                  <div
+                    onClick={() => setActiveSelector("logo")}
                     className="border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center p-6 hover:bg-muted/50 transition-colors cursor-pointer relative"
                   >
                     <div className="p-3 bg-primary/10 rounded-full mb-3 text-primary">
-                        <span className="material-symbols-outlined text-[24px]">photo_library</span>
+                      <span className="material-symbols-outlined text-[24px]">
+                        photo_library
+                      </span>
                     </div>
-                    <p className="text-sm font-medium text-primary mb-1">Select from Library</p>
-                    <p className="text-xs text-muted-foreground">Browse available logos & icons</p>
+                    <p className="text-sm font-medium text-primary mb-1">
+                      Select from Library
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Browse available logos & icons
+                    </p>
                   </div>
                 </div>
               </div>
@@ -146,14 +208,25 @@ export default function SettingsPage() {
                   Favicon
                 </label>
                 <div className="flex items-start gap-4 mb-6">
-                  <div className="size-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                    <span className="material-symbols-outlined">diamond</span>
+                  <div className="size-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20 overflow-hidden">
+                    {settings.faviconUrl ? (
+                      <img
+                        src={settings.faviconUrl}
+                        alt="Favicon"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="material-symbols-outlined">diamond</span>
+                    )}
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-medium mb-1">
                       Recommended 32×32px
                     </p>
-                    <button className="text-sm font-bold text-primary hover:underline">
+                    <button
+                      onClick={() => setActiveSelector("favicon")}
+                      className="text-sm font-bold text-primary hover:underline"
+                    >
                       Update
                     </button>
                   </div>
@@ -216,19 +289,39 @@ export default function SettingsPage() {
         <button className="px-6 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
           Discard Changes
         </button>
-        <button className="px-6 py-2.5 text-sm font-bold text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-all shadow-md shadow-blue-500/20 flex items-center gap-2">
-          <span className="material-symbols-outlined text-[18px]">save</span>
-          Save Settings
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-6 py-2.5 text-sm font-bold text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-all shadow-md shadow-blue-500/20 flex items-center gap-2 disabled:opacity-50"
+        >
+          {saving && (
+            <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+          )}
+          {saving ? "Saving..." : "Save Settings"}
         </button>
       </div>
 
-      <MediaSelectorModal 
-        isOpen={isLogoSelectorOpen} 
-        onClose={() => setIsLogoSelectorOpen(false)}
-        onSelect={(file) => {
-          setLogoPreview(file.url || null);
-          setSettings(prev => ({ ...prev, logoUrl: file.url || "" }));
-          setIsLogoSelectorOpen(false);
+      <MediaSelectorModal
+        isOpen={!!activeSelector}
+        onClose={() => setActiveSelector(null)}
+        multiple={false}
+        onSelect={(file: MediaFile | MediaFile[]) => {
+          const selectedFile = Array.isArray(file) ? file[0] : file;
+          if (selectedFile) {
+            if (activeSelector === "logo") {
+              setLogoPreview(selectedFile.url || null);
+              setSettings((prev) => ({
+                ...prev,
+                logoUrl: selectedFile.url || "",
+              }));
+            } else if (activeSelector === "favicon") {
+              setSettings((prev) => ({
+                ...prev,
+                faviconUrl: selectedFile.url || "",
+              }));
+            }
+          }
+          setActiveSelector(null);
         }}
       />
     </div>

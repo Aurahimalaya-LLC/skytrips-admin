@@ -29,79 +29,50 @@ class MediaService {
     // Initial check could be done here, but we'll do it lazily
   }
 
-  async getFiles(filters: { search?: string; type?: string; category?: string } = {}): Promise<MediaFile[]> {
+  async getFiles(
+    filters: { search?: string; type?: string; category?: string } = {}
+  ): Promise<MediaFile[]> {
     if (this.useMockData) {
       return this.getMockFiles(filters);
     }
 
     try {
-      // First try to fetch just the media to check if table exists and basic query works
-      // This helps isolate if the issue is with the joins or the main table
-      const { error: checkError } = await supabase
-        .from("media")
-        .select("media_id")
-        .limit(1);
+      const queryParams = new URLSearchParams();
+      if (filters.search) queryParams.append("search", filters.search);
+      if (filters.type) queryParams.append("type", filters.type);
+      if (filters.category) queryParams.append("category", filters.category);
 
-      if (checkError) {
-        throw checkError;
+      const response = await fetch(`/api/media?${queryParams.toString()}`);
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
       }
 
-      // If basic query works, try fetching with basic fields
-      // Note: We are temporarily removing the joins to isolate the PGRST200 relationship error.
-      // This allows the main media list to load even if tags/categories relationships are missing or misconfigured.
-      
-      let query = supabase
-        .from("media")
-        .select(`*`)
-        .order("created_at", { ascending: false });
-
-      if (filters.search) {
-        query = query.ilike("title", `%${filters.search}%`);
-      }
-
-      if (filters.type && filters.type !== "all") {
-        query = query.eq("mime_type", filters.type);
-      }
-
-      // Note: Filtering by related tables (tags/categories) in Supabase/PostgREST 
-      // is complex with a single query. For now, we fetch and filter in memory 
-      // if complex relations are needed, or rely on simple exact matches if structured differently.
-      // Here we will fetch all and filter client-side for categories if needed, 
-      // or assume the category is just a metadata field for now to keep it simple as per previous iteration.
-      // However, with the new schema, we should handle the join.
-      
-      const { data, error } = await query;
-
-      if (error) {
-        if (error.code === "PGRST205" || error.code === "42P01") {
-          console.warn("Media table not found, switching to mock data.");
-          this.useMockData = true;
-          return this.getMockFiles(filters);
-        }
-        throw error;
-      }
+      const data = await response.json();
 
       // Transform data to match MediaFile interface
       return (data || []).map((item: any) => ({
         ...item,
         // Helper to flatten tags/categories if they come back as arrays of objects
         tags: item.media_tags?.map((t: any) => t.tag_name) || [],
-        categories: item.media_categories?.map((c: any) => c.category_name) || [],
-        // Generate public URL if not stored (though we might store it or generate it on fly)
-        url: item.url || supabase.storage.from("media").getPublicUrl(item.file_path).data.publicUrl
+        categories:
+          item.media_categories?.map((c: any) => c.category_name) || [],
       }));
-
     } catch (error: any) {
       // Only log full error if it's not a known network/fetch issue to reduce noise
-      if (error.message?.includes("Failed to fetch") || error.message?.includes("NetworkError")) {
-        console.warn("Supabase connection failed (likely network/adblocker), switching to mock data.");
+      if (
+        error.message?.includes("Failed to fetch") ||
+        error.message?.includes("NetworkError")
+      ) {
+        console.warn(
+          "Supabase connection failed (likely network/adblocker), switching to mock data."
+        );
       } else {
         console.error("Error fetching media files:", {
           message: error.message,
           code: error.code,
           details: error.details,
           hint: error.hint,
-          original: error
+          original: error,
         });
       }
       // Fallback to mock on any error for resilience during dev
@@ -110,7 +81,11 @@ class MediaService {
     }
   }
 
-  private getMockFiles(filters: { search?: string; type?: string; category?: string }): MediaFile[] {
+  private getMockFiles(filters: {
+    search?: string;
+    type?: string;
+    category?: string;
+  }): MediaFile[] {
     let filteredFiles = [...mockMediaFiles];
 
     if (filters.search) {
@@ -120,8 +95,12 @@ class MediaService {
     }
 
     if (filters.type && filters.type !== "all") {
-       // Simple mime type matching for mock data
-      filteredFiles = filteredFiles.filter((f) => f.mime_type?.startsWith(filters.type!) || (filters.type === "document" && f.mime_type === "application/pdf"));
+      // Simple mime type matching for mock data
+      filteredFiles = filteredFiles.filter(
+        (f) =>
+          f.mime_type?.startsWith(filters.type!) ||
+          (filters.type === "document" && f.mime_type === "application/pdf")
+      );
     }
 
     if (filters.category && filters.category !== "all") {
@@ -129,9 +108,20 @@ class MediaService {
         (f) => f.categories && f.categories.includes(filters.category!)
       );
     }
-    
+
     // Ensure mock data matches type
     return filteredFiles as unknown as MediaFile[];
+  }
+
+  private getImageDimensions(
+    file: File
+  ): Promise<{ width: number; height: number }> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.width, height: img.height });
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
   }
 
   async uploadFile(file: File): Promise<MediaFile | null> {
@@ -139,67 +129,88 @@ class MediaService {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
-    
+
     // Sanitize filename to prevent issues
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const fileExt = sanitizedName.split(".").pop();
     const randomSuffix = Math.random().toString(36).substring(2, 8);
-    
+
     // Format: YYYY/MM/timestamp_random_filename.ext
     const fileName = `${Date.now()}_${randomSuffix}.${fileExt}`;
     const filePath = `${year}/${month}/${fileName}`;
 
     try {
-      const { error: storageError } = await supabase.storage
-        .from("media")
-        .upload(filePath, file);
+      // 1. Upload to Storage via API (Server-side to bypass RLS)
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("path", filePath);
 
-      let publicUrl = "";
+      const uploadResponse = await fetch("/api/media/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-      if (storageError) {
-        console.warn("Storage upload failed, using mock URL.", storageError);
-        publicUrl = URL.createObjectURL(file); 
-        if (!this.useMockData) {
-             // If storage fails, fallback to mock logic if needed or just error out
-        }
-      } else {
-        const { data } = supabase.storage.from("media").getPublicUrl(filePath);
-        publicUrl = data.publicUrl;
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || "Storage upload failed");
       }
+      
+      const { data } = supabase.storage.from("media").getPublicUrl(filePath);
+      let publicUrl = data.publicUrl;
 
+      // ... rest of the code is not needed, just the variable assignment
+      
       if (this.useMockData) {
         return this.createMockFile(file, filePath, publicUrl);
       }
 
-      // 2. Insert into DB
+      // 2. Insert into DB (via API to bypass RLS)
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user?.id;
 
-      const { data, error } = await supabase
-        .from("media")
-        .insert({
+      // Extract metadata if possible (simple client-side extraction)
+      let width = null;
+      let height = null;
+
+      if (file.type.startsWith("image/")) {
+        try {
+          const dimensions = await this.getImageDimensions(file);
+          width = dimensions.width;
+          height = dimensions.height;
+        } catch (e) {
+          console.warn("Failed to extract image dimensions", e);
+        }
+      }
+
+      const response = await fetch("/api/media", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           title: file.name,
           file_path: filePath,
           mime_type: file.type,
           file_size: file.size,
           uploaded_by: userId,
-        })
-        .select()
-        .single();
+          width: width,
+          height: height,
+          duration: null, // Could extract video duration similarly if needed
+        }),
+      });
 
-      if (error) {
-        console.warn("DB Insert failed, switching to mock.", error);
-        this.useMockData = true;
-        return this.createMockFile(file, filePath, publicUrl);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "DB Insert failed");
       }
 
-      return {
-        ...data,
-        url: publicUrl,
-        tags: [],
-        categories: []
-      };
+      const apiResponseData = await response.json();
 
+      return {
+        ...apiResponseData,
+        tags: [],
+        categories: [],
+      };
     } catch (error) {
       console.error("Upload process error:", error);
       return this.createMockFile(file, filePath, URL.createObjectURL(file));
@@ -220,10 +231,13 @@ class MediaService {
     };
   }
 
-  async updateFile(mediaId: string, updates: Partial<MediaFile>): Promise<MediaFile | null> {
+  async updateFile(
+    mediaId: string,
+    updates: Partial<MediaFile>
+  ): Promise<MediaFile | null> {
     if (this.useMockData) {
       // Simulate update
-      const mockFile = mockMediaFiles.find(f => f.media_id === mediaId);
+      const mockFile = mockMediaFiles.find((f) => f.media_id === mediaId);
       if (mockFile) {
         return { ...mockFile, ...updates } as MediaFile;
       }
@@ -231,27 +245,24 @@ class MediaService {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("media")
-        .update({
-          title: updates.title,
-          // Handle new fields if schema supports them
-          alt_text: updates.alt_text,
-          caption: updates.caption
-        })
-        .eq("media_id", mediaId)
-        .select()
-        .single();
+      const response = await fetch(`/api/media/${mediaId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updates),
+      });
 
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        throw new Error("Failed to update file");
       }
 
-      // Re-fetch full object or merge. Here we merge roughly.
-      // Ideally we should refetch relations too if tags/categories changed.
-      
+      const data = await response.json();
+
       // Generate a cache-busting URL to ensure immediate preview updates
-      const publicUrl = supabase.storage.from("media").getPublicUrl(data.file_path).data.publicUrl;
+      const publicUrl = supabase.storage
+        .from("media")
+        .getPublicUrl(data.file_path).data.publicUrl;
       const timestamp = new Date().getTime();
       const urlWithCacheBust = `${publicUrl}?t=${timestamp}`;
 
@@ -260,7 +271,7 @@ class MediaService {
         tags: updates.tags || [],
         categories: updates.categories || [],
         // Ensure url is preserved or regenerated with cache buster
-        url: updates.url || urlWithCacheBust
+        url: updates.url || urlWithCacheBust,
       };
     } catch (error) {
       console.error("Update error:", error);
@@ -272,20 +283,17 @@ class MediaService {
     if (this.useMockData) return true;
 
     try {
-      // Delete from Storage
-      // filePath should be the full path stored in DB (e.g., 2024/02/file.png)
-      // Supabase storage remove accepts array of paths
-      const { error: storageError } = await supabase.storage.from("media").remove([filePath]);
-      
-      if (storageError) {
-        console.error("Storage delete error:", storageError);
-        // We continue to delete from DB even if storage delete fails to prevent phantom records,
-        // unless it's a permission issue that suggests we shouldn't proceed.
-      }
+      // Use API to delete
+      const response = await fetch(
+        `/api/media/${mediaId}?path=${encodeURIComponent(filePath)}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-      // Delete from DB
-      const { error: dbError } = await supabase.from("media").delete().eq("media_id", mediaId);
-      if (dbError) throw dbError;
+      if (!response.ok) {
+        throw new Error("Failed to delete file");
+      }
 
       return true;
     } catch (error) {

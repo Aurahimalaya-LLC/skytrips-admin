@@ -7,7 +7,6 @@ import { Booking } from "@/types";
 import BookingModal from "./BookingModal";
 import BookingRowMenu from "@/components/BookingRowMenu";
 
-
 export default function BookingPage() {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -21,7 +20,10 @@ export default function BookingPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" }>({
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: "asc" | "desc";
+  }>({
     key: "id",
     direction: "desc",
   });
@@ -57,26 +59,29 @@ export default function BookingPage() {
       console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
       console.log("Has Anon Key:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-      let query = supabase
-        .from("bookings")
-        .select("*", { count: "exact" });
+      let query = supabase.from("bookings").select("*", { count: "exact" });
 
       // Handle Sorting
-      if (sortConfig.key === 'travelDate') {
+      if (sortConfig.key === "travelDate") {
         // travelDate doesn't exist in DB, it's computed from IssueDay, issueMonth, issueYear
         // For now, let's sort by issueYear, then issueMonth (string sort), then IssueDay
-        // Note: issueMonth is string (e.g., 'Oct '), so this won't be perfectly chronological 
+        // Note: issueMonth is string (e.g., 'Oct '), so this won't be perfectly chronological
         // without complex logic or a real travelDate column.
         // We'll sort by issueYear first.
         query = query
-          .order('issueYear', { ascending: sortConfig.direction === "asc" })
-          .order('issueMonth', { ascending: sortConfig.direction === "asc" })
-          .order('IssueDay', { ascending: sortConfig.direction === "asc" });
-      } else if (sortConfig.key === 'sellingPrice') {
+          .order("issueYear", { ascending: sortConfig.direction === "asc" })
+          .order("issueMonth", { ascending: sortConfig.direction === "asc" })
+          .order("IssueDay", { ascending: sortConfig.direction === "asc" });
+      } else if (sortConfig.key === "sellingPrice") {
         // Fallback to buyingPrice if sellingPrice is null
-        query = query.order('sellingPrice', { ascending: sortConfig.direction === "asc", nullsFirst: false });
+        query = query.order("sellingPrice", {
+          ascending: sortConfig.direction === "asc",
+          nullsFirst: false,
+        });
       } else {
-        query = query.order(sortConfig.key, { ascending: sortConfig.direction === "asc" });
+        query = query.order(sortConfig.key, {
+          ascending: sortConfig.direction === "asc",
+        });
       }
 
       query = query.range(from, to);
@@ -133,13 +138,18 @@ export default function BookingPage() {
   const handleSort = (key: string) => {
     setSortConfig((current) => ({
       key,
-      direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
+      direction:
+        current.key === key && current.direction === "asc" ? "desc" : "asc",
     }));
   };
 
   const renderSortIcon = (key: string) => {
     if (sortConfig.key !== key) {
-      return <span className="material-symbols-outlined text-[16px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">unfold_more</span>;
+      return (
+        <span className="material-symbols-outlined text-[16px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
+          unfold_more
+        </span>
+      );
     }
     return (
       <span className="material-symbols-outlined text-[16px] text-primary font-bold">
@@ -367,103 +377,157 @@ export default function BookingPage() {
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-xs">
                 <tr>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
-                    onClick={() => handleSort('id')}
-                    aria-sort={sortConfig.key === 'id' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    onClick={() => handleSort("id")}
+                    aria-sort={
+                      sortConfig.key === "id"
+                        ? sortConfig.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
                     <div className="flex items-center gap-1">
                       Booking ID
-                      {renderSortIcon('id')}
+                      {renderSortIcon("id")}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
-                    onClick={() => handleSort('travellerLastName')}
-                    aria-sort={sortConfig.key === 'travellerLastName' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    onClick={() => handleSort("travellerLastName")}
+                    aria-sort={
+                      sortConfig.key === "travellerLastName"
+                        ? sortConfig.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
                     <div className="flex items-center gap-1">
                       T. last name
-                      {renderSortIcon('travellerLastName')}
+                      {renderSortIcon("travellerLastName")}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
-                    onClick={() => handleSort('travellerFirstName')}
-                    aria-sort={sortConfig.key === 'travellerFirstName' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    onClick={() => handleSort("travellerFirstName")}
+                    aria-sort={
+                      sortConfig.key === "travellerFirstName"
+                        ? sortConfig.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
                     <div className="flex items-center gap-1">
                       T. First Name
-                      {renderSortIcon('travellerFirstName')}
+                      {renderSortIcon("travellerFirstName")}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
-                    onClick={() => handleSort('airlines')}
-                    aria-sort={sortConfig.key === 'airlines' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    onClick={() => handleSort("airlines")}
+                    aria-sort={
+                      sortConfig.key === "airlines"
+                        ? sortConfig.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
                     <div className="flex items-center gap-1">
                       Airline
-                      {renderSortIcon('airlines')}
+                      {renderSortIcon("airlines")}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
-                    onClick={() => handleSort('sellingPrice')}
-                    aria-sort={sortConfig.key === 'sellingPrice' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    onClick={() => handleSort("sellingPrice")}
+                    aria-sort={
+                      sortConfig.key === "sellingPrice"
+                        ? sortConfig.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
                     <div className="flex items-center gap-1">
                       S.P
-                      {renderSortIcon('sellingPrice')}
+                      {renderSortIcon("sellingPrice")}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
-                    onClick={() => handleSort('tripType')}
-                    aria-sort={sortConfig.key === 'tripType' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    onClick={() => handleSort("tripType")}
+                    aria-sort={
+                      sortConfig.key === "tripType"
+                        ? sortConfig.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
                     <div className="flex items-center gap-1">
                       Trip Type
-                      {renderSortIcon('tripType')}
+                      {renderSortIcon("tripType")}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
-                    onClick={() => handleSort('PNR')}
-                    aria-sort={sortConfig.key === 'PNR' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    onClick={() => handleSort("PNR")}
+                    aria-sort={
+                      sortConfig.key === "PNR"
+                        ? sortConfig.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
                     <div className="flex items-center gap-1">
                       PNR
-                      {renderSortIcon('PNR')}
+                      {renderSortIcon("PNR")}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
-                    onClick={() => handleSort('travelDate')}
-                    aria-sort={sortConfig.key === 'travelDate' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    onClick={() => handleSort("travelDate")}
+                    aria-sort={
+                      sortConfig.key === "travelDate"
+                        ? sortConfig.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
                     <div className="flex items-center gap-1">
                       Travel Date
-                      {renderSortIcon('travelDate')}
+                      {renderSortIcon("travelDate")}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
-                    onClick={() => handleSort('origin')}
-                    aria-sort={sortConfig.key === 'origin' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    onClick={() => handleSort("origin")}
+                    aria-sort={
+                      sortConfig.key === "origin"
+                        ? sortConfig.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
                   >
                     <div className="flex items-center gap-1">
                       Route
-                      {renderSortIcon('origin')}
+                      {renderSortIcon("origin")}
                     </div>
                   </th>
                   <th className="px-6 py-4 text-right">Actions</th>
@@ -503,7 +567,7 @@ export default function BookingPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-slate-900 font-semibold">
-                        {booking.sellingPrice || booking.buyingPrice || '0.00'}
+                        {booking.sellingPrice || booking.buyingPrice || "0.00"}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -515,9 +579,20 @@ export default function BookingPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-slate-900">
-                        {booking.travelDate || `${booking.IssueDay || ''} ${booking.issueMonth || ''} ${booking.issueYear || ''}`}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-slate-900 font-medium">
+                          {booking.departureDate ||
+                            booking.travelDate ||
+                            `${booking.IssueDay || ""} ${
+                              booking.issueMonth || ""
+                            } ${booking.issueYear || ""}`}
+                        </span>
+                        {booking.returnDate && (
+                          <span className="text-xs text-slate-500">
+                            to {booking.returnDate}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
@@ -556,7 +631,11 @@ export default function BookingPage() {
                             </span>
                           </button>
                           <button
-                            onClick={() => router.push(`/dashboard/booking/edit/${booking.id}`)}
+                            onClick={() =>
+                              router.push(
+                                `/dashboard/booking/edit/${booking.id}`
+                              )
+                            }
                             className="rounded p-2 text-slate-600 hover:bg-slate-100 hover:text-primary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30"
                             aria-label="Edit booking"
                             tabIndex={0}
@@ -568,8 +647,16 @@ export default function BookingPage() {
                         </div>
                         <BookingRowMenu
                           booking={booking}
-                          onRefund={() => router.push(`/dashboard/booking/${booking.id}/manage/status?action=refund`)}
-                          onReissue={() => router.push(`/dashboard/booking/${booking.id}/manage/status?action=reissue`)}
+                          onRefund={() =>
+                            router.push(
+                              `/dashboard/booking/${booking.id}/manage/status?action=refund`
+                            )
+                          }
+                          onReissue={() =>
+                            router.push(
+                              `/dashboard/booking/${booking.id}/manage/status?action=reissue`
+                            )
+                          }
                         />
                       </div>
                     </td>

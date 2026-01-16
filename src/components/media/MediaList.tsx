@@ -14,9 +14,10 @@ interface MediaListProps {
   onUpdate?: (id: string, updates: Partial<MediaFile>) => Promise<void>;
   onSelect?: (file: MediaFile) => void;
   selectionMode?: boolean;
+  selectedIds?: string[];
 }
 
-export function MediaList({ files, loading, viewMode, onDelete, onUpdate, onSelect, selectionMode = false }: MediaListProps) {
+export function MediaList({ files, loading, viewMode, onDelete, onUpdate, onSelect, selectionMode = false, selectedIds = [] }: MediaListProps) {
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [editingFile, setEditingFile] = useState<MediaFile | null>(null);
 
@@ -67,7 +68,11 @@ export function MediaList({ files, loading, viewMode, onDelete, onUpdate, onSele
           {files.map((file) => (
             <div
               key={file.media_id}
-              className="group relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+              className={`group relative bg-white dark:bg-slate-800 border rounded-lg overflow-hidden hover:shadow-md transition-shadow ${
+                selectedIds.includes(file.media_id)
+                  ? "border-primary ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-900"
+                  : "border-slate-200 dark:border-slate-700"
+              }`}
             >
               {/* Thumbnail */}
               <div
@@ -126,7 +131,11 @@ export function MediaList({ files, loading, viewMode, onDelete, onUpdate, onSele
               {files.map((file) => (
                 <tr
                   key={file.media_id}
-                  className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  className={`border-b transition-colors ${
+                    selectedIds.includes(file.media_id)
+                      ? "bg-primary/5 border-primary/20 dark:bg-primary/10"
+                      : "border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  }`}
                 >
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-3">

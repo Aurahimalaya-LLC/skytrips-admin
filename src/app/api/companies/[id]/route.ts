@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 import { CompanyProfile } from "@/types/company";
 
-// Create a Supabase client with the Service Role Key to bypass RLS for API operations
 const supabaseAdmin = createClient(
   env.supabase.url,
   env.supabase.serviceRoleKey || env.supabase.anonKey
@@ -16,8 +15,7 @@ export async function PUT(
   const { id } = await params;
   try {
     const body = await request.json();
-    const { name, address, emails, phones, website, isHeadquarters, deletedAt } =
-      body;
+    const { name, address, emails, phones, website, isHeadquarters, deletedAt } = body;
 
     const updates: any = {
       updated_at: new Date().toISOString(),
@@ -79,7 +77,6 @@ export async function DELETE(
     }
     return NextResponse.json({ success: true });
   } else {
-    // Soft delete
     const { data, error } = await supabaseAdmin
       .from("companies")
       .update({ deleted_at: new Date().toISOString() })

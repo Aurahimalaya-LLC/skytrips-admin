@@ -419,7 +419,7 @@ export default function DashboardLayout({
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 h-full min-w-0 bg-background overflow-hidden relative transition-colors duration-300">
         {/* Header */}
-        <header className="flex items-center justify-between whitespace-nowrap bg-background border-b border-border px-6 py-4 flex-shrink-0 z-10 shadow-sm transition-colors duration-300">
+        <header className="flex items-center justify-between whitespace-nowrap bg-background border-b border-border px-6 py-4 flex-shrink-0 z-10 shadow-sm transition-colors duration-300 print:hidden">
           <div className="flex items-center gap-4">
             {/* Mobile Menu Button */}
             <button className="md:hidden p-2 text-muted-foreground" aria-label="Open menu">

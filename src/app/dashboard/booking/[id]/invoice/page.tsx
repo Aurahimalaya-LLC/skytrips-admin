@@ -1,9 +1,13 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import Image from "next/image";
 import { useRouter, notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Booking } from "@/types";
+import { CompanyProfile } from "@/types/company";
+
+type BookingWithAgency = Booking & { issuedthroughagency?: string };
 
 export default function InvoicePage({
   params,
@@ -17,40 +21,65 @@ export default function InvoicePage({
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [companyProfiles, setCompanyProfiles] = useState<CompanyProfile[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(
+    null
+  );
+  const [settingsCompanyName, setSettingsCompanyName] = useState<string>("");
+  const [settingsLogoUrl, setSettingsLogoUrl] = useState<string>("");
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch("/api/settings");
+        if (!res.ok) return;
+        const data = await res.json();
+        setSettingsCompanyName(data.company_name || "");
+        setSettingsLogoUrl(data.logo_url || "");
+        const profiles = (data.company_profiles || []) as CompanyProfile[];
+        setCompanyProfiles(profiles);
+        if (!selectedCompanyId && profiles.length > 0) {
+          setSelectedCompanyId(profiles[0].id);
+        }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, [selectedCompanyId]);
 
   useEffect(() => {
     if (!bookingId) return;
+    const fetchBookingDetails = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("id", bookingId)
+          .single();
+
+        if (error) {
+          if (error.code === "PGRST116") {
+            setBooking(null);
+          } else {
+            throw error;
+          }
+        } else {
+          setBooking(data);
+        }
+      } catch (err: unknown) {
+        console.error("Error fetching booking:", err);
+        let message = "Failed to load booking details";
+        if (err instanceof Error) {
+          message = err.message;
+        }
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchBookingDetails();
   }, [bookingId]);
-
-  const fetchBookingDetails = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("*")
-        .eq("id", bookingId)
-        .single();
-
-      if (error) {
-        if (error.code === "PGRST116") {
-          setBooking(null);
-        } else {
-          throw error;
-        }
-      } else {
-        setBooking(data);
-      }
-    } catch (err: unknown) {
-      console.error("Error fetching booking:", err);
-      let message = "Failed to load booking details";
-      if (err instanceof Error) {
-        message = err.message;
-      }
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -89,6 +118,9 @@ export default function InvoicePage({
   }
 
   if (!booking) return null;
+
+  const selectedCompany =
+    companyProfiles.find((c) => c.id === selectedCompanyId) || null;
 
   // Calculate financials
   const sellingPrice = Number(booking.sellingPrice) || 0;
@@ -153,7 +185,32 @@ export default function InvoicePage({
           <span className="mx-2 text-slate-300">/</span>
           <span className="text-primary font-bold">Invoice</span>
         </nav>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          {companyProfiles.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500">
+                Company profile
+              </span>
+              <select
+                value={selectedCompanyId || ""}
+                onChange={(e) => setSelectedCompanyId(e.target.value || null)}
+                className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              >
+                {companyProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name}
+                    {profile.address.city
+                      ? ` (${profile.address.city}${
+                          profile.address.country
+                            ? `, ${profile.address.country}`
+                            : ""
+                        })`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <button
             onClick={handlePrint}
             className="inline-flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
@@ -176,20 +233,32 @@ export default function InvoicePage({
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden print:shadow-none print:rounded-none print:w-full print:max-w-none">
         {/* Header Section */}
         <div className="p-8 md:p-12 border-b border-slate-100">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+          <div className="flex flex-row justify-between items-center gap-8">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center text-white font-black text-2xl">
-                S
+              <div className="w-12 h-12 rounded-lg overflow-hidden bg-primary flex items-center justify-center text-white font-black text-2xl">
+                {settingsLogoUrl ? (
+                  <Image
+                    src={settingsLogoUrl}
+                    alt={settingsCompanyName || "Company Logo"}
+                    width={48}
+                    height={48}
+                    className="w-12 h-12 object-cover"
+                  />
+                ) : (
+                  "S"
+                )}
               </div>
               <div>
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                  {(booking as any).issuedthroughagency ||
+                  {settingsCompanyName ||
+                    (selectedCompany && selectedCompany.name) ||
+                    (booking as BookingWithAgency).issuedthroughagency ||
                     booking.agency ||
                     "SkyHigh Agency"}
                 </h1>
-                <p className="text-sm text-slate-500 font-medium">
+                {/* <p className="text-sm text-slate-500 font-medium">
                   Your Trusted Travel Partner
-                </p>
+                </p> */}
               </div>
             </div>
             <div className="text-left md:text-right">
@@ -211,14 +280,47 @@ export default function InvoicePage({
             </h3>
             <address className="not-italic text-sm text-slate-600 space-y-1">
               <p className="font-bold text-slate-900">
-                {(booking as any).issuedthroughagency ||
+                {selectedCompany?.name ||
+                  (booking as BookingWithAgency).issuedthroughagency ||
                   booking.agency ||
                   "SkyHigh Agency Ltd."}
               </p>
-              <p>123 Sky Tower, Aviation Street</p>
-              <p>Singapore, 018956</p>
-              <p>Tax ID: SG-99887766</p>
-              <p>support@skyhigh.com</p>
+              {selectedCompany ? (
+                <>
+                  {selectedCompany.address.street && (
+                    <p>{selectedCompany.address.street}</p>
+                  )}
+                  {(selectedCompany.address.city ||
+                    selectedCompany.address.state ||
+                    selectedCompany.address.postalCode) && (
+                    <p>
+                      {[
+                        selectedCompany.address.city,
+                        selectedCompany.address.state,
+                        selectedCompany.address.postalCode,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  )}
+                  {selectedCompany.address.country && (
+                    <p>{selectedCompany.address.country}</p>
+                  )}
+                  {selectedCompany.emails[0]?.value && (
+                    <p>{selectedCompany.emails[0].value}</p>
+                  )}
+                  {selectedCompany.phones[0]?.value && (
+                    <p>{selectedCompany.phones[0].value}</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p>123 Sky Tower, Aviation Street</p>
+                  <p>Singapore, 018956</p>
+                  <p>Tax ID: SG-99887766</p>
+                  <p>support@skyhigh.com</p>
+                </>
+              )}
             </address>
           </div>
         </div>
@@ -403,7 +505,7 @@ export default function InvoicePage({
         <div className="p-8 md:p-12 bg-slate-50 border-t border-slate-100 text-center">
           <h4 className="font-bold text-slate-900 mb-2">
             Thank you for booking with{" "}
-            {(booking as any).issuedthroughagency ||
+            {(booking as BookingWithAgency).issuedthroughagency ||
               booking.agency ||
               "SkyHigh Agency"}
             !
