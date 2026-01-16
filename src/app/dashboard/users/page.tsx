@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { InviteUserModal } from "@/components/InviteUserModal";
 import { supabase } from "@/lib/supabase";
+import { EmailEventType } from "@/types/email-event";
 
 type UserRow = {
   id: string;
@@ -156,6 +157,17 @@ export default function UsersPage() {
         setError(insertError.message);
         return;
       }
+      try {
+        const payload = {
+          type: EmailEventType.UserCreated,
+          data: { email, fullName, role }
+        };
+        await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      } catch {}
     }
     fetchData();
     setIsInviteModalOpen(false);
