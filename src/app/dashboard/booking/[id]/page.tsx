@@ -385,112 +385,241 @@ export default function BookingDetailsPage({
               </span>
             </div>
             <div className="p-6">
-              <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
-                <div className="flex-1 bg-slate-50 rounded-xl p-4 w-full border border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-400 mb-2">
-                    <span className="material-symbols-outlined text-[18px]">
-                      flight_takeoff
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest">
-                      Origin
-                    </span>
-                  </div>
-                  <div className="text-xl font-black text-slate-900">
-                    {booking.origin}
-                  </div>
-                  <div className="text-sm font-medium text-slate-500 mt-1">
-                    {booking.departureDate ||
-                      booking.travelDate ||
-                      "Wed, 11 Aug 2021"}
-                  </div>
-                </div>
+              {booking.itineraries && booking.itineraries.length > 0 ? (
+                <div className="space-y-6">
+                  {booking.itineraries.map((itinerary, itinIndex) => (
+                    <div
+                      key={itinIndex}
+                      className="bg-slate-50 border border-slate-200 rounded-xl p-6"
+                    >
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                          {itinIndex === 0
+                            ? "Outbound Flight Segments"
+                            : "Return Flight Segments"}
+                        </h4>
+                      </div>
 
-                <div className="flex flex-col items-center justify-center px-4 text-slate-300">
-                  <span className="material-symbols-outlined text-2xl">
-                    arrow_forward
-                  </span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest mt-1">
-                    {booking.tripType === "Round Trip" ? "Return" : "Direct"}
-                  </span>
-                </div>
+                      <div className="space-y-4">
+                        {itinerary.segments.map((segment, segIndex) => (
+                          <div
+                            key={segIndex}
+                            className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative group"
+                          >
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                              {/* Departure */}
+                              <div className="col-span-1 md:col-span-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase">
+                                  Departure
+                                </label>
+                                <div className="grid grid-cols-3 gap-2 mt-1">
+                                  <div className="bg-slate-50 px-3 py-2 rounded-md border border-slate-100">
+                                    <span className="text-xs text-slate-400 block">
+                                      Code
+                                    </span>
+                                    <span className="text-sm font-bold text-slate-900">
+                                      {segment.departure?.iataCode || "N/A"}
+                                    </span>
+                                  </div>
+                                  <div className="bg-slate-50 px-3 py-2 rounded-md border border-slate-100 col-span-2">
+                                    <span className="text-xs text-slate-400 block">
+                                      Time
+                                    </span>
+                                    <span className="text-sm font-bold text-slate-900">
+                                      {segment.departure?.at
+                                        ? new Date(
+                                            segment.departure.at
+                                          ).toLocaleString()
+                                        : "N/A"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
 
-                <div className="flex-1 bg-slate-50 rounded-xl p-4 w-full border border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-400 mb-2">
-                    <span className="material-symbols-outlined text-[18px]">
-                      flight_land
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest">
-                      Destination
-                    </span>
-                  </div>
-                  <div className="text-xl font-black text-slate-900">
-                    {booking.destination}
-                  </div>
-                  <div className="text-sm font-medium text-slate-500 mt-1">
-                    {booking.returnDate ||
-                      booking.arrivalDate ||
-                      "Wed, 11 Aug 2021"}
-                  </div>
-                </div>
-              </div>
+                              {/* Arrival */}
+                              <div className="col-span-1 md:col-span-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase">
+                                  Arrival
+                                </label>
+                                <div className="grid grid-cols-3 gap-2 mt-1">
+                                  <div className="bg-slate-50 px-3 py-2 rounded-md border border-slate-100">
+                                    <span className="text-xs text-slate-400 block">
+                                      Code
+                                    </span>
+                                    <span className="text-sm font-bold text-slate-900">
+                                      {segment.arrival?.iataCode || "N/A"}
+                                    </span>
+                                  </div>
+                                  <div className="bg-slate-50 px-3 py-2 rounded-md border border-slate-100 col-span-2">
+                                    <span className="text-xs text-slate-400 block">
+                                      Time
+                                    </span>
+                                    <span className="text-sm font-bold text-slate-900">
+                                      {segment.arrival?.at
+                                        ? new Date(
+                                            segment.arrival.at
+                                          ).toLocaleString()
+                                        : "N/A"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 py-6 border-t border-b border-slate-100">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                    Airline
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <span className="size-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">
-                      SQ
-                    </span>
-                    <p className="text-sm font-bold text-slate-900">
-                      {booking.airlines}
-                    </p>
-                  </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase">
+                                  Carrier
+                                </label>
+                                <div className="mt-1 font-bold text-slate-900">
+                                  {segment.carrierCode || "N/A"}
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase">
+                                  Flight No.
+                                </label>
+                                <div className="mt-1 font-bold text-slate-900">
+                                  {segment.number || "N/A"}
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase">
+                                  Aircraft
+                                </label>
+                                <div className="mt-1 font-bold text-slate-900">
+                                  {segment.aircraft?.code || "N/A"}
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase">
+                                  Duration
+                                </label>
+                                <div className="mt-1 font-bold text-slate-900">
+                                  {segment.duration || "N/A"}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                    Flight Number
-                  </label>
-                  <p className="text-sm font-bold text-slate-900">
-                    {booking.flightNumber || "SQ218"}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                    Class
-                  </label>
-                  <p className="text-sm font-bold text-slate-900">
-                    {booking.flightClass || "Economy"}
-                  </p>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
+                    <div className="flex-1 bg-slate-50 rounded-xl p-4 w-full border border-slate-100">
+                      <div className="flex items-center gap-2 text-slate-400 mb-2">
+                        <span className="material-symbols-outlined text-[18px]">
+                          flight_takeoff
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest">
+                          Origin
+                        </span>
+                      </div>
+                      <div className="text-xl font-black text-slate-900">
+                        {booking.origin}
+                      </div>
+                      <div className="text-sm font-medium text-slate-500 mt-1">
+                        {booking.departureDate ||
+                          booking.travelDate ||
+                          "Wed, 11 Aug 2021"}
+                      </div>
+                    </div>
 
-              {booking.stopoverLocation && (
-                <div className="mt-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Stopovers
-                    </h4>
+                    <div className="flex flex-col items-center justify-center px-4 text-slate-300">
+                      <span className="material-symbols-outlined text-2xl">
+                        arrow_forward
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest mt-1">
+                        {booking.tripType === "Round Trip"
+                          ? "Return"
+                          : "Direct"}
+                      </span>
+                    </div>
+
+                    <div className="flex-1 bg-slate-50 rounded-xl p-4 w-full border border-slate-100">
+                      <div className="flex items-center gap-2 text-slate-400 mb-2">
+                        <span className="material-symbols-outlined text-[18px]">
+                          flight_land
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest">
+                          Destination
+                        </span>
+                      </div>
+                      <div className="text-xl font-black text-slate-900">
+                        {booking.destination}
+                      </div>
+                      <div className="text-sm font-medium text-slate-500 mt-1">
+                        {booking.returnDate ||
+                          booking.arrivalDate ||
+                          "Wed, 11 Aug 2021"}
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-4 flex justify-between items-center">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 py-6 border-t border-b border-slate-100">
                     <div>
-                      <p className="text-sm font-bold text-slate-900">
-                        {booking.stopoverLocation}
-                      </p>
-                      <p className="text-xs text-slate-500">Changi Airport</p>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                        Airline
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <span className="size-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">
+                          SQ
+                        </span>
+                        <p className="text-sm font-bold text-slate-900">
+                          {booking.airlines}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-slate-500">
-                        <span className="font-bold">Arr:</span> 11 Aug 2021
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                        Flight Number
+                      </label>
+                      <p className="text-sm font-bold text-slate-900">
+                        {booking.flightNumber || "SQ218"}
                       </p>
-                      <p className="text-[10px] text-slate-500">
-                        <span className="font-bold">Dep:</span> 12 Aug 2021
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                        Class
+                      </label>
+                      <p className="text-sm font-bold text-slate-900">
+                        {booking.flightClass || "Economy"}
                       </p>
                     </div>
                   </div>
-                </div>
+
+                  {booking.stopoverLocation && (
+                    <div className="mt-6">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                          Stopovers
+                        </h4>
+                      </div>
+                      <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-4 flex justify-between items-center">
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">
+                            {booking.stopoverLocation}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            Changi Airport
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-500">
+                            <span className="font-bold">Arr:</span> 11 Aug 2021
+                          </p>
+                          <p className="text-[10px] text-slate-500">
+                            <span className="font-bold">Dep:</span> 12 Aug 2021
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
