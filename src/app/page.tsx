@@ -56,6 +56,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email: email.trim(), password }),
       });
       if (!res.ok) {
@@ -81,6 +82,11 @@ export default function LoginPage() {
       router.replace("/dashboard");
       if (typeof window !== "undefined") {
         window.location.href = "/dashboard";
+        setTimeout(() => {
+          try {
+            window.location.assign("/dashboard");
+          } catch {}
+        }, 50);
       }
     } catch (err: unknown) {
       console.error("Login error:", err);
