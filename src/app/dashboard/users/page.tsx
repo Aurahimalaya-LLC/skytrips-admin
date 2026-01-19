@@ -57,14 +57,12 @@ export default function UsersPage() {
       const { data: rows, count, error: fetchError } = await query;
       if (fetchError) throw fetchError;
       const normalized = (rows || []).map((u: UserRow) => {
-        const username = u.first_name ? u.first_name : (u.email?.split("@")[0] || "");
         const roleKey = u.role || "";
         const roleDisplay = roleKey
           ? roleKey.split("_").map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(" ")
           : "";
         return {
           ...u,
-          username,
           role: roleDisplay,
           role_key: roleKey,
           status: u.is_active ? "active" : "inactive",
@@ -149,18 +147,20 @@ export default function UsersPage() {
         setError("Email already exists");
         return;
       }
-      const id = crypto.randomUUID();
-      const { error: insertError } = await supabase.from("users").insert([
-        { id, email, first_name, last_name, role, is_active: true, is_verified: false }
-      ]);
-      if (insertError) {
-        setError(insertError.message);
+      const res = await fetch("/api/users/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, first_name, last_name, role })
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setError(j.error || "Failed to create user");
         return;
       }
       try {
         const payload = {
           type: EmailEventType.UserCreated,
-          data: { email, fullName, role }
+          data: { email, fullName, role, readable_password: process.env.NEXT_PUBLIC_ADMIN_DEFAULT_PASSWORD || "Skytrips@123" }
         };
         await fetch("/api/events", {
           method: "POST",
@@ -330,11 +330,11 @@ export default function UsersPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="size-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm">
-                          {u.first_name?.[0] || u.username[0] || "U"}
+                          {u.first_name?.[0] || (u.email?.split("@")[0]?.[0] || "U")}
                         </div>
                         <div>
                           <div className="font-bold text-slate-900">
-                            {[u.first_name, u.last_name].filter(Boolean).join(" ") || u.username}
+                            {[u.first_name, u.last_name].filter(Boolean).join(" ") || u.email}
                           </div>
                           <div className="text-xs text-slate-400 font-medium mt-0.5">
                             ID: {`${u.id}`}
