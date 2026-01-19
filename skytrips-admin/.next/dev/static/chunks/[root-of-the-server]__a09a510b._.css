@@ -907,10 +907,6 @@
     position: relative;
   }
 
-  .static {
-    position: static;
-  }
-
   .sticky {
     position: sticky;
   }
@@ -1077,10 +1073,6 @@
 
   .my-2 {
     margin-block: calc(var(--spacing) * 2);
-  }
-
-  .my-6 {
-    margin-block: calc(var(--spacing) * 6);
   }
 
   .-mt-2 {
@@ -3982,12 +3974,6 @@
   @media (hover: hover) {
     .hover\:bg-emerald-800:hover {
       background-color: var(--color-emerald-800);
-    }
-  }
-
-  @media (hover: hover) {
-    .hover\:bg-gray-50:hover {
-      background-color: var(--color-gray-50);
     }
   }
 
