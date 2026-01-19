@@ -23,6 +23,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb', // Adjust as needed, but Vercel's hard 4.5MB limit still applies to the final response
+    },
+  },
 };
 
 export default nextConfig;
