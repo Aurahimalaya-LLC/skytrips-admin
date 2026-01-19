@@ -18,10 +18,11 @@ export default function LoginPage() {
         const res = await fetch("/api/auth/me", { cache: "no-store", credentials: "include" });
         if (res.ok) {
           router.replace("/dashboard");
-          return;
         }
       } catch {}
-      setIsCheckingAuth(false);
+      finally {
+        setIsCheckingAuth(false);
+      }
     };
     checkExistingAuth();
   }, [router]);
@@ -78,7 +79,6 @@ export default function LoginPage() {
         return;
       }
       router.replace("/dashboard");
-      router.refresh();
     } catch (err: unknown) {
       console.error("Login error:", err);
       const errorMessage = err instanceof Error ? err.message : "An error occurred during login";
