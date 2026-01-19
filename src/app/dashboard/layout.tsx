@@ -44,16 +44,16 @@ export default function DashboardLayout({
   const checkAuth = async () => {
     try {
       const res = await fetch("/api/auth/me", { cache: "no-store", credentials: "include" });
-      if (!res.ok) {
-        router.push("/");
-        return;
+      if (res.ok) {
+        const data = await res.json();
+        setUserEmail(data.user?.email || "");
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
       }
-      const data = await res.json();
-      setUserEmail(data.user?.email || "");
-      setIsAuthenticated(true);
     } catch (error) {
       console.error("Auth check error:", error);
-      router.push("/");
+      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
