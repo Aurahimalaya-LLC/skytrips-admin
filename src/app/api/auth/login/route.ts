@@ -7,7 +7,12 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const supabase = getAdminClient();
-  if (!supabase) return NextResponse.json({ error: "Server config missing" }, { status: 500 });
+  if (!supabase) {
+    return NextResponse.json(
+      { ok: false, code: "server_config_missing", error: "Server configuration missing" },
+      { status: 500 }
+    );
+  }
   const body = await req.json().catch(() => null);
   const email = String(body?.email || "").trim().toLowerCase();
   const password = String(body?.password || "");
