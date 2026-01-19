@@ -219,7 +219,7 @@ export default function InvoicePage({
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
       // Create a PDF with dynamic height based on the content
-      const pdf = new jsPDF("p", "mm", [imgWidth, imgHeight]);
+      const pdf = new jsPDF("p", "mm", [imgWidth, imgHeight], true);
       pdf.addImage(
         canvas.toDataURL("image/png"),
         "PNG",
