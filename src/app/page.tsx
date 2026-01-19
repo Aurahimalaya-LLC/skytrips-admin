@@ -15,7 +15,7 @@ export default function LoginPage() {
   useEffect(() => {
     const checkExistingAuth = async () => {
       try {
-        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        const res = await fetch("/api/auth/me", { cache: "no-store", credentials: "include" });
         if (res.ok) {
           router.replace("/dashboard");
           return;
@@ -59,14 +59,20 @@ export default function LoginPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        if (data?.error) {
+        if (data?.code === "server_config_missing") {
+          setError("Server configuration missing. Please configure SUPABASE_SERVICE_ROLE_KEY and ADMIN_SESSION_SECRET.");
+        } else if (data?.error) {
           setError(data.error);
+        } else if (res.status === 404) {
+          setError("No account found for this email");
+        } else if (res.status === 403) {
+          setError("Account disabled. Contact your administrator.");
+        } else if (res.status === 401) {
+          setError("Incorrect password");
+        } else if (res.status === 400) {
+          setError("Invalid request. Please check your inputs.");
         } else {
-          if (res.status === 404) setError("No account found for this email");
-          else if (res.status === 403) setError("Account disabled. Contact your administrator.");
-          else if (res.status === 401) setError("Incorrect password");
-          else if (res.status === 400) setError("Invalid request. Please check your inputs.");
-          else setError("Unable to sign in due to a server error");
+          setError("Unable to sign in due to a server error");
         }
         setIsLoading(false);
         return;
