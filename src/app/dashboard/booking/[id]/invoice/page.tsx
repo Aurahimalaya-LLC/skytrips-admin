@@ -6,6 +6,9 @@ import { useRouter, notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Booking } from "@/types";
 import { CompanyProfile } from "@/types/company";
+import SendEmailModal from "@/components/booking-management/SendEmailModal";
+import html2canvas from "html2canvas-pro";
+import jsPDF from "jspdf";
 
 type BookingWithAgency = Booking & { issuedthroughagency?: string };
 
@@ -27,6 +30,7 @@ export default function InvoicePage({
   );
   const [settingsCompanyName, setSettingsCompanyName] = useState<string>("");
   const [settingsLogoUrl, setSettingsLogoUrl] = useState<string>("");
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -168,8 +172,114 @@ export default function InvoicePage({
     window.print();
   };
 
+  const handleSendEmail = async (data: {
+    subject: string;
+    message: string;
+    template: string;
+  }) => {
+    if (!booking) return;
+    try {
+      const element = document.getElementById("invoice-content");
+      if (!element) throw new Error("Invoice content not found");
+
+      // Wait for fonts to load before capturing
+      await document.fonts.ready;
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        onclone: (doc) => {
+          const allElements = doc.querySelectorAll("*");
+          allElements.forEach((el) => {
+            const htmlEl = el as HTMLElement;
+            const style = window.getComputedStyle(htmlEl);
+            if (style.color && style.color.includes("oklab")) {
+              htmlEl.style.setProperty("color", "#000000", "important");
+            }
+            if (
+              style.backgroundColor &&
+              style.backgroundColor.includes("oklab")
+            ) {
+              htmlEl.style.setProperty(
+                "background-color",
+                "#ffffff",
+                "important"
+              );
+            }
+            if (style.borderColor && style.borderColor.includes("oklab")) {
+              htmlEl.style.setProperty("border-color", "#e2e8f0", "important");
+            }
+          });
+        },
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      // Create a PDF with dynamic height based on the content
+      const pdf = new jsPDF("p", "mm", [imgWidth, imgHeight]);
+      pdf.addImage(
+        canvas.toDataURL("image/png"),
+        "PNG",
+        0,
+        0,
+        imgWidth,
+        imgHeight
+      );
+
+      const pdfBase64 = pdf.output("datauristring");
+
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: booking.email,
+          subject: data.subject.replace("{PNR}", booking.PNR || ""),
+          message: data.message
+            .replace(
+              "{NAME}",
+              `${booking.travellerFirstName} ${booking.travellerLastName}`
+            )
+            .replace("{PNR}", booking.PNR || "")
+            .replace("{ORIGIN}", booking.origin)
+            .replace("{DESTINATION}", booking.destination)
+            .replace("{DEPARTURE_DATE}", booking.travelDate || "")
+            .replace("{FLIGHT_NUMBER}", booking.flightNumber || "")
+            .replace("{AMOUNT}", booking.sellingPrice?.toString() || ""),
+          attachment: {
+            filename: `Invoice-${invoiceNumber}.pdf`,
+            content: pdfBase64,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Failed to send email");
+      }
+    } catch (err) {
+      console.error("Error sending invoice:", err);
+      throw err;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 p-6 md:p-12 print:p-0 print:bg-white font-display">
+      {booking && (
+        <SendEmailModal
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          recipient={{
+            name: `${booking.travellerFirstName} ${booking.travellerLastName}`,
+            email: booking.email || "",
+            phone: booking.phone,
+            organization: (booking as any).companyName || "Individual",
+          }}
+          onSend={handleSendEmail}
+        />
+      )}
       {/* Navigation / Actions - Hidden in Print */}
       <div className="max-w-4xl mx-auto mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <nav className="flex text-sm text-slate-500">
@@ -220,7 +330,10 @@ export default function InvoicePage({
             </span>
             Download PDF
           </button>
-          <button className="inline-flex items-center px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-sm hover:bg-blue-600 transition-all active:scale-95">
+          <button
+            onClick={() => setIsEmailModalOpen(true)}
+            className="inline-flex items-center px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-sm hover:bg-blue-600 transition-all active:scale-95"
+          >
             <span className="material-symbols-outlined text-[20px] mr-2">
               send
             </span>
@@ -230,7 +343,11 @@ export default function InvoicePage({
       </div>
 
       {/* Invoice Container */}
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden print:shadow-none print:rounded-none print:w-full print:max-w-none">
+      <div
+        id="invoice-content"
+        className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden print:shadow-none print:rounded-none print:w-full print:max-w-none"
+        style={{ colorScheme: "only light" }}
+      >
         {/* Header Section */}
         <div className="p-8 md:p-12 border-b border-slate-100">
           <div className="flex flex-row justify-between items-center gap-8">

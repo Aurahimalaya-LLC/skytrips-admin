@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { InviteUserModal } from "@/components/InviteUserModal";
 import { supabase } from "@/lib/supabase";
 import { EmailEventType } from "@/types/email-event";
+import { domToPng } from "modern-screenshot";
+import jsPDF from "jspdf";
 
 type UserRow = {
   id: string;
@@ -41,9 +43,15 @@ export default function UsersPage() {
     try {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      let query = supabase.from("users").select("*", { count: "exact" }).order("created_at", { ascending: false }).range(from, to);
+      let query = supabase
+        .from("users")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
       if (q) {
-        query = query.or(`email.ilike.*${q}*,first_name.ilike.*${q}*,last_name.ilike.*${q}*,phone.ilike.*${q}*`);
+        query = query.or(
+          `email.ilike.*${q}*,first_name.ilike.*${q}*,last_name.ilike.*${q}*,phone.ilike.*${q}*`
+        );
       }
       if (roleFilter) {
         query = query.eq("role", roleFilter);
@@ -57,10 +65,15 @@ export default function UsersPage() {
       const { data: rows, count, error: fetchError } = await query;
       if (fetchError) throw fetchError;
       const normalized = (rows || []).map((u: UserRow) => {
-        const username = u.first_name ? u.first_name : (u.email?.split("@")[0] || "");
+        const username = u.first_name
+          ? u.first_name
+          : u.email?.split("@")[0] || "";
         const roleKey = u.role || "";
         const roleDisplay = roleKey
-          ? roleKey.split("_").map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(" ")
+          ? roleKey
+              .split("_")
+              .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+              .join(" ")
           : "";
         return {
           ...u,
@@ -69,7 +82,7 @@ export default function UsersPage() {
           role_key: roleKey,
           status: u.is_active ? "active" : "inactive",
           last_login: u.last_login_at || "",
-          displayId: `#USR-${String(u.id).substring(0, 4)}`
+          displayId: `#USR-${String(u.id).substring(0, 4)}`,
         };
       });
       setData(normalized);
@@ -88,9 +101,13 @@ export default function UsersPage() {
   useEffect(() => {
     const channel = supabase
       .channel("public:users")
-      .on("postgres_changes", { event: "*", schema: "public", table: "users" }, () => {
-        fetchData();
-      })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "users" },
+        () => {
+          fetchData();
+        }
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -150,24 +167,76 @@ export default function UsersPage() {
         return;
       }
       const id = crypto.randomUUID();
-      const { error: insertError } = await supabase.from("users").insert([
-        { id, email, first_name, last_name, role, is_active: true, is_verified: false }
-      ]);
+      const { error: insertError } = await supabase
+        .from("users")
+        .insert([
+          {
+            id,
+            email,
+            first_name,
+            last_name,
+            role,
+            is_active: true,
+            is_verified: false,
+          },
+        ]);
       if (insertError) {
         setError(insertError.message);
         return;
       }
       try {
-        const payload = {
-          type: EmailEventType.UserCreated,
-          data: { email, fullName, role }
+        const welcomeElement = document.createElement("div");
+        welcomeElement.style.padding = "40px";
+        welcomeElement.style.background = "white";
+        welcomeElement.style.width = "800px";
+        welcomeElement.innerHTML = `
+          <div style="font-family: sans-serif; color: #333;">
+            <h1 style="color: #0f766e;">Welcome to SkyTrips!</h1>
+            <p>Dear ${fullName},</p>
+            <p>You have been invited to join the SkyTrips Admin Portal as a <strong>${role}</strong>.</p>
+            <p>Your account has been created successfully.</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #666;">This is an automated message.</p>
+          </div>
+        `;
+        document.body.appendChild(welcomeElement);
+
+        const dataUrl = await domToPng(welcomeElement, {
+          backgroundColor: "#ffffff",
+          scale: 2,
+        });
+        document.body.removeChild(welcomeElement);
+
+        const img = new Image();
+        img.src = dataUrl;
+        await new Promise((resolve) => {
+          img.onload = resolve;
+        });
+
+        const imgWidth = 210;
+        const imgHeight = (img.height * imgWidth) / img.width;
+        const pdf = new jsPDF("p", "mm", "a4");
+        pdf.addImage(dataUrl, "PNG", 0, 0, imgWidth, imgHeight);
+        const pdfBase64 = pdf.output("datauristring");
+
+        const attachment = {
+          filename: "Welcome-SkyTrips.pdf",
+          content: pdfBase64,
         };
-        await fetch("/api/events", {
+
+        await fetch("/api/send-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            to: email,
+            subject: "Welcome to SkyTrips Admin",
+            message: `Hello ${fullName},\n\nYou have been invited to join SkyTrips as a ${role}.\n\nPlease check the attached welcome document.\n\nBest regards,\nSkyTrips Team`,
+            attachment,
+          }),
         });
-      } catch {}
+      } catch (err) {
+        console.error("Error generating/sending PDF:", err);
+      }
     }
     fetchData();
     setIsInviteModalOpen(false);
@@ -176,8 +245,8 @@ export default function UsersPage() {
 
   return (
     <div className="max-w-7xl mx-auto w-full font-display pb-12">
-      <InviteUserModal 
-        isOpen={isInviteModalOpen} 
+      <InviteUserModal
+        isOpen={isInviteModalOpen}
         onClose={() => {
           setIsInviteModalOpen(false);
           setEditingUser(null);
@@ -187,9 +256,11 @@ export default function UsersPage() {
           editingUser
             ? {
                 id: editingUser.id,
-                fullName: [editingUser.first_name, editingUser.last_name].filter(Boolean).join(" "),
+                fullName: [editingUser.first_name, editingUser.last_name]
+                  .filter(Boolean)
+                  .join(" "),
                 email: editingUser.email,
-                role: editingUser.role_key || "agent"
+                role: editingUser.role_key || "agent",
               }
             : undefined
         }
@@ -199,14 +270,20 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">User Management</h1>
-          <p className="text-slate-500 mt-1 text-sm">Manage internal access levels and staff credentials.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+            User Management
+          </h1>
+          <p className="text-slate-500 mt-1 text-sm">
+            Manage internal access levels and staff credentials.
+          </p>
         </div>
         <button
           onClick={() => setIsInviteModalOpen(true)}
           className="inline-flex items-center gap-2 rounded-lg border border-teal-700 px-4 py-2.5 text-sm font-bold text-teal-700 bg-white hover:bg-teal-50 transition-colors shadow-sm"
         >
-          <span className="material-symbols-outlined text-[20px]">person_add</span>
+          <span className="material-symbols-outlined text-[20px]">
+            person_add
+          </span>
           Invite New User
         </button>
       </div>
@@ -214,13 +291,17 @@ export default function UsersPage() {
       {/* Table Card */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         {error && (
-          <div className="px-6 py-4 bg-red-50 text-red-700 border-b border-red-200">{error}</div>
+          <div className="px-6 py-4 bg-red-50 text-red-700 border-b border-red-200">
+            {error}
+          </div>
         )}
         <div className="px-6 py-4 border-b border-slate-100 bg-white">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
             <div className="md:col-span-2">
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
+                  search
+                </span>
                 <input
                   value={q}
                   onChange={(e) => {
@@ -288,23 +369,31 @@ export default function UsersPage() {
               }}
               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50 transition-colors"
             >
-              <span className="material-symbols-outlined text-[16px]">filter_alt_off</span>
+              <span className="material-symbols-outlined text-[16px]">
+                filter_alt_off
+              </span>
               Reset filters
             </button>
           </div>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-white text-slate-400 font-bold uppercase text-xs border-b border-slate-100">
               <tr>
                 <th className="px-6 py-5 font-bold tracking-wider">User</th>
-                <th className="px-6 py-5 font-bold tracking-wider">Email Address</th>
+                <th className="px-6 py-5 font-bold tracking-wider">
+                  Email Address
+                </th>
                 <th className="px-6 py-5 font-bold tracking-wider">Role</th>
                 <th className="px-6 py-5 font-bold tracking-wider">Status</th>
                 <th className="px-6 py-5 font-bold tracking-wider">Verified</th>
-                <th className="px-6 py-5 font-bold tracking-wider">Last Login</th>
-                <th className="px-6 py-5 font-bold tracking-wider text-right">Actions</th>
+                <th className="px-6 py-5 font-bold tracking-wider">
+                  Last Login
+                </th>
+                <th className="px-6 py-5 font-bold tracking-wider text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -319,13 +408,19 @@ export default function UsersPage() {
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                  <td
+                    colSpan={6}
+                    className="px-6 py-8 text-center text-slate-500"
+                  >
                     No users found matching your criteria.
                   </td>
                 </tr>
               ) : (
                 data.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/80 transition-colors group">
+                  <tr
+                    key={u.id}
+                    className="hover:bg-slate-50/80 transition-colors group"
+                  >
                     {/* User Column */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -334,7 +429,9 @@ export default function UsersPage() {
                         </div>
                         <div>
                           <div className="font-bold text-slate-900">
-                            {[u.first_name, u.last_name].filter(Boolean).join(" ") || u.username}
+                            {[u.first_name, u.last_name]
+                              .filter(Boolean)
+                              .join(" ") || u.username}
                           </div>
                           <div className="text-xs text-slate-400 font-medium mt-0.5">
                             ID: {`${u.id}`}
@@ -342,56 +439,72 @@ export default function UsersPage() {
                         </div>
                       </div>
                     </td>
-                    
+
                     {/* Email Column */}
                     <td className="px-6 py-4 text-slate-600 font-medium">
                       {u.email}
                     </td>
-                    
+
                     {/* Role Column */}
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${
-                        u.role_key === "super_admin" 
-                          ? "bg-teal-50 text-teal-700 border border-teal-100" 
-                          : "bg-slate-100 text-slate-600 border border-slate-200"
-                      }`}>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${
+                          u.role_key === "super_admin"
+                            ? "bg-teal-50 text-teal-700 border border-teal-100"
+                            : "bg-slate-100 text-slate-600 border border-slate-200"
+                        }`}
+                      >
                         {u.role}
                       </span>
                     </td>
-                    
+
                     {/* Status Column */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <span className={`size-2 rounded-full ${
-                          u.status === "active" ? "bg-green-500" : "bg-slate-300"
-                        }`}></span>
-                        <span className={`text-sm font-bold ${
-                          u.status === "active" ? "text-slate-700" : "text-slate-400"
-                        }`}>
+                        <span
+                          className={`size-2 rounded-full ${
+                            u.status === "active"
+                              ? "bg-green-500"
+                              : "bg-slate-300"
+                          }`}
+                        ></span>
+                        <span
+                          className={`text-sm font-bold ${
+                            u.status === "active"
+                              ? "text-slate-700"
+                              : "text-slate-400"
+                          }`}
+                        >
                           {u.status === "active" ? "Active" : "Inactive"}
                         </span>
                       </div>
                     </td>
-                    
+
                     {/* Verified Column */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <span className={`size-2 rounded-full ${
-                          u.is_verified ? "bg-teal-600" : "bg-slate-300"
-                        }`}></span>
-                        <span className={`text-sm font-bold ${
-                          u.is_verified ? "text-slate-700" : "text-slate-400"
-                        }`}>
+                        <span
+                          className={`size-2 rounded-full ${
+                            u.is_verified ? "bg-teal-600" : "bg-slate-300"
+                          }`}
+                        ></span>
+                        <span
+                          className={`text-sm font-bold ${
+                            u.is_verified ? "text-slate-700" : "text-slate-400"
+                          }`}
+                        >
                           {u.is_verified ? "Verified" : "Unverified"}
                         </span>
                       </div>
                     </td>
-                    
+
                     {/* Last Login Column */}
                     <td className="px-6 py-4 text-slate-500">
-                      {u.last_login ? new Date(u.last_login).toLocaleString() : "Never"}
+                      {u.last_login
+                        ? new Date(u.last_login).toLocaleString()
+                        : "Never"}
                     </td>
-                    
+
                     {/* Actions Column */}
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
@@ -403,7 +516,9 @@ export default function UsersPage() {
                           className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
                           title="Edit"
                         >
-                          <span className="material-symbols-outlined text-[18px]">edit</span>
+                          <span className="material-symbols-outlined text-[18px]">
+                            edit
+                          </span>
                         </button>
                         <button
                           onClick={() => {
@@ -413,7 +528,9 @@ export default function UsersPage() {
                           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete"
                         >
-                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                          <span className="material-symbols-outlined text-[18px]">
+                            delete
+                          </span>
                         </button>
                       </div>
                     </td>
@@ -437,17 +554,28 @@ export default function UsersPage() {
             <div className="absolute inset-0 bg-black/40"></div>
             <div className="relative bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md mx-4">
               <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px] text-red-600">warning</span>
-                <h2 id="delete-title" className="text-lg font-bold text-slate-900">
+                <span className="material-symbols-outlined text-[20px] text-red-600">
+                  warning
+                </span>
+                <h2
+                  id="delete-title"
+                  className="text-lg font-bold text-slate-900"
+                >
                   Confirm Deletion
                 </h2>
               </div>
               <div className="px-6 py-4 space-y-3">
                 <div className="text-sm text-slate-700">
-                  User: <span className="font-medium">{[deleteTarget?.first_name, deleteTarget?.last_name].filter(Boolean).join(" ") || deleteTarget?.email}</span>
+                  User:{" "}
+                  <span className="font-medium">
+                    {[deleteTarget?.first_name, deleteTarget?.last_name]
+                      .filter(Boolean)
+                      .join(" ") || deleteTarget?.email}
+                  </span>
                 </div>
                 <p className="text-xs text-red-600">
-                  This action cannot be undone. The user will be permanently deleted.
+                  This action cannot be undone. The user will be permanently
+                  deleted.
                 </p>
               </div>
               <div className="px-6 py-4 flex items-center justify-end gap-3 border-t border-slate-100">
@@ -461,7 +589,10 @@ export default function UsersPage() {
                   onClick={async () => {
                     if (!deleteTarget) return;
                     setIsDeleting(true);
-                    const { error: delError } = await supabase.from("users").delete().eq("id", deleteTarget.id);
+                    const { error: delError } = await supabase
+                      .from("users")
+                      .delete()
+                      .eq("id", deleteTarget.id);
                     setIsDeleting(false);
                     if (delError) {
                       setError(delError.message);
@@ -473,7 +604,9 @@ export default function UsersPage() {
                   disabled={isDeleting}
                   className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
                 >
-                  {isDeleting && <span className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>}
+                  {isDeleting && (
+                    <span className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  )}
                   <span>Delete User</span>
                 </button>
               </div>
@@ -484,9 +617,21 @@ export default function UsersPage() {
         <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
           <div className="text-sm text-slate-500 font-medium">
             {totalCount === 0 ? (
-              <>Showing <span className="font-bold text-slate-900">0</span> of <span className="font-bold text-slate-900">0</span> users</>
+              <>
+                Showing <span className="font-bold text-slate-900">0</span> of{" "}
+                <span className="font-bold text-slate-900">0</span> users
+              </>
             ) : (
-              <>Showing <span className="font-bold text-slate-900">{(page - 1) * pageSize + 1}-{Math.min(page * pageSize, totalCount)}</span> of <span className="font-bold text-slate-900">{totalCount}</span> users</>
+              <>
+                Showing{" "}
+                <span className="font-bold text-slate-900">
+                  {(page - 1) * pageSize + 1}-
+                  {Math.min(page * pageSize, totalCount)}
+                </span>{" "}
+                of{" "}
+                <span className="font-bold text-slate-900">{totalCount}</span>{" "}
+                users
+              </>
             )}
           </div>
           <div className="flex items-center gap-1">
@@ -495,12 +640,17 @@ export default function UsersPage() {
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               className="size-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+              <span className="material-symbols-outlined text-[16px]">
+                chevron_left
+              </span>
             </button>
             {pageButtons.map((p, i) => (
               <button
                 key={i}
-                onClick={() => typeof p === "number" && setPage(Math.min(Math.max(1, p), totalPages))}
+                onClick={() =>
+                  typeof p === "number" &&
+                  setPage(Math.min(Math.max(1, p), totalPages))
+                }
                 disabled={typeof p !== "number" || totalPages <= 1}
                 className={`size-8 flex items-center justify-center rounded-lg text-sm font-bold transition-colors ${
                   p === page
@@ -518,7 +668,9 @@ export default function UsersPage() {
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               className="size-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+              <span className="material-symbols-outlined text-[16px]">
+                chevron_right
+              </span>
             </button>
           </div>
         </div>

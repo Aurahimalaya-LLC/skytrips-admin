@@ -561,14 +561,10 @@ export default function BookingModal({
     if (isReadOnly) return;
 
     // Validation: Ensure customer is selected if "Existing" is chosen
-    if (
-      (formData.contactType === "existing" ||
-        formData.customerType === "existing") &&
-      !formData.customerid
-    ) {
-      alert("Please select an existing customer from the search results.");
-      return;
-    }
+    // if (formData.contactType === "existing" && !formData.customerid) {
+    //   alert("Please select an existing customer from the search results.");
+    //   return;
+    // }
 
     // Helper to convert empty strings to null for date fields
     const toDateOrNull = (dateStr: string | undefined) => {
