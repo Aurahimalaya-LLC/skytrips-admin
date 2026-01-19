@@ -4,7 +4,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { supabase, getCurrentUser } from "@/lib/supabase";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function DashboardLayout({
@@ -21,31 +20,6 @@ export default function DashboardLayout({
 
   useEffect(() => {
     checkAuth();
-
-    // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      // Only redirect if not using static admin
-      const isStaticAdmin = localStorage.getItem("isAdmin") === "true";
-      
-      // Handle explicit sign out
-      if (event === "SIGNED_OUT") {
-        if (!isStaticAdmin) {
-          router.push("/");
-        }
-        return;
-      }
-
-      // For other cases where session might be missing (e.g. initial load),
-      // we let checkAuth handle the verification to avoid race conditions.
-      // If we redirect here immediately on !session, it might conflict with
-      // the session recovery process.
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [router]);
 
   useEffect(() => {
@@ -69,25 +43,13 @@ export default function DashboardLayout({
 
   const checkAuth = async () => {
     try {
-      // Check for static admin session first
-      const isStaticAdmin = localStorage.getItem("isAdmin") === "true";
-
-      if (isStaticAdmin) {
-        setUserEmail("admin@skytrips.com.au");
-        setIsAuthenticated(true);
-        setIsLoading(false);
-        return;
-      }
-
-      // Otherwise check Supabase auth
-      const { user, isAdmin } = await getCurrentUser();
-
-      if (!user || !isAdmin) {
+      const res = await fetch("/api/auth/me", { cache: "no-store" });
+      if (!res.ok) {
         router.push("/");
         return;
       }
-
-      setUserEmail(user.email || "");
+      const data = await res.json();
+      setUserEmail(data.user?.email || "");
       setIsAuthenticated(true);
     } catch (error) {
       console.error("Auth check error:", error);
@@ -99,13 +61,7 @@ export default function DashboardLayout({
 
   const handleLogout = async () => {
     try {
-      // Clear static admin session
-      localStorage.removeItem("isAdmin");
-
-      // Also sign out from Supabase
-      await supabase.auth.signOut();
-
-      // Redirect to login page
+      await fetch("/api/auth/logout", { method: "POST" });
       window.location.href = "/";
     } catch (error) {
       console.error("Logout error:", error);
