@@ -59,6 +59,11 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
     departureDate: "",
     returnDate: "",
   });
+  const [multiSegments, setMultiSegments] = useState<Array<{ origin: string; destination: string; date: string }>>([
+    { origin: "", destination: "", date: "" },
+    { origin: "", destination: "", date: "" },
+  ]);
+  const segmentDateRefs = useRef<HTMLInputElement[]>([]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -69,6 +74,20 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
         const newErrors = { ...prev };
         delete newErrors[name];
         return newErrors;
+      });
+    }
+  };
+  const handleSegmentChange = (index: number, field: "origin" | "destination" | "date", value: string) => {
+    setMultiSegments((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+    if (errors[`segment_${index}_${field}`]) {
+      setErrors((prev) => {
+        const n = { ...prev };
+        delete n[`segment_${index}_${field}`];
+        return n;
       });
     }
   };
@@ -99,18 +118,37 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.origin) newErrors.origin = "Origin is required";
-    if (!formData.destination) newErrors.destination = "Destination is required";
-    if (!formData.departureDate) newErrors.departureDate = "Departure date is required";
-    if (tripType === "Round Trip" && !formData.returnDate) {
-      newErrors.returnDate = "Return date is required";
-    }
-    if (
-      formData.departureDate &&
-      formData.returnDate &&
-      new Date(formData.returnDate) < new Date(formData.departureDate)
-    ) {
-      newErrors.returnDate = "Return date cannot be before departure";
+    const hasIata = (v: string) => {
+      const t = v.trim();
+      if (!t) return false;
+      if (/^[A-Z]{3}$/.test(t)) return true;
+      const m = t.match(/\(([^)]+)\)\s*$/);
+      return !!(m && /^[A-Z]{3}$/.test(m[1]));
+    };
+    if (tripType === "Multi-city") {
+      multiSegments.forEach((seg, i) => {
+        if (!seg.origin) newErrors[`segment_${i}_origin`] = "Origin is required";
+        if (!seg.destination) newErrors[`segment_${i}_destination`] = "Destination is required";
+        if (!seg.date) newErrors[`segment_${i}_date`] = "Date is required";
+        if (seg.origin && !hasIata(seg.origin)) newErrors[`segment_${i}_origin`] = "Select a valid airport";
+        if (seg.destination && !hasIata(seg.destination)) newErrors[`segment_${i}_destination`] = "Select a valid airport";
+      });
+    } else {
+      if (!formData.origin) newErrors.origin = "Origin is required";
+      if (!formData.destination) newErrors.destination = "Destination is required";
+      if (!formData.departureDate) newErrors.departureDate = "Departure date is required";
+      if (tripType === "Round Trip" && !formData.returnDate) {
+        newErrors.returnDate = "Return date is required";
+      }
+      if (
+        formData.departureDate &&
+        formData.returnDate &&
+        new Date(formData.returnDate) < new Date(formData.departureDate)
+      ) {
+        newErrors.returnDate = "Return date cannot be before departure";
+      }
+      if (formData.origin && !hasIata(formData.origin)) newErrors.origin = "Select a valid airport";
+      if (formData.destination && !hasIata(formData.destination)) newErrors.destination = "Select a valid airport";
     }
 
     setErrors(newErrors);
@@ -122,25 +160,50 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
 
     setLoading(true);
     
-    // Simulate API call / Search
     try {
-      // Construct query params
-      const params = new URLSearchParams({
-        origin: formData.origin,
-        destination: formData.destination,
-        depart: formData.departureDate,
-        return: formData.returnDate,
-        adults: passengers.adults.toString(),
-        children: passengers.children.toString(),
-        infants: passengers.infants.toString(),
-        class: passengers.class,
-        type: tripType,
-      });
-
-      console.log("Searching flights with:", params.toString());
-      
-      // router.push(`/dashboard/flights/results?${params.toString()}`);
-      router.push(`/dashboard/flights/results?${params.toString()}`);
+      if (tripType === "Multi-city") {
+        const payload = {
+          segments: multiSegments,
+          passengers: { adults: passengers.adults, children: passengers.children, infants: passengers.infants },
+          class: passengers.class,
+        };
+        const res = await fetch(`/api/amadeus/search`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (!res.ok || !json.ok) {
+          setErrors((prev) => ({ ...prev, origin: "Search failed. Try again." }));
+          setLoading(false);
+          return;
+        }
+        const key = `mc_${Math.random().toString(36).slice(2)}`;
+        sessionStorage.setItem(`amadeusCache:${key}`, JSON.stringify(json.offers || []));
+        router.push(`/dashboard/flights/results?type=Multi-city&k=${key}`);
+      } else {
+        const params = new URLSearchParams({
+          origin: formData.origin,
+          destination: formData.destination,
+          depart: formData.departureDate,
+          return: formData.returnDate,
+          adults: passengers.adults.toString(),
+          children: passengers.children.toString(),
+          infants: passengers.infants.toString(),
+          class: passengers.class,
+          type: tripType,
+        });
+        const res = await fetch(`/api/amadeus/search?${params.toString()}`);
+        const json = await res.json();
+        if (!res.ok || !json.ok) {
+          setErrors((prev) => ({ ...prev, origin: "Search failed. Try again." }));
+          setLoading(false);
+          return;
+        }
+        const key = `amadeusCache:${params.toString()}`;
+        sessionStorage.setItem(key, JSON.stringify(json.offers || []));
+        router.push(`/dashboard/flights/results?${params.toString()}&cached=1`);
+      }
       
     } catch (error) {
       console.error("Search failed", error);
@@ -179,40 +242,43 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         
         {/* Origin & Destination Group */}
-        <div className="lg:col-span-5 grid grid-cols-1 md:grid-cols-2 gap-0 relative">
-          <div className="relative z-10">
-            <AirportAutocomplete
-              label="Origin"
-              name="origin"
-              value={formData.origin}
-              onChange={handleChange}
-              icon="flight_takeoff"
-            />
-            {errors.origin && <p className="text-red-500 text-xs mt-1 absolute">{errors.origin}</p>}
-          </div>
+        {tripType !== "Multi-city" && (
+          <div className="lg:col-span-5 grid grid-cols-1 md:grid-cols-2 gap-0 relative">
+            <div className="relative z-10">
+              <AirportAutocomplete
+                label="Origin"
+                name="origin"
+                value={formData.origin}
+                onChange={handleChange}
+                icon="flight_takeoff"
+              />
+              {errors.origin && <p className="text-red-500 text-xs mt-1 absolute">{errors.origin}</p>}
+            </div>
 
-          {/* Swap Button (Absolute centered on desktop, hidden/different on mobile) */}
-          <button
-            onClick={swapLocations}
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white border border-slate-200 rounded-full shadow-sm flex items-center justify-center text-primary hover:bg-slate-50 hover:scale-110 transition-all hidden md:flex"
-            aria-label="Swap locations"
-          >
-            <span className="material-symbols-outlined text-[18px]">sync_alt</span>
-          </button>
+            {/* Swap Button (Absolute centered on desktop, hidden/different on mobile) */}
+            <button
+              onClick={swapLocations}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white border border-slate-200 rounded-full shadow-sm flex items-center justify-center text-primary hover:bg-slate-50 hover:scale-110 transition-all hidden md:flex"
+              aria-label="Swap locations"
+            >
+              <span className="material-symbols-outlined text-[18px]">sync_alt</span>
+            </button>
 
-          <div className="relative z-0 md:pl-2">
-            <AirportAutocomplete
-              label="Destination"
-              name="destination"
-              value={formData.destination}
-              onChange={handleChange}
-              icon="flight_land"
-            />
-             {errors.destination && <p className="text-red-500 text-xs mt-1 absolute">{errors.destination}</p>}
+            <div className="relative z-0 md:pl-2">
+              <AirportAutocomplete
+                label="Destination"
+                name="destination"
+                value={formData.destination}
+                onChange={handleChange}
+                icon="flight_land"
+              />
+              {errors.destination && <p className="text-red-500 text-xs mt-1 absolute">{errors.destination}</p>}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Dates Group */}
+        {tripType !== "Multi-city" && (
         <div className="lg:col-span-4 grid grid-cols-2 gap-4">
           <div className="relative">
             <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
@@ -291,6 +357,92 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
              {errors.returnDate && <p className="text-red-500 text-xs mt-1 absolute">{errors.returnDate}</p>}
           </div>
         </div>
+        )}
+
+        {tripType === "Multi-city" && (
+          <div className="lg:col-span-9 grid grid-cols-1 gap-4">
+            {multiSegments.map((seg, i) => (
+              <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div className="relative">
+                  <AirportAutocomplete
+                    label={`Origin ${i + 1}`}
+                    name={`segment_${i}_origin`}
+                    value={seg.origin}
+                    onChange={(e) => handleSegmentChange(i, "origin", ('target' in e ? (e as React.ChangeEvent<HTMLInputElement>).target.value : (e as { target: { value: string } }).target.value))}
+                    icon="flight_takeoff"
+                  />
+                  {errors[`segment_${i}_origin`] && <p className="text-red-500 text-xs mt-1 absolute">{errors[`segment_${i}_origin`]}</p>}
+                </div>
+                <div className="relative">
+                  <AirportAutocomplete
+                    label={`Destination ${i + 1}`}
+                    name={`segment_${i}_destination`}
+                    value={seg.destination}
+                    onChange={(e) => handleSegmentChange(i, "destination", ('target' in e ? (e as React.ChangeEvent<HTMLInputElement>).target.value : (e as { target: { value: string } }).target.value))}
+                    icon="flight_land"
+                  />
+                  {errors[`segment_${i}_destination`] && <p className="text-red-500 text-xs mt-1 absolute">{errors[`segment_${i}_destination`]}</p>}
+                </div>
+                <div className="relative">
+                  <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                    Date
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      name={`segment_${i}_date`}
+                      value={seg.date}
+                      onChange={(e) => handleSegmentChange(i, "date", e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                      ref={(el) => {
+                        if (el) segmentDateRefs.current[i] = el;
+                      }}
+                      className={`block w-full h-12 pl-4 pr-10 rounded-lg border bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium ${errors[`segment_${i}_date`] ? "border-red-300 focus:border-red-500 focus:ring-red-200" : "border-slate-200"}`}
+                    />
+                    <button
+                      type="button"
+                      aria-label={`Open segment ${i + 1} date picker`}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600"
+                      onClick={() => {
+                        const el = segmentDateRefs.current[i];
+                        if (!el) return;
+                        const withPicker = el as HTMLInputElement & { showPicker?: () => void };
+                        withPicker.showPicker?.();
+                        el.focus();
+                        el.click();
+                      }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>
+                        calendar_today
+                      </span>
+                    </button>
+                  </div>
+                  {errors[`segment_${i}_date`] && <p className="text-red-500 text-xs mt-1 absolute">{errors[`segment_${i}_date`]}</p>}
+                </div>
+                {multiSegments.length > 2 && (
+                  <div className="md:col-span-3 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setMultiSegments((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+            <div className="flex justify-between">
+              <button
+                type="button"
+                onClick={() => setMultiSegments((prev) => [...prev, { origin: "", destination: "", date: "" }])}
+                className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-blue-600 transition-colors"
+              >
+                Add Segment
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Passengers & Class */}
         <div className="lg:col-span-3 relative">
@@ -476,6 +628,14 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
             </button>
         </div>
       </div>
+      {loading && (
+        <div className="fixed inset-0 z-[1000] bg-white/70 backdrop-blur-[1px] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm font-bold text-primary">Searching flights...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

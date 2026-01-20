@@ -7,70 +7,7 @@ import FlightFilterSidebar from "@/components/dashboard/flights/FlightFilterSide
 import FlightResultCard from "@/components/dashboard/flights/FlightResultCard";
 import { FlightOffer } from "@/types/flight-search";
 
-// Mock Data
-const MOCK_FLIGHTS: FlightOffer[] = [
-  // ... (keep existing mock data)
-  {
-    id: "1",
-    airline: { name: "Premium Carrier", code: "PC", logo: "https://pics.avs.io/200/200/EK.png" }, // Using Emirates as mock
-    flightNumber: "FL-101",
-    aircraft: "Airbus A350",
-    departure: { city: "London", code: "LHR", time: "10:15" },
-    arrival: { city: "New York", code: "JFK", time: "14:00" },
-    duration: "7h 45m",
-    stops: { count: 0 },
-    price: 520.00,
-    currency: "USD",
-  },
-  {
-    id: "2",
-    airline: { name: "Global Connect", code: "GC", logo: "https://pics.avs.io/200/200/QR.png" }, // Using Qatar as mock
-    flightNumber: "GC-701",
-    aircraft: "Boeing 787",
-    departure: { city: "London", code: "LHR", time: "08:30" },
-    arrival: { city: "New York", code: "JFK", time: "19:50" },
-    duration: "11h 20m",
-    stops: { count: 1, locations: ["DOH"] },
-    price: 450.00,
-    currency: "USD",
-  },
-  {
-    id: "3",
-    airline: { name: "SkyLink Airlines", code: "SL", logo: "https://pics.avs.io/200/200/SQ.png" }, // Using Singapore as mock
-    flightNumber: "SL-442",
-    aircraft: "Airbus A330",
-    departure: { city: "London", code: "LHR", time: "13:45" },
-    arrival: { city: "New York", code: "JFK", time: "18:00" },
-    duration: "8h 15m",
-    stops: { count: 0 },
-    price: 675.00,
-    currency: "USD",
-  },
-  {
-    id: "4",
-    airline: { name: "Emirates", code: "EK", logo: "https://pics.avs.io/200/200/EK.png" },
-    flightNumber: "EK-001",
-    aircraft: "A380-800",
-    departure: { city: "London", code: "LHR", time: "14:20" },
-    arrival: { city: "New York", code: "JFK", time: "20:00" },
-    duration: "9h 40m",
-    stops: { count: 1, locations: ["DXB"] },
-    price: 850.00,
-    currency: "USD",
-  },
-  {
-    id: "5",
-    airline: { name: "British Airways", code: "BA", logo: "https://pics.avs.io/200/200/BA.png" },
-    flightNumber: "BA-117",
-    aircraft: "Boeing 777",
-    departure: { city: "London", code: "LHR", time: "08:25" },
-    arrival: { city: "New York", code: "JFK", time: "11:05" },
-    duration: "7h 40m",
-    stops: { count: 0 },
-    price: 620.00,
-    currency: "USD",
-  }
-];
+// Live data fetched from API route
 
 function FlightResultsContent() {
   const searchParams = useSearchParams();
@@ -82,15 +19,59 @@ function FlightResultsContent() {
   const destination = searchParams.get("destination") || "JFK";
   const departDate = searchParams.get("depart") || "Oct 24";
   const returnDate = searchParams.get("return") || "Oct 31";
+  const typeParam = searchParams.get("type") || "Round Trip";
+  const cacheKey = searchParams.get("k") || "";
 
-  // Simulate API fetch
+  // Fetch Amadeus offers via server API or use cache
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setFlights(MOCK_FLIGHTS);
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchOffers = async () => {
+      setLoading(true);
+      try {
+        if (typeParam === "Multi-city" && cacheKey) {
+          const cached = typeof window !== "undefined" ? sessionStorage.getItem(`amadeusCache:${cacheKey}`) : null;
+          if (cached) {
+            const offers = JSON.parse(cached) as FlightOffer[];
+            setFlights(offers);
+          } else {
+            setFlights([]);
+          }
+        } else {
+          const params = new URLSearchParams({
+            origin,
+            destination,
+            depart: searchParams.get("depart") || "",
+            return: searchParams.get("return") || "",
+            adults: searchParams.get("adults") || "1",
+            children: searchParams.get("children") || "0",
+            infants: searchParams.get("infants") || "0",
+            class: searchParams.get("class") || "Economy",
+            type: searchParams.get("type") || "Round Trip",
+          });
+          const key = `amadeusCache:${params.toString()}`;
+          const cached = typeof window !== "undefined" ? sessionStorage.getItem(key) : null;
+          if (cached) {
+            const offers = JSON.parse(cached) as FlightOffer[];
+            setFlights(offers);
+          } else {
+            const res = await fetch(`/api/amadeus/search?${params.toString()}`);
+            const json = await res.json();
+            if (!res.ok || !json.ok) {
+              console.error("Amadeus search error:", json);
+              setFlights([]);
+            } else {
+              setFlights(json.offers || []);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Fetch failed:", e);
+        setFlights([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOffers();
+  }, [origin, destination, searchParams, typeParam, cacheKey]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-20">
@@ -100,9 +81,9 @@ function FlightResultsContent() {
           
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-black text-slate-900">{origin.split(' ')[0]}</span>
+              <span className="text-2xl font-black text-slate-900">{(origin.match(/\(([^)]+)\)\s*$/)?.[1] || origin).split(' ')[0]}</span>
               <span className="material-symbols-outlined text-slate-400">arrow_right_alt</span>
-              <span className="text-2xl font-black text-slate-900">{destination.split(' ')[0]}</span>
+              <span className="text-2xl font-black text-slate-900">{(destination.match(/\(([^)]+)\)\s*$/)?.[1] || destination).split(' ')[0]}</span>
             </div>
             <div className="h-8 w-[1px] bg-slate-200 hidden md:block"></div>
             <div className="flex items-center gap-2 text-slate-600 font-medium text-sm">
