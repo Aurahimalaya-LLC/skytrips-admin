@@ -23,6 +23,8 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [tripType, setTripType] = useState("Round Trip");
+  const departRef = useRef<HTMLInputElement>(null);
+  const returnRef = useRef<HTMLInputElement>(null);
   const [passengers, setPassengers] = useState({
     adults: 1,
     children: 0,
@@ -217,21 +219,34 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
               Departure
             </label>
             <div className="relative">
-               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span className="material-symbols-outlined text-slate-400" style={{ fontSize: "20px" }}>
-                  calendar_today
-                </span>
-              </div>
               <input
                 type="date"
                 name="departureDate"
                 value={formData.departureDate}
                 onChange={handleChange}
                 min={new Date().toISOString().split("T")[0]}
-                className={`block w-full h-12 pl-10 rounded-lg border shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium ${
+                ref={departRef}
+                className={`block w-full h-12 pl-4 pr-10 rounded-lg border bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium ${
                     errors.departureDate ? "border-red-300 focus:border-red-500 focus:ring-red-200" : "border-slate-200"
                 }`}
               />
+              <button
+                type="button"
+                aria-label="Open departure date picker"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600"
+                onClick={() => {
+                  const el = departRef.current;
+                  if (!el) return;
+                  const withPicker = el as HTMLInputElement & { showPicker?: () => void };
+                  withPicker.showPicker?.();
+                  el.focus();
+                  el.click();
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>
+                  calendar_today
+                </span>
+              </button>
             </div>
              {errors.departureDate && <p className="text-red-500 text-xs mt-1 absolute">{errors.departureDate}</p>}
           </div>
@@ -241,11 +256,6 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
               Return
             </label>
             <div className="relative">
-               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span className={`material-symbols-outlined ${tripType === "One Way" ? "text-slate-200" : "text-slate-400"}`} style={{ fontSize: "20px" }}>
-                  calendar_today
-                </span>
-              </div>
               <input
                 type="date"
                 name="returnDate"
@@ -253,10 +263,30 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
                 onChange={handleChange}
                 min={formData.departureDate || new Date().toISOString().split("T")[0]}
                 disabled={tripType === "One Way"}
-                className={`block w-full h-12 pl-10 rounded-lg border shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium ${
-                    tripType === "One Way" ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed" : "border-slate-200"
+                ref={returnRef}
+                className={`block w-full h-12 pl-4 pr-10 rounded-lg border shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium ${
+                    tripType === "One Way" ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed" : "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"
                 } ${errors.returnDate ? "border-red-300 focus:border-red-500 focus:ring-red-200" : ""}`}
               />
+              <button
+                type="button"
+                aria-label="Open return date picker"
+                disabled={tripType === "One Way"}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 ${tripType === "One Way" ? "text-slate-300 cursor-not-allowed" : "text-slate-400 hover:text-slate-600"}`}
+                onClick={() => {
+                  if (tripType === "One Way") return;
+                  const el = returnRef.current;
+                  if (!el) return;
+                  const withPicker = el as HTMLInputElement & { showPicker?: () => void };
+                  withPicker.showPicker?.();
+                  el.focus();
+                  el.click();
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>
+                  calendar_today
+                </span>
+              </button>
             </div>
              {errors.returnDate && <p className="text-red-500 text-xs mt-1 absolute">{errors.returnDate}</p>}
           </div>
@@ -293,7 +323,7 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
                   <select 
                     value={passengers.class}
                     onChange={(e) => setPassengers(p => ({...p, class: e.target.value}))}
-                    className="w-full p-2 border border-slate-200 rounded-lg text-sm font-medium focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    className="w-full p-2 border border-slate-200 rounded-lg text-sm font-medium bg-white text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                   >
                       <option>Economy</option>
                       <option>Premium Economy</option>
@@ -365,7 +395,7 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
                 <button
                   type="button"
                   onClick={() => setShowAirlineDropdown(!showAirlineDropdown)}
-                  className="w-full bg-white border border-slate-200 text-slate-600 text-sm rounded-lg p-2.5 focus:ring-primary focus:border-primary flex items-center justify-between transition-colors hover:border-primary/50"
+                  className="w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg p-2.5 focus:ring-primary focus:border-primary flex items-center justify-between transition-colors hover:border-primary/50"
                 >
                   <span className="truncate">
                     {selectedAirlines.length === 0
