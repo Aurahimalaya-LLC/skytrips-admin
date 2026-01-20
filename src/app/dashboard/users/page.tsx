@@ -3,8 +3,6 @@ import { useEffect, useState } from "react";
 import { InviteUserModal } from "@/components/InviteUserModal";
 import { supabase } from "@/lib/supabase";
 import { EmailEventType } from "@/types/email-event";
-import { domToPng } from "modern-screenshot";
-import jsPDF from "jspdf";
 
 type UserRow = {
   id: string;
@@ -65,9 +63,6 @@ export default function UsersPage() {
       const { data: rows, count, error: fetchError } = await query;
       if (fetchError) throw fetchError;
       const normalized = (rows || []).map((u: UserRow) => {
-        const username = u.first_name
-          ? u.first_name
-          : u.email?.split("@")[0] || "";
         const roleKey = u.role || "";
         const roleDisplay = roleKey
           ? roleKey
@@ -153,89 +148,31 @@ export default function UsersPage() {
         return;
       }
     } else {
-      const { count: existingCount, error: existsError } = await supabase
-        .from("users")
-        .select("id", { count: "exact" })
-        .eq("email", email);
-      if (existsError) {
-        setError(existsError.message);
+      const res = await fetch("/api/users/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, first_name, last_name, role }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setError(err?.error || "Failed to create user");
         return;
       }
-      if ((existingCount || 0) > 0) {
-        setError("Email already exists");
-        return;
-      }
-      const id = crypto.randomUUID();
-      const { error: insertError } = await supabase
-        .from("users")
-        .insert([
-          {
-            id,
-            email,
-            first_name,
-            last_name,
-            role,
-            is_active: true,
-            is_verified: false,
-          },
-        ]);
-      if (insertError) {
-        setError(insertError.message);
-        return;
-      }
-      try {
-        const welcomeElement = document.createElement("div");
-        welcomeElement.style.padding = "40px";
-        welcomeElement.style.background = "white";
-        welcomeElement.style.width = "800px";
-        welcomeElement.innerHTML = `
-          <div style="font-family: sans-serif; color: #333;">
-            <h1 style="color: #0f766e;">Welcome to SkyTrips!</h1>
-            <p>Dear ${fullName},</p>
-            <p>You have been invited to join the SkyTrips Admin Portal as a <strong>${role}</strong>.</p>
-            <p>Your account has been created successfully.</p>
-            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #666;">This is an automated message.</p>
-          </div>
-        `;
-        document.body.appendChild(welcomeElement);
-
-        const dataUrl = await domToPng(welcomeElement, {
-          backgroundColor: "#ffffff",
-          scale: 2,
-        });
-        document.body.removeChild(welcomeElement);
-
-        const img = new Image();
-        img.src = dataUrl;
-        await new Promise((resolve) => {
-          img.onload = resolve;
-        });
-
-        const imgWidth = 210;
-        const imgHeight = (img.height * imgWidth) / img.width;
-        const pdf = new jsPDF("p", "mm", "a4");
-        pdf.addImage(dataUrl, "PNG", 0, 0, imgWidth, imgHeight);
-        const pdfBase64 = pdf.output("datauristring");
-
-        const attachment = {
-          filename: "Welcome-SkyTrips.pdf",
-          content: pdfBase64,
-        };
-
-        await fetch("/api/send-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: email,
-            subject: "Welcome to SkyTrips Admin",
-            message: `Hello ${fullName},\n\nYou have been invited to join SkyTrips as a ${role}.\n\nPlease check the attached welcome document.\n\nBest regards,\nSkyTrips Team`,
-            attachment,
-          }),
-        });
-      } catch (err) {
-        console.error("Error generating/sending PDF:", err);
-      }
+      const payload = {
+        type: EmailEventType.UserCreated,
+        data: {
+          email,
+          fullName,
+          role,
+          readable_password:
+            process.env.NEXT_PUBLIC_ADMIN_DEFAULT_PASSWORD || "Skytrips@123",
+        },
+      };
+      await fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
     }
     fetchData();
     setIsInviteModalOpen(false);
