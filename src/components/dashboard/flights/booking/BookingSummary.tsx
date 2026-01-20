@@ -40,8 +40,14 @@ export default function BookingSummary({ offer, passengerCount }: BookingSummary
           </div>
           
           <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-            <span className="material-symbols-outlined text-[16px]">flight_takeoff</span>
-            <p>Premium Carrier • FL-101</p>
+            <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden">
+               {offer.airline.logo ? (
+                  <img src={offer.airline.logo} alt={offer.airline.name} className="w-full h-full object-cover" />
+               ) : (
+                  <span className="material-symbols-outlined text-[14px]">flight_takeoff</span>
+               )}
+            </div>
+            <p>{offer.airline.name} • {offer.flightNumber}</p>
           </div>
           <p className="text-[10px] text-slate-400 mt-1 pl-6">Oct 24, 2023 • 10:15 - 14:00</p>
         </div>

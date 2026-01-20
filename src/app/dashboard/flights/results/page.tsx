@@ -12,7 +12,7 @@ const MOCK_FLIGHTS: FlightOffer[] = [
   // ... (keep existing mock data)
   {
     id: "1",
-    airline: { name: "Premium Carrier", code: "PC", logo: "" },
+    airline: { name: "Premium Carrier", code: "PC", logo: "https://pics.avs.io/200/200/EK.png" }, // Using Emirates as mock
     flightNumber: "FL-101",
     aircraft: "Airbus A350",
     departure: { city: "London", code: "LHR", time: "10:15" },
@@ -24,7 +24,7 @@ const MOCK_FLIGHTS: FlightOffer[] = [
   },
   {
     id: "2",
-    airline: { name: "Global Connect", code: "GC", logo: "" },
+    airline: { name: "Global Connect", code: "GC", logo: "https://pics.avs.io/200/200/QR.png" }, // Using Qatar as mock
     flightNumber: "GC-701",
     aircraft: "Boeing 787",
     departure: { city: "London", code: "LHR", time: "08:30" },
@@ -36,7 +36,7 @@ const MOCK_FLIGHTS: FlightOffer[] = [
   },
   {
     id: "3",
-    airline: { name: "SkyLink Airlines", code: "SL", logo: "" },
+    airline: { name: "SkyLink Airlines", code: "SL", logo: "https://pics.avs.io/200/200/SQ.png" }, // Using Singapore as mock
     flightNumber: "SL-442",
     aircraft: "Airbus A330",
     departure: { city: "London", code: "LHR", time: "13:45" },
@@ -48,7 +48,7 @@ const MOCK_FLIGHTS: FlightOffer[] = [
   },
   {
     id: "4",
-    airline: { name: "Emirates", code: "EK", logo: "" },
+    airline: { name: "Emirates", code: "EK", logo: "https://pics.avs.io/200/200/EK.png" },
     flightNumber: "EK-001",
     aircraft: "A380-800",
     departure: { city: "London", code: "LHR", time: "14:20" },
@@ -60,7 +60,7 @@ const MOCK_FLIGHTS: FlightOffer[] = [
   },
   {
     id: "5",
-    airline: { name: "British Airways", code: "BA", logo: "" },
+    airline: { name: "British Airways", code: "BA", logo: "https://pics.avs.io/200/200/BA.png" },
     flightNumber: "BA-117",
     aircraft: "Boeing 777",
     departure: { city: "London", code: "LHR", time: "08:25" },

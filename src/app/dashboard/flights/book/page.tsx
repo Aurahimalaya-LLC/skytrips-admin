@@ -9,7 +9,7 @@ import { FlightOffer } from "@/types/flight-search";
 // Mock offer data - In a real app this would come from context or props
 const MOCK_OFFER: FlightOffer = {
   id: "1",
-  airline: { name: "Premium Carrier", code: "PC", logo: "" },
+  airline: { name: "Premium Carrier", code: "PC", logo: "https://pics.avs.io/200/200/EK.png" },
   flightNumber: "FL-101",
   aircraft: "Airbus A350",
   departure: { city: "London", code: "LHR", time: "10:15", date: "Oct 24" },
