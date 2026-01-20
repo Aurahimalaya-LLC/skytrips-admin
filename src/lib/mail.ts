@@ -7,7 +7,15 @@ type SendEmailInput = {
   html?: string;
   text?: string;
   from?: string;
-  attachment?: any;
+  attachment?: {
+    filename: string;
+    data: Buffer | string;
+    contentType?: string;
+  } | Array<{
+    filename: string;
+    data: Buffer | string;
+    contentType?: string;
+  }>;
 };
 
 const client = () => {
@@ -42,34 +50,59 @@ export async function sendWelcomeUser(data: { email: string; fullName?: string; 
         .map((s) => s[0]?.toUpperCase() + s.slice(1))
         .join(" ")
     : "";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_PUBLIC_APP_URL || "";
   const html = `
-    <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#0f172a; max-width:600px; margin:0 auto;">
-      <h2 style="margin:0 0 12px;">Welcome, ${name}</h2>
-      <p style="margin:0 0 12px;">Your account has been created in SkyTrips Admin.</p>
-      ${roleLabel ? `<p style="margin:0 0 12px;">Role: <strong>${roleLabel}</strong></p>` : ""}
-      <div style="margin:16px 0; padding:16px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
-        <h3 style="margin:0 0 10px; font-size:16px; color:#0f172a;">Login Credentials</h3>
-        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse; table-layout:fixed; margin:0;">
-          <tr>
-            <td style="width:140px; color:#64748b; font-weight:700; padding:6px 0; vertical-align:middle;">Email</td>
-            <td style="padding:6px 0; vertical-align:middle;">
-              <span style="display:inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; color:#0f172a;">${data.email}</span>
-            </td>
-          </tr>
-          ${data.readablePassword ? `
-          <tr>
-            <td style="width:140px; color:#64748b; font-weight:700; padding:6px 0; vertical-align:middle;">Password</td>
-            <td style="padding:6px 0; vertical-align:middle;">
-              <span style="display:inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; color:#0f172a;">${data.readablePassword}</span>
-            </td>
-          </tr>
+    <div style="background:#f1f5f9; padding:24px;">
+      <div class="container" style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#0f172a; max-width:600px; margin:0 auto; background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden;">
+        <div style="height:6px; background:linear-gradient(90deg,#0ea5e9,#2563eb);"></div>
+        <div style="padding:24px;">
+          <h2 style="margin:0 0 4px; font-size:22px;">Welcome, ${name}</h2>
+          <p style="margin:0 0 12px;">Your account has been created in SkyTrips Admin.</p>
+          ${roleLabel ? `<p style="margin:0 0 12px;">Role: <strong>${roleLabel}</strong></p>` : ""}
+          <div class="card" style="margin:16px 0; padding:16px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
+            <h3 style="margin:0 0 10px; font-size:16px; color:#0f172a;">Login Credentials</h3>
+            <table class="grid" role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse; table-layout:auto; margin:0;">
+              <tr>
+                <td class="label" style="color:#64748b; font-weight:700; padding:6px 0;">Email</td>
+              </tr>
+              <tr>
+                <td class="value" style="padding:4px 0; word-break: break-all; word-wrap: break-word;">
+                  <span style="display:block; max-width:100%; box-sizing:border-box; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; color:#0f172a; word-break: break-all; word-wrap: break-word; white-space: normal;">${data.email}</span>
+                </td>
+              </tr>
+              ${data.readablePassword ? `
+              <tr>
+                <td class="label" style="color:#64748b; font-weight:700; padding:6px 0;">Password</td>
+              </tr>
+              <tr>
+                <td class="value" style="padding:4px 0; word-break: break-all; word-wrap: break-word;">
+                  <span style="display:block; max-width:100%; box-sizing:border-box; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; color:#0f172a; word-break: break-all; word-wrap: break-word; white-space: normal;">${data.readablePassword}</span>
+                </td>
+              </tr>
+              ` : ``}
+            </table>
+            <div style="margin-top:10px; font-size:12px; color:#64748b;">
+              For security, change your password after first login.
+            </div>
+          </div>
+          ${appUrl ? `
+          <div style="margin-top:12px;">
+            <a href="${appUrl}" class="btn" style="display:inline-block; background:#2563eb; color:#ffffff; text-decoration:none; font-weight:700; padding:10px 16px; border-radius:10px;">Open Admin</a>
+          </div>
           ` : ``}
-        </table>
-        <div style="margin-top:10px; font-size:12px; color:#64748b;">
-          For security, change your password after first login.
+          <p style="margin:16px 0 0; font-size:14px; color:#64748b;">If you didn't request this, contact support.</p>
         </div>
       </div>
-      <p style="margin:0 0 12px;">You can now sign in and manage bookings.</p>
+      <style>
+        @media (max-width: 480px) {
+          .container { width:100% !important }
+          .card { padding:14px !important }
+          .grid td { display:block !important; width:100% !important; padding:4px 0 !important }
+          .grid .label { margin-bottom:2px !important; font-size:13px !important }
+          .grid .value span { display:block !important; width:100% !important }
+          .btn { display:block !important; width:100% !important; text-align:center !important }
+        }
+      </style>
     </div>
   `;
   return sendEmail({
