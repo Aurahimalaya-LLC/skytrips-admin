@@ -113,7 +113,7 @@ export default function ManageBookingEditPage() {
               href="/dashboard/manage-booking"
               className="hover:text-primary"
             >
-              Bookings
+              Manage Bookings
             </Link>
             <span className="material-symbols-outlined text-[14px]">
               chevron_right

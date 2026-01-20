@@ -201,20 +201,9 @@ export default function ManageBookingPage() {
                     {new Date(row.created_at).toLocaleString()}
                   </td>
                   <td className="px-6 py-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <button
-                        className="text-blue-600 hover:text-blue-800 text-xs font-bold uppercase tracking-wider transition-colors"
-                        title="Edit"
-                        onClick={() =>
-                          router.push(
-                            `/dashboard/manage-booking/edit/${row.uid}`,
-                          )
-                        }
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="text-slate-600 hover:text-slate-800 text-xs font-bold uppercase tracking-wider transition-colors"
+                        className="text-slate-600 hover:text-primary transition-colors p-1 rounded-full hover:bg-slate-100"
                         title="View"
                         onClick={() =>
                           router.push(
@@ -222,13 +211,30 @@ export default function ManageBookingPage() {
                           )
                         }
                       >
-                        View
+                        <span className="material-symbols-outlined text-[20px]">
+                          visibility
+                        </span>
                       </button>
                       <button
-                        className="text-red-600 hover:text-red-800 text-xs font-bold uppercase tracking-wider transition-colors"
+                        className="text-blue-600 hover:text-blue-800 transition-colors p-1 rounded-full hover:bg-blue-50"
+                        title="Edit"
+                        onClick={() =>
+                          router.push(
+                            `/dashboard/manage-booking/edit/${row.uid}`,
+                          )
+                        }
+                      >
+                        <span className="material-symbols-outlined text-[20px]">
+                          edit
+                        </span>
+                      </button>
+                      <button
+                        className="text-red-600 hover:text-red-800 transition-colors p-1 rounded-full hover:bg-red-50"
                         title="Void"
                       >
-                        Void
+                        <span className="material-symbols-outlined text-[20px]">
+                          block
+                        </span>
                       </button>
                     </div>
                   </td>
