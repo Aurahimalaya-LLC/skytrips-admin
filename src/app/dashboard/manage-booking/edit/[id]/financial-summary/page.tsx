@@ -133,7 +133,7 @@ export default function FinancialSummaryPage() {
                     <span className="font-bold text-xs">{booking.origin}</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-lg font-bold text-slate-900">{booking.originCity || booking.origin}</span>
+                    <span className="text-lg font-bold text-slate-900">{booking.origin}</span>
                     <span className="text-xs text-slate-500">10:00 AM - {booking.IssueDay} {booking.issueMonth}</span>
                   </div>
                 </div>
@@ -148,7 +148,7 @@ export default function FinancialSummaryPage() {
                 </div>
                 <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
                   <div className="flex flex-col text-right">
-                    <span className="text-lg font-bold text-slate-900">{booking.destinationCity || booking.destination}</span>
+                    <span className="text-lg font-bold text-slate-900">{booking.destination}</span>
                     <span className="text-xs text-slate-500">10:05 PM - {booking.IssueDay} {booking.issueMonth}</span>
                   </div>
                   <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-slate-500 shadow-sm border border-slate-100">
