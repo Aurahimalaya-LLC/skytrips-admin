@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { airports } from "../../libs/shared-utils/constants/airport";
+import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent } from "react";
 
 interface Airport {
   name: string;
@@ -18,19 +17,28 @@ interface AirportAutocompleteProps {
   label: string;
   name: string;
   value: string;
-  onChange: (e: any) => void;
+  onChange: (e: ChangeEvent<HTMLInputElement> | { target: { name: string; value: string } }) => void;
   disabled?: boolean;
   icon: string;
 }
 
 const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: AirportAutocompleteProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [allAirports, setAllAirports] = useState<Airport[]>([]);
   const [filteredOptions, setFilteredOptions] = useState<Airport[]>([]);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listboxId = `${name}-listbox`;
 
   useEffect(() => {
+    import("../../libs/shared-utils/constants/airport")
+      .then((mod) => {
+        setAllAirports(mod.airports as Airport[]);
+      })
+      .catch(() => {
+        setAllAirports([]);
+      });
+
     const handleClickOutside = (event: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setIsOpen(false);
@@ -41,12 +49,12 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && allAirports.length > 0) {
       if (!value) {
-        setFilteredOptions((airports as Airport[]).slice(0, 50));
+        setFilteredOptions(allAirports.slice(0, 50));
       } else {
         const lower = value.toLowerCase();
-        const filtered = (airports as Airport[]).filter(
+        const filtered = allAirports.filter(
           (a) =>
             (a.name && a.name.toLowerCase().includes(lower)) ||
             (a.IATA && a.IATA.toLowerCase().includes(lower)) ||
@@ -55,7 +63,7 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
         setFilteredOptions(filtered.slice(0, 50));
       }
     }
-  }, [value, isOpen]);
+  }, [value, isOpen, allAirports]);
 
   const highlight = (text: string, query: string) => {
     const idx = text.toLowerCase().indexOf(query.toLowerCase());
@@ -69,7 +77,7 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
     );
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen || filteredOptions.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();

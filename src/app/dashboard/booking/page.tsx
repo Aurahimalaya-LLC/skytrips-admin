@@ -200,11 +200,82 @@ export default function BookingPage() {
     setActionLoading(-1);
 
     try {
+      let bookingToSave = { ...booking };
+
+      // Handle New Customer Creation logic
+      if (booking.contactType === 'new' && booking.email) {
+        console.log("Processing new customer creation for:", booking.email);
+        
+        // 1. Check if customer already exists
+        const { data: existingCustomer, error: searchError } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('email', booking.email)
+          .single();
+
+        if (searchError && searchError.code !== 'PGRST116') {
+             // PGRST116 is "Row not found" - ignore that, but log others
+             console.error("Error searching for existing customer:", searchError);
+        }
+
+        let customerIdToUse = existingCustomer?.id;
+
+        if (!customerIdToUse) {
+          // 2. Create new customer
+          const firstName = booking.travellerFirstName || booking.travellers?.[0]?.firstName || 'Unknown';
+          const lastName = booking.travellerLastName || booking.travellers?.[0]?.lastName || 'Traveller';
+          
+          const newCustomer = {
+            firstName,
+            lastName,
+            email: booking.email,
+            phone: booking.phone || '',
+            country: booking.nationality || 'Nepalese',
+            isActive: 'true',
+            isVerified: 'false',
+            userType: 'Traveler',
+            isDisabled: 'false',
+            phoneCountryCode: '+977', // Default or extract
+            dateOfBirth: booking.travellers?.[0]?.dob || booking.dob || '',
+            gender: 'N/A',
+            address: {}, // JSONB default
+            passport: {
+                number: booking.passportNumber || booking.travellers?.[0]?.passportNumber || '',
+                expiryDate: booking.passportExpiry || booking.travellers?.[0]?.passportExpiry || '',
+                issueCountry: booking.nationality || 'Nepalese'
+            },
+            created_at: new Date().toISOString(),
+            // socialProvider: 'email'
+          };
+
+          const { data: createdCustomer, error: createError } = await supabase
+            .from('customers')
+            .insert([newCustomer])
+            .select()
+            .single();
+
+          if (createError) {
+            console.error("Failed to create new customer:", createError);
+            throw new Error(`Failed to create customer profile: ${createError.message}`);
+          }
+
+          console.log("New customer created successfully:", createdCustomer.id);
+          customerIdToUse = createdCustomer.id;
+        } else {
+            console.log("Customer already exists, linking to ID:", customerIdToUse);
+        }
+
+        // Update booking with the customer ID
+        bookingToSave.customerid = customerIdToUse;
+        // Also update the 'customer' object in the booking to reflect the link immediately in UI if needed
+        // bookingToSave.customer = { id: customerIdToUse, ... } as any; 
+      }
+
       if (editingBooking?.id) {
         // Update
         const { error: updateError } = await supabase
           .from("bookings")
-          .update(booking)
+          .update(bookingToSave)
           .eq("id", editingBooking.id);
 
         if (updateError) throw updateError;
@@ -212,7 +283,7 @@ export default function BookingPage() {
         // Create
         const { error: createError } = await supabase
           .from("bookings")
-          .insert([booking]);
+          .insert([bookingToSave]);
 
         if (createError) throw createError;
       }
@@ -221,6 +292,7 @@ export default function BookingPage() {
       await fetchBookings();
     } catch (err: any) {
       alert(err.message || "Failed to save booking");
+      console.error(err);
     } finally {
       setActionLoading(null);
     }

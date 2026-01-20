@@ -6,6 +6,7 @@ import { MediaFile } from "@/lib/media-service";
 import CompanyManager from "@/components/CompanyManager";
 import PaymentMethodsManager from "@/components/settings/PaymentMethodsManager";
 import { MediaSelectorModal } from "@/components/media/MediaSelectorModal";
+import CurrencyTab from "@/components/dashboard/settings/CurrencyTab";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("company");
@@ -269,8 +270,15 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* Currency Tab */}
+      {activeTab === "currency" && (
+        <div className="space-y-8 animate-in fade-in duration-300">
+           <CurrencyTab />
+        </div>
+      )}
+
       {/* Placeholder for other tabs */}
-      {activeTab !== "company" && activeTab !== "payment" && (
+      {activeTab === "general" && (
         <div className="flex flex-col items-center justify-center py-20 bg-card border border-border rounded-xl border-dashed">
           <span className="material-symbols-outlined text-4xl text-muted-foreground mb-4">
             construction

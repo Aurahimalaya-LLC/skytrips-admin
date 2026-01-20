@@ -158,12 +158,22 @@ export default function DashboardLayout({
 
           {/* Flights */}
           <Link
-            href="#"
-            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg hover:bg-muted text-sidebar-foreground hover:text-foreground transition-colors group`}
+            href="/dashboard/flights"
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
+              pathname === "/dashboard/flights"
+                ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
+                : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
+            }`}
             aria-label="Flights"
             title="Flights"
           >
-            <span className="material-symbols-outlined group-hover:text-primary transition-colors">
+            <span
+              className={`material-symbols-outlined ${
+                pathname === "/dashboard/flights"
+                  ? "active-icon"
+                  : "group-hover:text-primary transition-colors"
+              }`}
+            >
               flight
             </span>
             <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Flights</p>

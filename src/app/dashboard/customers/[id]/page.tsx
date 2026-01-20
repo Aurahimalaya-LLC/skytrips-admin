@@ -36,13 +36,22 @@ export default function CustomerDetailsPage() {
 
   const fetchCustomerDetails = async () => {
     try {
+      console.log("Fetching customer details for ID:", customerId);
       const { data, error } = await supabase
         .from("customers")
         .select("*")
         .eq("id", customerId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error fetching customer:", error);
+        throw error;
+      }
+      
+      if (!data) {
+        throw new Error("Customer not found");
+      }
+      
       setCustomer(data);
     } catch (err: unknown) {
       console.error("Error fetching customer:", err);
@@ -113,7 +122,7 @@ export default function CustomerDetailsPage() {
                         <span className="material-symbols-outlined text-slate-400">history_off</span>
                     </div>
                     <h3 className="text-slate-900 font-bold">No bookings found</h3>
-                    <p className="text-slate-500 text-sm mt-1">This customer hasn't made any bookings yet.</p>
+                    <p className="text-slate-500 text-sm mt-1">This customer hasn&apos;t made any bookings yet.</p>
                  </div>
             ) : (
                 bookings.map((booking, index) => {
@@ -258,7 +267,7 @@ export default function CustomerDetailsPage() {
                         <span className="material-symbols-outlined text-slate-400">group_off</span>
                     </div>
                     <h3 className="text-slate-900 font-bold">No linked travellers found</h3>
-                    <p className="text-slate-500 text-sm mt-1">No other travellers found in this customer's bookings.</p>
+                    <p className="text-slate-500 text-sm mt-1">No other travellers found in this customer&apos;s bookings.</p>
                  </div>
              ) : (
                  uniqueTravellers.map((traveller, index) => (
@@ -370,14 +379,20 @@ export default function CustomerDetailsPage() {
   }
 
   // Parse JSON fields safely
-  const address =
-    typeof customer.address === "string"
-      ? JSON.parse(customer.address)
-      : customer.address || {};
-  const passport =
-    typeof customer.passport === "string"
-      ? JSON.parse(customer.passport)
-      : customer.passport || {};
+  const safeJsonParse = (value: any, fallback: any = {}) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch (e) {
+        console.error("JSON Parse Error:", e);
+        return fallback;
+      }
+    }
+    return value || fallback;
+  };
+
+  const address = safeJsonParse(customer.address);
+  const passport = safeJsonParse(customer.passport);
 
   return (
     <div className="flex flex-col w-full max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
