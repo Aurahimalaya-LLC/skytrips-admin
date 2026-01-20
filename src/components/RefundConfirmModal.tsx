@@ -11,6 +11,7 @@ export default function RefundConfirmModal({
   isProcessing = false,
   isAuthenticated = true,
   onRequireAuth,
+  hideWarning = false,
 }: {
   isOpen: boolean;
   bookingId: number;
@@ -21,6 +22,7 @@ export default function RefundConfirmModal({
   isProcessing?: boolean;
   isAuthenticated?: boolean;
   onRequireAuth?: () => void;
+  hideWarning?: boolean;
 }) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const firstBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -87,9 +89,11 @@ export default function RefundConfirmModal({
           </div>
           <div className="text-sm text-slate-700">Date: <span className="font-medium">{bookingDate || "-"}</span></div>
           <div className="text-sm text-slate-700">Amount: <span className="font-medium">${Number(amount).toFixed(2)}</span></div>
-          <p className="text-xs text-red-600 mt-2">
-            This action cannot be undone. The booking will be marked for refund processing.
-          </p>
+          {!hideWarning && (
+            <p className="text-xs text-red-600 mt-2">
+              This action cannot be undone. The booking will be marked for refund processing.
+            </p>
+          )}
         </div>
         <div className="px-6 py-4 flex items-center justify-end gap-3 border-t border-slate-100">
           <div className="relative group">

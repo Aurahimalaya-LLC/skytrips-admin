@@ -49,8 +49,14 @@ export default function DashboardLayout({
 
   const checkAuth = async () => {
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("sky_admin_session") : null;
-      const userStr = typeof window !== "undefined" ? localStorage.getItem("sky_admin_user") : null;
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("sky_admin_session")
+          : null;
+      const userStr =
+        typeof window !== "undefined"
+          ? localStorage.getItem("sky_admin_user")
+          : null;
       if (token && userStr) {
         try {
           const user = JSON.parse(userStr);
@@ -132,7 +138,9 @@ export default function DashboardLayout({
               type="button"
               onClick={toggleSidebar}
               className="ml-auto p-2 rounded-lg hover:bg-muted text-sidebar-foreground transition-colors"
-              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={
+                sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+              }
               aria-expanded={!sidebarCollapsed}
             >
               <span className="material-symbols-outlined">
@@ -142,7 +150,9 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        <nav className={`flex flex-col gap-2 ${sidebarCollapsed ? "px-2" : "px-4"} mt-6 flex-1 overflow-y-auto`}>
+        <nav
+          className={`flex flex-col gap-2 ${sidebarCollapsed ? "px-2" : "px-4"} mt-6 flex-1 overflow-y-auto`}
+        >
           {/* Dashboard */}
           <Link
             href="/dashboard"
@@ -163,7 +173,11 @@ export default function DashboardLayout({
             >
               dashboard
             </span>
-            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Dashboard</p>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Dashboard
+            </p>
           </Link>
 
           {/* Flights */}
@@ -186,7 +200,11 @@ export default function DashboardLayout({
             >
               flight
             </span>
-            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Flights</p>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Flights
+            </p>
           </Link>
 
           {/* Hotels */}
@@ -199,7 +217,11 @@ export default function DashboardLayout({
             <span className="material-symbols-outlined group-hover:text-primary transition-colors">
               hotel
             </span>
-            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Hotels</p>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Hotels
+            </p>
           </Link>
 
           {/* Customers */}
@@ -222,7 +244,38 @@ export default function DashboardLayout({
             >
               group
             </span>
-            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Customers</p>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Customers
+            </p>
+          </Link>
+
+          {/* Travellers */}
+          <Link
+            href="/dashboard/travellers"
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
+              pathname === "/dashboard/travellers"
+                ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
+                : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
+            }`}
+            aria-label="Travellers"
+            title="Travellers"
+          >
+            <span
+              className={`material-symbols-outlined ${
+                pathname === "/dashboard/travellers"
+                  ? "active-icon"
+                  : "group-hover:text-primary transition-colors"
+              }`}
+            >
+              person_pin_circle
+            </span>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Travellers
+            </p>
           </Link>
 
           {/* Bookings */}
@@ -245,7 +298,11 @@ export default function DashboardLayout({
             >
               confirmation_number
             </span>
-            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Bookings</p>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Bookings
+            </p>
           </Link>
 
           {/* Payments */}
@@ -268,7 +325,11 @@ export default function DashboardLayout({
             >
               payments
             </span>
-            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Payments</p>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Payments
+            </p>
           </Link>
 
           {/* Manage Booking */}
@@ -291,7 +352,11 @@ export default function DashboardLayout({
             >
               edit_calendar
             </span>
-            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Manage Booking</p>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Manage Booking
+            </p>
           </Link>
 
           {/* Media Management */}
@@ -314,7 +379,11 @@ export default function DashboardLayout({
             >
               perm_media
             </span>
-            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Media</p>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Media
+            </p>
           </Link>
 
           {/* Agency */}
@@ -337,7 +406,11 @@ export default function DashboardLayout({
             >
               domain
             </span>
-            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Agency</p>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Agency
+            </p>
           </Link>
 
           {/* User Management */}
@@ -360,7 +433,11 @@ export default function DashboardLayout({
             >
               group
             </span>
-            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Users</p>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Users
+            </p>
           </Link>
 
           {/* Setting */}
@@ -383,7 +460,11 @@ export default function DashboardLayout({
             >
               settings
             </span>
-            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Setting</p>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Setting
+            </p>
           </Link>
         </nav>
 
@@ -395,7 +476,11 @@ export default function DashboardLayout({
             title="Sign Out"
           >
             <span className="material-symbols-outlined">logout</span>
-            <p className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}>Sign Out</p>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Sign Out
+            </p>
           </div>
         </div>
       </aside>
@@ -406,7 +491,10 @@ export default function DashboardLayout({
         <header className="flex items-center justify-between whitespace-nowrap bg-background border-b border-border px-6 py-4 flex-shrink-0 z-10 shadow-sm transition-colors duration-300 print:hidden">
           <div className="flex items-center gap-4">
             {/* Mobile Menu Button */}
-            <button className="md:hidden p-2 text-muted-foreground" aria-label="Open menu">
+            <button
+              className="md:hidden p-2 text-muted-foreground"
+              aria-label="Open menu"
+            >
               <span className="material-symbols-outlined">menu</span>
             </button>
             <div className="flex flex-col">
@@ -420,7 +508,6 @@ export default function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-6">
-
             {/* Actions */}
             <div className="flex items-center gap-3">
               <ThemeToggle />

@@ -4,9 +4,9 @@ import { sendEmail } from "@/lib/mail";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { to, subject, message, attachment } = body;
+    const { to, subject, message, html, attachment } = body;
 
-    if (!to || !subject || !message) {
+    if (!to || !subject || (!message && !html)) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     await sendEmail({
       to,
       subject,
-      html: message.replace(/\n/g, "<br>"),
+      html: html || message.replace(/\n/g, "<br>"),
       attachment: mailAttachment,
     });
 

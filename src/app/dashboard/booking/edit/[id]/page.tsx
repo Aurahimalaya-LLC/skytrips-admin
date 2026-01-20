@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import CustomerSearch from "@/components/CustomerSearch";
+import TravellerSearch from "@/components/TravellerSearch";
 import BookingHistory from "@/components/BookingHistory";
 import Link from "next/link";
 import { Customer, Traveller, FlightItinerary } from "@/types";
@@ -96,6 +97,8 @@ export default function EditBookingPage({
   const [saving, setSaving] = useState(false);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [agenciesLoading, setAgenciesLoading] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [isMealModalOpen, setIsMealModalOpen] = useState(false);
   const [showStopover, setShowStopover] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
@@ -106,19 +109,20 @@ export default function EditBookingPage({
     string | number | undefined
   >(undefined);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
-    null
+    null,
   );
   const [selectedTraveler, setSelectedTraveler] = useState<Customer | null>(
-    null
+    null,
   );
   const [searchingTravellerIndex, setSearchingTravellerIndex] = useState<
     number | null
   >(null);
+  const [travellerType, setTravellerType] = useState<"existing" | "new">("new");
 
   const logAssignmentChange = (
     oldId: string | number | undefined,
     newId: string | number | undefined,
-    context: string
+    context: string,
   ) => {
     if (!oldId && !newId) return;
     if (oldId === newId) return;
@@ -126,7 +130,7 @@ export default function EditBookingPage({
     console.log(
       `[AUDIT] ${timestamp} - Customer Association Changed (${context}): ${
         oldId || "None"
-      } -> ${newId}`
+      } -> ${newId}`,
     );
   };
 
@@ -156,6 +160,25 @@ export default function EditBookingPage({
       }
     };
     loadAgencies();
+  }, []);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      setUsersLoading(true);
+      try {
+        const { data, error } = await supabase.from("users").select("*");
+        if (error) {
+          console.error("Failed to load users", error);
+          return;
+        }
+        setUsers(data || []);
+      } catch (e) {
+        console.error("Failed to load users", e);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+    loadUsers();
   }, []);
 
   const validateForm = () => {
@@ -244,68 +267,37 @@ export default function EditBookingPage({
     setFormErrors({});
   };
 
-  const handleTravelerSelect = (customer: Customer) => {
-    if (searchingTravellerIndex !== null) {
-      setFormData((prev) => {
-        const newTravellers = [...prev.travellers];
-        // Ensure the slot exists (it should)
-        if (!newTravellers[searchingTravellerIndex]) {
-          newTravellers[searchingTravellerIndex] = {
-            id: Date.now().toString(),
-            firstName: "",
-            lastName: "",
-          };
-        }
+  const handleTravellerSelect = (traveller: any) => {
+    if (searchingTravellerIndex === null) return;
 
-        newTravellers[searchingTravellerIndex] = {
-          ...newTravellers[searchingTravellerIndex],
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          passportNumber: customer.passport?.number || "",
-          passportExpiry: customer.passport?.expiryDate || "",
-          dob: customer.dateOfBirth || "",
-          nationality: customer.country || "Nepalese",
-          customerId: customer.id,
-        };
+    setFormData((prev) => {
+      const newTravellers = [...prev.travellers];
+      newTravellers[searchingTravellerIndex] = {
+        ...newTravellers[searchingTravellerIndex],
+        firstName: traveller.first_name,
+        lastName: traveller.last_name,
+        passportNumber: traveller.passport_number || "",
+        passportExpiry: traveller.passport_expiry || "",
+        dob: traveller.dob || "",
+        nationality: traveller.nationality || "Nepalese",
+        eticketNumber: "", // Reset e-ticket for new booking association
+      };
 
-        const updates: any = { travellers: newTravellers };
-
-        // If primary traveller, sync legacy fields and contact info
-        if (searchingTravellerIndex === 0) {
-          updates.travellerFirstName = customer.firstName;
-          updates.travellerLastName = customer.lastName;
-          updates.passportNumber = customer.passport?.number || "";
-          updates.passportExpiry = customer.passport?.expiryDate || "";
-          updates.dob = customer.dateOfBirth || "";
-          updates.nationality = customer.country || "Nepalese";
-
-          // Sync contact info if not present or just because it's primary?
-          // Existing logic synced it.
-          updates.email = prev.email || customer.email;
-          updates.phone = prev.phone || customer.phone;
-          updates.address =
-            prev.address || toAddressString(customer.address || "");
-          updates.contactType = "existing";
-          updates.customerType = "existing";
-        }
-
-        return { ...prev, ...updates };
-      });
-
+      // Sync primary if index 0
+      const updates: any = { travellers: newTravellers };
       if (searchingTravellerIndex === 0) {
-        const newId = customer.id;
-        if (newId !== selectedCustomerId) {
-          logAssignmentChange(selectedCustomerId, newId, "Traveller Selection");
-          setSelectedCustomerId(newId);
-        }
-        setSelectedCustomer(customer);
-        setSelectedTraveler(customer);
-        setExistingContactSelected(true);
-        setExistingTravelerSelected(true);
+        updates.travellerFirstName = traveller.first_name;
+        updates.travellerLastName = traveller.last_name;
+        updates.passportNumber = traveller.passport_number || "";
+        updates.passportExpiry = traveller.passport_expiry || "";
+        updates.dob = traveller.dob || "";
+        updates.nationality = traveller.nationality || "Nepalese";
       }
 
-      setSearchingTravellerIndex(null);
-    }
+      return { ...prev, ...updates };
+    });
+    // Keep searchingTravellerIndex active so subsequent searches work
+    // setSearchingTravellerIndex(null);
   };
 
   const [formData, setFormData] = useState<FormData>({
@@ -407,7 +399,18 @@ export default function EditBookingPage({
           Array.isArray((data as any).travellers) &&
           (data as any).travellers.length > 0
         ) {
-          loadedTravellers = (data as any).travellers;
+          loadedTravellers = (data as any).travellers.map((t: any) => ({
+            id: t.id || Date.now().toString() + Math.random().toString(),
+            firstName: t.firstName || t.first_name || "",
+            lastName: t.lastName || t.last_name || "",
+            passportNumber: t.passportNumber || t.passport_number || "",
+            passportExpiry: t.passportExpiry || t.passport_expiry || "",
+            dob: t.dob || "",
+            nationality: t.nationality || "Nepalese",
+            customerId: t.customerId || t.customer_id,
+            saveToDatabase: t.saveToDatabase || false,
+            eticketNumber: t.eticketNumber || t.eticket_number || "",
+          }));
         } else {
           // Fallback to flat fields if travellers array is empty
           loadedTravellers = [
@@ -420,6 +423,7 @@ export default function EditBookingPage({
               dob: data.dob || "",
               nationality: data.nationality || "Nepalese",
               customerId: possibleCustomerId,
+              eticketNumber: "",
             },
           ];
         }
@@ -495,7 +499,7 @@ export default function EditBookingPage({
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    >,
   ) => {
     const { name, value, type } = e.target;
 
@@ -555,7 +559,7 @@ export default function EditBookingPage({
   const handleTravellerChange = (
     index: number,
     field: keyof Traveller,
-    value: any
+    value: any,
   ) => {
     setFormData((prev) => {
       const newTravellers = [...prev.travellers];
@@ -592,6 +596,7 @@ export default function EditBookingPage({
           passportExpiry: "",
           dob: "",
           nationality: "Nepalese",
+          eticketNumber: "",
         },
       ],
     }));
@@ -633,7 +638,7 @@ export default function EditBookingPage({
     segmentIndex: number,
     field: string,
     value: any,
-    nestedField?: string
+    nestedField?: string,
   ) => {
     setFormData((prev) => {
       const newItineraries = [...prev.itineraries];
@@ -771,7 +776,7 @@ export default function EditBookingPage({
         // dateOfPayment: "dateofpayment", // Removed as we use "dateOfPayment" column now? Wait, migration has dateofpayment lowercase.
         costPrice: "costprice",
         sellingPrice: "sellingprice",
-        handledBy: "handledby",
+        handledBy: "handledBy",
         pnr: "pnr",
       };
 
@@ -803,7 +808,7 @@ export default function EditBookingPage({
         "bookingid",
         "pnr",
         "issuedthroughagency",
-        "handledby",
+        "handledBy",
         "bookingstatus",
         "costprice",
         "sellingprice",
@@ -856,7 +861,7 @@ export default function EditBookingPage({
             processed[dbKey] = data[key];
           } else {
             console.warn(
-              `[Schema Bypass] Skipping field '${key}' (mapped to '${dbKey}') as it does not exist in target schema.`
+              `[Schema Bypass] Skipping field '${key}' (mapped to '${dbKey}') as it does not exist in target schema.`,
             );
           }
         });
@@ -962,7 +967,7 @@ export default function EditBookingPage({
                               email: selectedCustomer.email || "",
                               phone: selectedCustomer.phone || "",
                               address: toAddressString(
-                                selectedCustomer.address || ""
+                                selectedCustomer.address || "",
                               ),
                             }
                           : {}),
@@ -1266,29 +1271,6 @@ export default function EditBookingPage({
                         Traveller Details
                       </h4>
                       <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setSearchingTravellerIndex(
-                              searchingTravellerIndex === index ? null : index
-                            )
-                          }
-                          className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1 ${
-                            searchingTravellerIndex === index
-                              ? "bg-slate-200 text-slate-700"
-                              : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-[16px]">
-                            {searchingTravellerIndex === index
-                              ? "close"
-                              : "person_search"}
-                          </span>
-                          {searchingTravellerIndex === index
-                            ? "Cancel"
-                            : "Link Profile"}
-                        </button>
-
                         {formData.travellers.length > 1 && (
                           <button
                             type="button"
@@ -1304,18 +1286,74 @@ export default function EditBookingPage({
                       </div>
                     </div>
 
-                    {searchingTravellerIndex === index ? (
+                    <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                          <div className="flex items-center h-6">
+                            <input
+                              checked={travellerType === "existing"}
+                              onChange={() => {
+                                setTravellerType("existing");
+                                setSearchingTravellerIndex(index);
+                              }}
+                              className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
+                              id={`existing-traveller-${index}`}
+                              name={`traveller-type-${index}`}
+                              type="radio"
+                              value="existing"
+                            />
+                          </div>
+                          <label
+                            className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
+                            htmlFor={`existing-traveller-${index}`}
+                          >
+                            Existing Traveller
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                          <div className="flex items-center h-6">
+                            <input
+                              checked={travellerType === "new"}
+                              onChange={() => {
+                                setTravellerType("new");
+                                setSearchingTravellerIndex(null);
+                              }}
+                              className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
+                              id={`new-traveller-${index}`}
+                              name={`traveller-type-${index}`}
+                              type="radio"
+                              value="new"
+                            />
+                          </div>
+                          <label
+                            className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
+                            htmlFor={`new-traveller-${index}`}
+                          >
+                            New Traveller
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {travellerType === "existing" && (
                       <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-200 bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
                         <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                          Search Existing Customer
+                          Search Existing Traveller
                         </label>
-                        <CustomerSearch onSelect={handleTravelerSelect} />
+                        <TravellerSearch
+                          onSelect={(t) => {
+                            handleTravellerSelect(t);
+                          }}
+                        />
                         <p className="text-xs text-slate-500 mt-2">
-                          Select a customer to auto-fill this traveller&apos;s
-                          details.
+                          Select a traveller to auto-fill their details.
                         </p>
                       </div>
-                    ) : (
+                    )}
+
+                    {(travellerType === "new" ||
+                      (travellerType === "existing" &&
+                        traveller.firstName)) && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* First Name */}
                         <div>
@@ -1333,7 +1371,7 @@ export default function EditBookingPage({
                               handleTravellerChange(
                                 index,
                                 "firstName",
-                                e.target.value
+                                e.target.value,
                               );
                               if (formErrors[`traveller_${index}_firstName`]) {
                                 const newErrors = { ...formErrors };
@@ -1367,7 +1405,7 @@ export default function EditBookingPage({
                               handleTravellerChange(
                                 index,
                                 "lastName",
-                                e.target.value
+                                e.target.value,
                               );
                               if (formErrors[`traveller_${index}_lastName`]) {
                                 const newErrors = { ...formErrors };
@@ -1401,7 +1439,7 @@ export default function EditBookingPage({
                                 handleTravellerChange(
                                   index,
                                   "passportNumber",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               placeholder="Passport No."
@@ -1421,7 +1459,7 @@ export default function EditBookingPage({
                               handleTravellerChange(
                                 index,
                                 "passportExpiry",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -1444,7 +1482,7 @@ export default function EditBookingPage({
                                 handleTravellerChange(
                                   index,
                                   "nationality",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                             >
@@ -1469,10 +1507,35 @@ export default function EditBookingPage({
                               handleTravellerChange(
                                 index,
                                 "dob",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
+                        </div>
+                        {/* E-Ticket Number */}
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                            E-Ticket Number
+                          </label>
+                          <div className="relative">
+                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                              <span className="material-symbols-outlined text-slate-400 text-[18px]">
+                                confirmation_number
+                              </span>
+                            </div>
+                            <input
+                              className="block w-full h-10 rounded-lg border border-slate-200 pl-10 px-3 focus:ring focus:border-primary transition-colors"
+                              value={traveller.eticketNumber || ""}
+                              onChange={(e) =>
+                                handleTravellerChange(
+                                  index,
+                                  "eticketNumber",
+                                  e.target.value,
+                                )
+                              }
+                              placeholder="E-Ticket No."
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1613,7 +1676,7 @@ export default function EditBookingPage({
                                         segIndex,
                                         "departure",
                                         e.target.value,
-                                        "iataCode"
+                                        "iataCode",
                                       )
                                     }
                                   />
@@ -1627,7 +1690,7 @@ export default function EditBookingPage({
                                         segIndex,
                                         "departure",
                                         e.target.value,
-                                        "terminal"
+                                        "terminal",
                                       )
                                     }
                                   />
@@ -1641,7 +1704,7 @@ export default function EditBookingPage({
                                         segIndex,
                                         "departure",
                                         e.target.value,
-                                        "at"
+                                        "at",
                                       )
                                     }
                                   />
@@ -1664,7 +1727,7 @@ export default function EditBookingPage({
                                         segIndex,
                                         "arrival",
                                         e.target.value,
-                                        "iataCode"
+                                        "iataCode",
                                       )
                                     }
                                   />
@@ -1678,7 +1741,7 @@ export default function EditBookingPage({
                                         segIndex,
                                         "arrival",
                                         e.target.value,
-                                        "terminal"
+                                        "terminal",
                                       )
                                     }
                                   />
@@ -1692,7 +1755,7 @@ export default function EditBookingPage({
                                         segIndex,
                                         "arrival",
                                         e.target.value,
-                                        "at"
+                                        "at",
                                       )
                                     }
                                   />
@@ -1714,7 +1777,7 @@ export default function EditBookingPage({
                                       itinIndex,
                                       segIndex,
                                       "carrierCode",
-                                      e.target.value
+                                      e.target.value,
                                     )
                                   }
                                 />
@@ -1732,7 +1795,7 @@ export default function EditBookingPage({
                                       itinIndex,
                                       segIndex,
                                       "number",
-                                      e.target.value
+                                      e.target.value,
                                     )
                                   }
                                 />
@@ -1751,7 +1814,7 @@ export default function EditBookingPage({
                                       segIndex,
                                       "aircraft",
                                       e.target.value,
-                                      "code"
+                                      "code",
                                     )
                                   }
                                 />
@@ -1769,7 +1832,7 @@ export default function EditBookingPage({
                                       itinIndex,
                                       segIndex,
                                       "duration",
-                                      e.target.value
+                                      e.target.value,
                                     )
                                   }
                                 />
@@ -2143,20 +2206,32 @@ export default function EditBookingPage({
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
-                    Handled By
+                    Issued By
                   </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="material-symbols-outlined text-slate-400 text-[18px]">
-                        badge
-                      </span>
-                    </div>
-                    <input
-                      className="block w-full h-10 rounded-lg border-slate-200 pl-10 bg-white text-slate-700 sm:text-sm font-medium"
-                      value={formData.handledBy}
-                      readOnly
-                    />
-                  </div>
+                  <select
+                    className="block w-full h-10 rounded-lg border-slate-200 px-3 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium"
+                    name="handledBy"
+                    value={formData.handledBy}
+                    onChange={handleChange}
+                  >
+                    <option value="">
+                      {usersLoading ? "Loading users..." : "Select user"}
+                    </option>
+                    {users.map((user) => (
+                      <option
+                        key={user.id}
+                        value={
+                          user.first_name && user.last_name
+                            ? `${user.first_name} ${user.last_name}`
+                            : user.username || user.email
+                        }
+                      >
+                        {user.first_name && user.last_name
+                          ? `${user.first_name} ${user.last_name}`
+                          : user.username || user.email}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">

@@ -96,7 +96,7 @@ export default function BookingDetailsPage({
   if (booking.prices) {
     addonsTotal = Object.values(booking.prices).reduce<number>(
       (acc, val) => acc + Number(val),
-      0
+      0,
     );
   }
 
@@ -303,6 +303,14 @@ export default function BookingDetailsPage({
                           {traveller.nationality || "Nepalese"}
                         </p>
                       </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                          E-Ticket Number
+                        </label>
+                        <p className="text-sm font-bold text-slate-900">
+                          {traveller.eticketNumber || "N/A"}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -428,7 +436,7 @@ export default function BookingDetailsPage({
                                     <span className="text-sm font-bold text-slate-900">
                                       {segment.departure?.at
                                         ? new Date(
-                                            segment.departure.at
+                                            segment.departure.at,
                                           ).toLocaleString()
                                         : "N/A"}
                                     </span>
@@ -457,7 +465,7 @@ export default function BookingDetailsPage({
                                     <span className="text-sm font-bold text-slate-900">
                                       {segment.arrival?.at
                                         ? new Date(
-                                            segment.arrival.at
+                                            segment.arrival.at,
                                           ).toLocaleString()
                                         : "N/A"}
                                     </span>

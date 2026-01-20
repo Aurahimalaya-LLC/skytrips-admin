@@ -100,6 +100,8 @@ export interface Traveller {
   dob?: string;
   nationality?: string;
   customerId?: string | number;
+  saveToDatabase?: boolean;
+  eticketNumber?: string;
 }
 
 export interface Address {

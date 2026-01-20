@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
+import { useRouter } from "next/navigation";
 
 interface FlightSearchWidgetProps {
   className?: string;
@@ -19,6 +20,7 @@ const AIRLINES = [
 ];
 
 export default function FlightSearchWidget({ className = "" }: FlightSearchWidgetProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [tripType, setTripType] = useState("Round Trip");
   const [passengers, setPassengers] = useState({
@@ -133,18 +135,13 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
         type: tripType,
       });
 
-      // In a real app, you might redirect to a results page or fetch data here
-      // For now, we'll just log and maybe simulate a delay
       console.log("Searching flights with:", params.toString());
       
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
       // router.push(`/dashboard/flights/results?${params.toString()}`);
-      alert("Search initiated! Check console for details.");
+      router.push(`/dashboard/flights/results?${params.toString()}`);
       
     } catch (error) {
       console.error("Search failed", error);
-    } finally {
       setLoading(false);
     }
   };

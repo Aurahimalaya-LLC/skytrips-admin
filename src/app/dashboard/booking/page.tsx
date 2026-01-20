@@ -286,6 +286,43 @@ export default function BookingPage() {
           .insert([bookingToSave]);
 
         if (createError) throw createError;
+
+        // Send confirmation email
+        if (booking.email) {
+          try {
+            await fetch("/api/send-email", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                to: booking.email,
+                subject: `Booking Confirmation - PNR: ${booking.PNR}`,
+                html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+                    <h2 style="color: #2563eb;">Booking Confirmation</h2>
+                    <p>Dear ${booking.travellerFirstName || "Customer"},</p>
+                    <p>Your booking has been successfully created.</p>
+                    <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                      <p style="margin: 5px 0;"><strong>PNR:</strong> ${
+                        booking.PNR
+                      }</p>
+                      <p style="margin: 5px 0;"><strong>Route:</strong> ${
+                        booking.origin
+                      } ✈ ${booking.destination}</p>
+                      <p style="margin: 5px 0;"><strong>Travel Date:</strong> ${
+                        booking.travelDate || "N/A"
+                      }</p>
+                    </div>
+                    <p>Thank you for choosing SkyTrips.</p>
+                  </div>
+                `,
+              }),
+            });
+          } catch (emailError) {
+            console.error("Failed to send confirmation email", emailError);
+          }
+        }
       }
 
       setIsModalOpen(false);
@@ -635,7 +672,7 @@ export default function BookingPage() {
                                 booking.travellerLastName ||
                                 booking.travellers?.[0]?.lastName ||
                                 ""
-                              }`
+                              }`,
                             )}&background=random")`,
                           }}
                         ></div>
@@ -717,7 +754,7 @@ export default function BookingPage() {
                           <button
                             onClick={() =>
                               router.push(
-                                `/dashboard/booking/edit/${booking.id}`
+                                `/dashboard/booking/edit/${booking.id}`,
                               )
                             }
                             className="rounded p-2 text-slate-600 hover:bg-slate-100 hover:text-primary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -732,15 +769,9 @@ export default function BookingPage() {
                         <BookingRowMenu
                           booking={booking}
                           onRefund={() =>
-                            router.push(
-                              `/dashboard/booking/${booking.id}/manage/status?action=refund`
-                            )
+                            router.push(`/dashboard/manage-booking`)
                           }
-                          onReissue={() =>
-                            router.push(
-                              `/dashboard/booking/${booking.id}/manage/status?action=reissue`
-                            )
-                          }
+                          onReissue={() => router.push(`/dashboard/booking/`)}
                         />
                       </div>
                     </td>

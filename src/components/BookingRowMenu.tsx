@@ -23,10 +23,67 @@ export default function BookingRowMenu({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSignInPromptOpen, setIsSignInPromptOpen] = useState(false);
+  const [isAuthorizedUser, setIsAuthorizedUser] = useState(false);
+  const [localUser, setLocalUser] = useState<{
+    id: string;
+    email: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const checkUserAuthorization = async () => {
+      let emailToCheck = "";
+      let userId = "";
+
+      // 1. Try localStorage "sky_admin_user"
+      if (typeof window !== "undefined") {
+        const storedStr = localStorage.getItem("sky_admin_user");
+        if (storedStr) {
+          try {
+            const parsed = JSON.parse(storedStr);
+            if (parsed.email) {
+              emailToCheck = parsed.email;
+              userId = parsed.id;
+            }
+          } catch (e) {
+            console.error("Error parsing sky_admin_user", e);
+          }
+        }
+      }
+
+      // 2. Fallback to Supabase auth if not found in localStorage
+      if (!emailToCheck) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user && user.email) {
+          emailToCheck = user.email;
+          userId = user.id;
+        }
+      }
+
+      if (emailToCheck) {
+        // Check if user exists in the 'users' list
+        const { data } = await supabase
+          .from("users")
+          .select("email")
+          .eq("email", emailToCheck)
+          .maybeSingle();
+
+        if (data) {
+          setIsAuthorizedUser(true);
+          setLocalUser({ id: userId, email: emailToCheck });
+        }
+      }
+    };
+    checkUserAuthorization();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
+      ) {
         setOpen(false);
         setActiveIndex(-1);
       }
@@ -39,16 +96,21 @@ export default function BookingRowMenu({
     supabase.auth.getSession().then(({ data }) => {
       setIsAuthenticated(!!data.session);
     });
-    const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
-    });
+    const { data: authSub } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setIsAuthenticated(!!session);
+      },
+    );
     return () => {
       authSub.subscription.unsubscribe();
     };
   }, []);
 
   const options = [
-    { label: "Refund", icon: "currency_exchange", action: async () => {
+    {
+      label: "Refund",
+      icon: "currency_exchange",
+      action: async () => {
         const { data, error: preError } = await supabase
           .from("manage_booking")
           .select("uid")
@@ -61,13 +123,16 @@ export default function BookingRowMenu({
           setPendingUid(crypto.randomUUID());
         }
         setIsRefundOpen(true);
-      } 
+      },
     },
     { label: "Re-issue", icon: "sync", action: onReissue },
   ];
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (!open && (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")) {
+    if (
+      !open &&
+      (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")
+    ) {
       e.preventDefault();
       setOpen(true);
       setActiveIndex(0);
@@ -143,10 +208,14 @@ export default function BookingRowMenu({
         <RefundConfirmModal
           isOpen={isRefundOpen}
           bookingId={booking.id}
-          bookingDate={booking.travelDate || `${booking.IssueDay || ""} ${booking.issueMonth || ""} ${booking.issueYear || ""}`}
+          bookingDate={
+            booking.travelDate ||
+            `${booking.IssueDay || ""} ${booking.issueMonth || ""} ${booking.issueYear || ""}`
+          }
           amount={Number(booking.sellingPrice || booking.buyingPrice || 0)}
-          isAuthenticated={isAuthenticated}
+          isAuthenticated={isAuthenticated || !!localUser}
           onRequireAuth={() => setIsSignInPromptOpen(true)}
+          hideWarning={isAuthorizedUser}
           onConfirm={async () => {
             console.log("analytics:event", {
               type: "refund_confirmed",
@@ -154,13 +223,25 @@ export default function BookingRowMenu({
               amount: booking.sellingPrice || booking.buyingPrice || 0,
             });
             setIsSubmitting(true);
-            const { data: { session }, error: sessError } = await supabase.auth.getSession();
-            if (sessError) {
+
+            let finalUserId = "";
+            const {
+              data: { session },
+              error: sessError,
+            } = await supabase.auth.getSession();
+
+            if (session) {
+              finalUserId = session.user.id;
+            } else if (localUser && localUser.id) {
+              finalUserId = localUser.id;
+            }
+
+            if (sessError && !finalUserId) {
               alert("Authentication check failed");
               setIsSubmitting(false);
               return;
             }
-            if (!session) {
+            if (!finalUserId) {
               alert("Sign in required");
               setIsSubmitting(false);
               return;
@@ -176,28 +257,32 @@ export default function BookingRowMenu({
               return;
             }
             try {
-              const { error } = await supabase
-                .from("manage_booking")
-                .insert([{ uid: pendingUid, booking_id: String(booking.id), user_id: session.user.id }]);
-              if (error) {
-                const code = (error as unknown as { code?: string }).code;
-                const message = (error as unknown as { message?: string }).message;
-                const details = (error as unknown as { details?: string | null }).details;
-                const hint = (error as unknown as { hint?: string | null }).hint;
-                console.error("Insert manage_booking error:", { code, message, details, hint });
-                const friendly =
-                  code === "PGRST205"
-                    ? "Manage booking table not found. Apply the Supabase SQL migration for 'manage_booking'."
-                    : code === "42501"
-                      ? "Permission denied by Row Level Security."
-                      : message || "Failed to create manage booking record";
-                alert(friendly);
-                setIsSubmitting(false);
-                return;
+              // Use API to create manage booking record with type and details
+              const res = await fetch("/api/manage-booking", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  uid: pendingUid,
+                  booking: booking,
+                  user_id: finalUserId,
+                  type: "Refund",
+                }),
+              });
+
+              if (!res.ok) {
+                const j = await res.json();
+                throw new Error(
+                  j.error || "Failed to create manage booking record",
+                );
               }
             } catch (e) {
-              console.error("Insert exception:", e instanceof Error ? e.message : e);
-              alert("Network or server error while creating manage booking record");
+              console.error(
+                "Insert exception:",
+                e instanceof Error ? e.message : e,
+              );
+              alert(
+                "Network or server error while creating manage booking record",
+              );
               setIsSubmitting(false);
               return;
             }
@@ -206,14 +291,20 @@ export default function BookingRowMenu({
             onRefund();
           }}
           onCancel={() => {
-            console.log("analytics:event", { type: "refund_cancelled", bookingId: booking.id });
+            console.log("analytics:event", {
+              type: "refund_cancelled",
+              bookingId: booking.id,
+            });
             setIsRefundOpen(false);
           }}
           isProcessing={isSubmitting}
         />
       )}
       {isSignInPromptOpen && (
-        <SignInPromptModal isOpen={isSignInPromptOpen} onClose={() => setIsSignInPromptOpen(false)} />
+        <SignInPromptModal
+          isOpen={isSignInPromptOpen}
+          onClose={() => setIsSignInPromptOpen(false)}
+        />
       )}
     </div>
   );

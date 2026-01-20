@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import CustomerSearch from "@/components/CustomerSearch";
+import TravellerSearch from "@/components/TravellerSearch";
 import countryData from "../../../../libs/shared-utils/constants/country.json";
 import {
   Booking,
@@ -102,10 +104,12 @@ export default function BookingModal({
     number | null
   >(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
-    null
+    null,
   );
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [agenciesLoading, setAgenciesLoading] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     email: "sarita.p@example.com",
@@ -193,8 +197,28 @@ export default function BookingModal({
       }
     };
 
+    const loadUsers = async () => {
+      setUsersLoading(true);
+      try {
+        const { data: rows, error } = await supabase
+          .from("users")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        setUsers(rows || []);
+      } catch (e) {
+        console.error("Failed to load users", e);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+
     loadAgencies();
+    loadUsers();
   }, []);
+
+  const [travellerType, setTravellerType] = useState<"existing" | "new">("new");
 
   useEffect(() => {
     if (booking) {
@@ -204,7 +228,18 @@ export default function BookingModal({
         Array.isArray((booking as any).travellers) &&
         (booking as any).travellers.length > 0
       ) {
-        loadedTravellers = (booking as any).travellers;
+        loadedTravellers = (booking as any).travellers.map((t: any) => ({
+          id: t.id || Date.now().toString() + Math.random().toString(),
+          firstName: t.firstName || t.first_name || "",
+          lastName: t.lastName || t.last_name || "",
+          passportNumber: t.passportNumber || t.passport_number || "",
+          passportExpiry: t.passportExpiry || t.passport_expiry || "",
+          dob: t.dob || "",
+          nationality: t.nationality || "Nepalese",
+          customerId: t.customerId || t.customer_id,
+          saveToDatabase: t.saveToDatabase || false,
+          eticketNumber: t.eticketNumber || t.eticket_number || "",
+        }));
       } else {
         // Fallback to flat fields
         loadedTravellers = [
@@ -216,6 +251,7 @@ export default function BookingModal({
             passportExpiry: booking.passportExpiry || "",
             dob: booking.dob || "",
             nationality: booking.nationality || "Nepalese",
+            eticketNumber: "",
           },
         ];
       }
@@ -265,6 +301,7 @@ export default function BookingModal({
             passportExpiry: "",
             nationality: "Australian",
             dob: "",
+            eticketNumber: "",
           },
         ],
         travellerFirstName: "",
@@ -450,15 +487,47 @@ export default function BookingModal({
               nationality: customer.country || t.nationality,
               customerId: customer.id,
             }
-          : t
+          : t,
       ),
     }));
+  };
+
+  const handleTravellerSelect = (traveller: any) => {
+    if (searchingTravellerIndex === null) return;
+
+    setFormData((prev) => {
+      const newTravellers = [...prev.travellers];
+      newTravellers[searchingTravellerIndex] = {
+        ...newTravellers[searchingTravellerIndex],
+        firstName: traveller.first_name,
+        lastName: traveller.last_name,
+        passportNumber: traveller.passport_number || "",
+        passportExpiry: traveller.passport_expiry || "",
+        dob: traveller.dob || "",
+        nationality: traveller.nationality || "Nepalese",
+        eticketNumber: "",
+      };
+
+      // Sync primary if index 0
+      const updates: any = { travellers: newTravellers };
+      if (searchingTravellerIndex === 0) {
+        updates.travellerFirstName = traveller.first_name;
+        updates.travellerLastName = traveller.last_name;
+        updates.passportNumber = traveller.passport_number || "";
+        updates.passportExpiry = traveller.passport_expiry || "";
+        updates.dob = traveller.dob || "";
+        updates.nationality = traveller.nationality || "Nepalese";
+      }
+
+      return { ...prev, ...updates };
+    });
+    setSearchingTravellerIndex(null);
   };
 
   const handleTravellerChange = (
     index: number,
     field: keyof Traveller,
-    value: any
+    value: any,
   ) => {
     setFormData((prev) => {
       const newTravellers = [...prev.travellers];
@@ -495,6 +564,7 @@ export default function BookingModal({
           passportExpiry: "",
           dob: "",
           nationality: "Nepalese",
+          eticketNumber: "",
         },
       ],
     }));
@@ -536,7 +606,7 @@ export default function BookingModal({
     segmentIndex: number,
     field: string,
     value: any,
-    nestedField?: string
+    nestedField?: string,
   ) => {
     setFormData((prev) => {
       const newItineraries = [...prev.itineraries];
@@ -556,9 +626,28 @@ export default function BookingModal({
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isReadOnly) return;
+
+    // Process new travellers to save to DB
+    for (const t of formData.travellers) {
+      if (t.saveToDatabase && t.firstName && t.lastName) {
+        try {
+          const { error } = await supabase.from("travellers").insert({
+            first_name: t.firstName,
+            last_name: t.lastName,
+            passport_number: t.passportNumber,
+            passport_expiry: t.passportExpiry || null,
+            dob: t.dob || null,
+            nationality: t.nationality,
+          });
+          if (error) console.error("Error saving traveller:", error);
+        } catch (err) {
+          console.error("Error processing traveller save:", err);
+        }
+      }
+    }
 
     // Validation: Ensure customer is selected if "Existing" is chosen
     // if (formData.contactType === "existing" && !formData.customerid) {
@@ -609,7 +698,7 @@ export default function BookingModal({
       passportNumber:
         formData.travellers[0]?.passportNumber || formData.passportNumber,
       passportExpiry: toDateOrNull(
-        formData.travellers[0]?.passportExpiry || formData.passportExpiry
+        formData.travellers[0]?.passportExpiry || formData.passportExpiry,
       ),
       nationality: formData.travellers[0]?.nationality || formData.nationality,
       dob: toDateOrNull(formData.dob),
@@ -836,31 +925,6 @@ export default function BookingModal({
                               Traveller Details
                             </h4>
                             <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setSearchingTravellerIndex(
-                                    searchingTravellerIndex === index
-                                      ? null
-                                      : index
-                                  )
-                                }
-                                className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1 ${
-                                  searchingTravellerIndex === index
-                                    ? "bg-slate-200 text-slate-700"
-                                    : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                                }`}
-                              >
-                                <span className="material-symbols-outlined text-[16px]">
-                                  {searchingTravellerIndex === index
-                                    ? "close"
-                                    : "person_search"}
-                                </span>
-                                {searchingTravellerIndex === index
-                                  ? "Cancel"
-                                  : "Link Profile"}
-                              </button>
-
                               {formData.travellers.length > 1 && (
                                 <button
                                   type="button"
@@ -876,18 +940,74 @@ export default function BookingModal({
                             </div>
                           </div>
 
-                          {searchingTravellerIndex === index ? (
+                          <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                              <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <div className="flex items-center h-6">
+                                  <input
+                                    checked={travellerType === "existing"}
+                                    onChange={() => {
+                                      setTravellerType("existing");
+                                      setSearchingTravellerIndex(index);
+                                    }}
+                                    className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
+                                    id={`existing-traveller-${index}`}
+                                    name={`traveller-type-${index}`}
+                                    type="radio"
+                                    value="existing"
+                                  />
+                                </div>
+                                <label
+                                  className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
+                                  htmlFor={`existing-traveller-${index}`}
+                                >
+                                  Existing Traveller
+                                </label>
+                              </div>
+                              <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <div className="flex items-center h-6">
+                                  <input
+                                    checked={travellerType === "new"}
+                                    onChange={() => {
+                                      setTravellerType("new");
+                                      setSearchingTravellerIndex(null);
+                                    }}
+                                    className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
+                                    id={`new-traveller-${index}`}
+                                    name={`traveller-type-${index}`}
+                                    type="radio"
+                                    value="new"
+                                  />
+                                </div>
+                                <label
+                                  className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
+                                  htmlFor={`new-traveller-${index}`}
+                                >
+                                  New Traveller
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+
+                          {travellerType === "existing" && (
                             <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-200 bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
                               <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                                Search Existing Customer
+                                Search Existing Traveller
                               </label>
-                              <CustomerSearch onSelect={handleCustomerSelect} />
+                              <TravellerSearch
+                                onSelect={(t) => {
+                                  handleTravellerSelect(t);
+                                }}
+                              />
                               <p className="text-xs text-slate-500 mt-2">
-                                Select a customer to auto-fill this traveller's
-                                details.
+                                Select a traveller to auto-fill their details.
                               </p>
                             </div>
-                          ) : (
+                          )}
+
+                          {(travellerType === "new" ||
+                            (travellerType === "existing" &&
+                              traveller.firstName)) && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                               <div className="col-span-1">
                                 <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
@@ -900,7 +1020,7 @@ export default function BookingModal({
                                     handleTravellerChange(
                                       index,
                                       "firstName",
-                                      e.target.value
+                                      e.target.value,
                                     )
                                   }
                                   disabled={isReadOnly}
@@ -918,7 +1038,7 @@ export default function BookingModal({
                                     handleTravellerChange(
                                       index,
                                       "lastName",
-                                      e.target.value
+                                      e.target.value,
                                     )
                                   }
                                   disabled={isReadOnly}
@@ -946,7 +1066,7 @@ export default function BookingModal({
                                         handleTravellerChange(
                                           index,
                                           "passportNumber",
-                                          e.target.value
+                                          e.target.value,
                                         )
                                       }
                                       disabled={isReadOnly}
@@ -966,7 +1086,7 @@ export default function BookingModal({
                                       handleTravellerChange(
                                         index,
                                         "passportExpiry",
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                     disabled={isReadOnly}
@@ -985,7 +1105,7 @@ export default function BookingModal({
                                       handleTravellerChange(
                                         index,
                                         "nationality",
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                     disabled={isReadOnly}
@@ -1009,12 +1129,68 @@ export default function BookingModal({
                                       handleTravellerChange(
                                         index,
                                         "dob",
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                     disabled={isReadOnly}
                                   />
                                 </div>
+                                <div>
+                                  <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                                    E-Ticket Number
+                                  </label>
+                                  <div className="relative rounded-lg shadow-sm">
+                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                      <span
+                                        className="material-symbols-outlined text-slate-400"
+                                        style={{ fontSize: "20px" }}
+                                      >
+                                        confirmation_number
+                                      </span>
+                                    </div>
+                                    <input
+                                      className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
+                                      value={traveller.eticketNumber || ""}
+                                      onChange={(e) =>
+                                        handleTravellerChange(
+                                          index,
+                                          "eticketNumber",
+                                          e.target.value,
+                                        )
+                                      }
+                                      disabled={isReadOnly}
+                                      placeholder="E-Ticket No."
+                                    />
+                                  </div>
+                                </div>
+                                <label className="flex items-start gap-3 cursor-pointer group p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                                  <div className="flex items-center h-5 mt-0.5">
+                                    <input
+                                      type="checkbox"
+                                      className="w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary cursor-pointer"
+                                      checked={
+                                        traveller.saveToDatabase || false
+                                      }
+                                      onChange={(e) =>
+                                        handleTravellerChange(
+                                          index,
+                                          "saveToDatabase",
+                                          e.target.checked,
+                                        )
+                                      }
+                                      disabled={isReadOnly}
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">
+                                      Save to Travellers Database
+                                    </span>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                      Add this person to your saved travellers
+                                      list for future bookings.
+                                    </p>
+                                  </div>
+                                </label>
                               </div>
                             </div>
                           )}
@@ -1164,7 +1340,7 @@ export default function BookingModal({
                                               segIndex,
                                               "departure",
                                               e.target.value,
-                                              "iataCode"
+                                              "iataCode",
                                             )
                                           }
                                         />
@@ -1178,7 +1354,7 @@ export default function BookingModal({
                                               segIndex,
                                               "departure",
                                               e.target.value,
-                                              "terminal"
+                                              "terminal",
                                             )
                                           }
                                         />
@@ -1192,7 +1368,7 @@ export default function BookingModal({
                                               segIndex,
                                               "departure",
                                               e.target.value,
-                                              "at"
+                                              "at",
                                             )
                                           }
                                         />
@@ -1215,7 +1391,7 @@ export default function BookingModal({
                                               segIndex,
                                               "arrival",
                                               e.target.value,
-                                              "iataCode"
+                                              "iataCode",
                                             )
                                           }
                                         />
@@ -1229,7 +1405,7 @@ export default function BookingModal({
                                               segIndex,
                                               "arrival",
                                               e.target.value,
-                                              "terminal"
+                                              "terminal",
                                             )
                                           }
                                         />
@@ -1243,7 +1419,7 @@ export default function BookingModal({
                                               segIndex,
                                               "arrival",
                                               e.target.value,
-                                              "at"
+                                              "at",
                                             )
                                           }
                                         />
@@ -1265,7 +1441,7 @@ export default function BookingModal({
                                             itinIndex,
                                             segIndex,
                                             "carrierCode",
-                                            e.target.value
+                                            e.target.value,
                                           )
                                         }
                                       />
@@ -1283,7 +1459,7 @@ export default function BookingModal({
                                             itinIndex,
                                             segIndex,
                                             "number",
-                                            e.target.value
+                                            e.target.value,
                                           )
                                         }
                                       />
@@ -1302,7 +1478,7 @@ export default function BookingModal({
                                             segIndex,
                                             "aircraft",
                                             e.target.value,
-                                            "code"
+                                            "code",
                                           )
                                         }
                                       />
@@ -1320,7 +1496,7 @@ export default function BookingModal({
                                             itinIndex,
                                             segIndex,
                                             "duration",
-                                            e.target.value
+                                            e.target.value,
                                           )
                                         }
                                       />
@@ -1595,7 +1771,7 @@ export default function BookingModal({
                           Issued through
                         </label>
                         <select
-                          className="block w-full h-11 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-bold text-slate-700 px-4"
+                          className="block w-full h-10 rounded-lg border-slate-200 px-3 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium"
                           name="agency"
                           value={formData.agency}
                           onChange={handleChange}
@@ -1609,6 +1785,39 @@ export default function BookingModal({
                           {agencies.map((agency) => (
                             <option key={agency.uid} value={agency.agency_name}>
                               {agency.agency_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label
+                          className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2"
+                          htmlFor="handledBy"
+                        >
+                          Issued By
+                        </label>
+                        <select
+                          className="block w-full h-10 rounded-lg border-slate-200 px-3 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium"
+                          name="handledBy"
+                          value={formData.handledBy}
+                          onChange={handleChange}
+                          disabled={isReadOnly}
+                        >
+                          <option value="">
+                            {usersLoading ? "Loading users..." : "Select user"}
+                          </option>
+                          {users.map((user) => (
+                            <option
+                              key={user.id}
+                              value={
+                                user.first_name && user.last_name
+                                  ? `${user.first_name} ${user.last_name}`
+                                  : user.username || user.email
+                              }
+                            >
+                              {user.first_name && user.last_name
+                                ? `${user.first_name} ${user.last_name}`
+                                : user.username || user.email}
                             </option>
                           ))}
                         </select>
