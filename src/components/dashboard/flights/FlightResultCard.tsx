@@ -34,10 +34,10 @@ export default function FlightResultCard({ offer }: FlightResultCardProps) {
         <div className="flex flex-col md:flex-row gap-6 items-center">
           {/* Airline Logo & Info */}
           <div className="flex items-center gap-4 w-full md:w-1/4">
-            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-primary shrink-0 overflow-hidden">
+            <div className="w-16 h-16 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
               {/* Use an image if available, else a generic icon */}
               {offer.airline.logo ? (
-                  <img src={offer.airline.logo} alt={offer.airline.name} className="w-8 h-8 object-contain" />
+                  <img src={offer.airline.logo} alt={offer.airline.name} className="w-14 h-14 object-contain" />
               ) : (
                   <span className="material-symbols-outlined">flight_sm</span>
               )}

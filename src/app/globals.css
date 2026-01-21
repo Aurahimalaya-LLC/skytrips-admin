@@ -187,3 +187,14 @@ body {
 .material-symbols-outlined.fill-1 {
   font-variation-settings: "FILL" 1;
 }
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+}

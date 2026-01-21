@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent } from "react";
+import { supabase } from "@/lib/supabase";
 
-interface Airport {
+interface AirportRow {
+  id: string;
+  name: string | null;
+  municipality: string | null;
+  iata_code: string | null;
+  iso_country: string | null;
+  popularity: number | null;
+}
+
+interface AirportOption {
   name: string;
   city: string;
-  country: string;
+  country?: string;
   IATA: string;
-  ICAO: string;
-  lat: string;
-  lon: string;
-  timezone: string;
 }
 
 interface AirportAutocompleteProps {
@@ -24,21 +30,12 @@ interface AirportAutocompleteProps {
 
 const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: AirportAutocompleteProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [allAirports, setAllAirports] = useState<Airport[]>([]);
-  const [filteredOptions, setFilteredOptions] = useState<Airport[]>([]);
+  const [filteredOptions, setFilteredOptions] = useState<AirportOption[]>([]);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listboxId = `${name}-listbox`;
 
   useEffect(() => {
-    import("../../libs/shared-utils/constants/airport")
-      .then((mod) => {
-        setAllAirports(mod.airports as Airport[]);
-      })
-      .catch(() => {
-        setAllAirports([]);
-      });
-
     const handleClickOutside = (event: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setIsOpen(false);
@@ -49,21 +46,52 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
   }, []);
 
   useEffect(() => {
-    if (isOpen && allAirports.length > 0) {
-      if (!value) {
-        setFilteredOptions(allAirports.slice(0, 50));
-      } else {
-        const lower = value.toLowerCase();
-        const filtered = allAirports.filter(
-          (a) =>
-            (a.name && a.name.toLowerCase().includes(lower)) ||
-            (a.IATA && a.IATA.toLowerCase().includes(lower)) ||
-            (a.city && a.city.toLowerCase().includes(lower))
-        );
-        setFilteredOptions(filtered.slice(0, 50));
+    if (!isOpen) return;
+
+    const runSearch = async () => {
+      try {
+        if (!value || value.trim().length < 1) {
+          const { data, error } = await supabase
+            .from("airports")
+            .select("id,name,municipality,iata_code,iso_country,popularity")
+            .eq("published_status", true)
+            .not("iata_code", "is", null)
+            .order("popularity", { ascending: false })
+            .limit(50);
+          if (error) throw error;
+          const options = (data || []).map((row: AirportRow) => ({
+            name: row.name || "",
+            city: row.municipality || "",
+            country: row.iso_country || undefined,
+            IATA: row.iata_code || "",
+          }));
+          setFilteredOptions(options);
+        } else {
+          const q = value.trim();
+          const { data, error } = await supabase
+            .from("airports")
+            .select("id,name,municipality,iata_code,iso_country,popularity")
+            .or(`municipality.ilike.%${q}%,name.ilike.%${q}%,iata_code.ilike.%${q}%`)
+            .eq("published_status", true)
+            .limit(50);
+          if (error) throw error;
+          const options = (data || []).map((row: AirportRow) => ({
+            name: row.name || "",
+            city: row.municipality || "",
+            country: row.iso_country || undefined,
+            IATA: row.iata_code || "",
+          }));
+          setFilteredOptions(options);
+        }
+      } catch (e) {
+        console.error("Airport search failed:", e);
+        setFilteredOptions([]);
       }
-    }
-  }, [value, isOpen, allAirports]);
+    };
+
+    const timer = setTimeout(runSearch, 200);
+    return () => clearTimeout(timer);
+  }, [value, isOpen]);
 
   const highlight = (text: string, query: string) => {
     const idx = text.toLowerCase().indexOf(query.toLowerCase());
@@ -119,7 +147,7 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
           role="combobox"
           aria-expanded={isOpen}
           aria-controls={listboxId}
-          className="block w-full h-12 pl-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
+          className="block w-full h-12 pl-12 pr-10 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
           name={name}
           placeholder="City or Airport"
           type="text"
@@ -142,6 +170,8 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
             onClick={() => {
               onChange({ target: { name, value: "" } });
               setActiveIndex(-1);
+              setIsOpen(false);
+              setFilteredOptions([]);
             }}
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
@@ -158,7 +188,7 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
             <li
               role="option"
               aria-selected={activeIndex === index}
-              key={index}
+              key={`${option.IATA}-${index}`}
               className={`px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-none group ${activeIndex === index ? "bg-slate-50" : ""}`}
               onClick={() => {
                 onChange({
@@ -171,16 +201,16 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
                 setActiveIndex(-1);
               }}
             >
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="font-bold text-slate-700 text-sm group-hover:text-primary transition-colors">
-                    {highlight(option.city, value)}
+              <div className="flex justify-between items-start">
+                <div className="min-w-0 pr-3">
+                  <div className="font-bold text-slate-700 text-sm group-hover:text-primary transition-colors break-words whitespace-normal">
+                    {highlight(option.city || option.name, value)}
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5">
+                  <div className="text-xs text-slate-500 mt-0.5 break-words whitespace-normal">
                     {highlight(option.name, value)}
                   </div>
                 </div>
-                <div className="bg-slate-100 px-2 py-1 rounded text-xs font-black text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors">
+                <div className="bg-slate-100 px-2 py-1 rounded text-xs font-black text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors shrink-0">
                   {highlight(option.IATA, value)}
                 </div>
               </div>
