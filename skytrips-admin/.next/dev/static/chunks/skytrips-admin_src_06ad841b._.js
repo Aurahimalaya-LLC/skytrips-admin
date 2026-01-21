@@ -4697,11 +4697,40 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_mo
 var _s = __turbopack_context__.k.signature();
 "use client";
 ;
-function RefundConfirmModal({ isOpen, bookingId, bookingDate, amount, onConfirm, onCancel, isProcessing = false, isAuthenticated = true, onRequireAuth, hideWarning = false }) {
+function RefundConfirmModal({ isOpen, bookingId, bookingDate, amount, travellers = [], onConfirm, onCancel, isProcessing = false, isAuthenticated = true, onRequireAuth, hideWarning = false }) {
     _s();
     const dialogRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
     const firstBtnRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
     const lastBtnRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const [selectedTravellerIds, setSelectedTravellerIds] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "RefundConfirmModal.useEffect": ()=>{
+            if (isOpen) {
+                // Default to selecting all travellers when modal opens
+                const allIds = travellers.map({
+                    "RefundConfirmModal.useEffect.allIds": (t, index)=>t.id || `temp-${index}`
+                }["RefundConfirmModal.useEffect.allIds"]);
+                setSelectedTravellerIds(allIds);
+            }
+        }
+    }["RefundConfirmModal.useEffect"], [
+        isOpen,
+        travellers
+    ]);
+    const toggleTraveller = (id)=>{
+        setSelectedTravellerIds((prev)=>prev.includes(id) ? prev.filter((tid)=>tid !== id) : [
+                ...prev,
+                id
+            ]);
+    };
+    const toggleAll = ()=>{
+        const allIds = travellers.map((t, index)=>t.id || `temp-${index}`);
+        if (selectedTravellerIds.length === allIds.length) {
+            setSelectedTravellerIds([]);
+        } else {
+            setSelectedTravellerIds(allIds);
+        }
+    };
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "RefundConfirmModal.useEffect": ()=>{
             if (!isOpen) return;
@@ -4758,7 +4787,7 @@ function RefundConfirmModal({ isOpen, bookingId, bookingDate, amount, onConfirm,
                 className: "absolute inset-0 bg-black/40 animate-in fade-in duration-200"
             }, void 0, false, {
                 fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                lineNumber: 76,
+                lineNumber: 106,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4773,12 +4802,12 @@ function RefundConfirmModal({ isOpen, bookingId, bookingDate, amount, onConfirm,
                             children: "Confirm Refund Request"
                         }, void 0, false, {
                             fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                            lineNumber: 82,
+                            lineNumber: 112,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                        lineNumber: 81,
+                        lineNumber: 111,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4787,7 +4816,8 @@ function RefundConfirmModal({ isOpen, bookingId, bookingDate, amount, onConfirm,
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "text-sm text-slate-700",
                                 children: [
-                                    "Booking ID: ",
+                                    "Booking ID:",
+                                    " ",
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "font-mono font-bold text-primary",
                                         children: [
@@ -4796,13 +4826,13 @@ function RefundConfirmModal({ isOpen, bookingId, bookingDate, amount, onConfirm,
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                        lineNumber: 88,
-                                        columnNumber: 25
+                                        lineNumber: 119,
+                                        columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                lineNumber: 87,
+                                lineNumber: 117,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4814,19 +4844,20 @@ function RefundConfirmModal({ isOpen, bookingId, bookingDate, amount, onConfirm,
                                         children: bookingDate || "-"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                        lineNumber: 90,
-                                        columnNumber: 57
+                                        lineNumber: 124,
+                                        columnNumber: 19
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                lineNumber: 90,
+                                lineNumber: 123,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "text-sm text-slate-700",
                                 children: [
-                                    "Amount: ",
+                                    "Amount:",
+                                    " ",
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "font-medium",
                                         children: [
@@ -4835,27 +4866,129 @@ function RefundConfirmModal({ isOpen, bookingId, bookingDate, amount, onConfirm,
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                        lineNumber: 91,
-                                        columnNumber: 59
+                                        lineNumber: 128,
+                                        columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                lineNumber: 91,
+                                lineNumber: 126,
                                 columnNumber: 11
+                            }, this),
+                            travellers.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "mt-4 pt-4 border-t border-slate-100",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "flex justify-between items-center mb-2",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                className: "text-sm font-bold text-slate-700",
+                                                children: "Select Travellers"
+                                            }, void 0, false, {
+                                                fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
+                                                lineNumber: 134,
+                                                columnNumber: 17
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                                type: "button",
+                                                onClick: toggleAll,
+                                                className: "text-xs text-primary font-bold hover:underline",
+                                                children: selectedTravellerIds.length === travellers.length ? "Deselect All" : "Select All"
+                                            }, void 0, false, {
+                                                fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
+                                                lineNumber: 137,
+                                                columnNumber: 17
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
+                                        lineNumber: 133,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "max-h-40 overflow-y-auto space-y-2 border border-slate-200 rounded-lg p-2",
+                                        children: travellers.map((t, index)=>{
+                                            const tId = t.id || `temp-${index}`;
+                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                className: "flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer",
+                                                children: [
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                        type: "checkbox",
+                                                        checked: selectedTravellerIds.includes(tId),
+                                                        onChange: ()=>toggleTraveller(tId),
+                                                        className: "rounded border-slate-300 text-primary focus:ring-primary"
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
+                                                        lineNumber: 155,
+                                                        columnNumber: 23
+                                                    }, this),
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                        className: "flex-1",
+                                                        children: [
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                className: "text-sm font-bold text-slate-800",
+                                                                children: [
+                                                                    t.firstName,
+                                                                    " ",
+                                                                    t.lastName
+                                                                ]
+                                                            }, void 0, true, {
+                                                                fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
+                                                                lineNumber: 162,
+                                                                columnNumber: 25
+                                                            }, this),
+                                                            t.eticketNumber && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                className: "text-xs text-slate-500 font-mono",
+                                                                children: t.eticketNumber
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
+                                                                lineNumber: 166,
+                                                                columnNumber: 27
+                                                            }, this)
+                                                        ]
+                                                    }, void 0, true, {
+                                                        fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
+                                                        lineNumber: 161,
+                                                        columnNumber: 23
+                                                    }, this)
+                                                ]
+                                            }, tId, true, {
+                                                fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
+                                                lineNumber: 151,
+                                                columnNumber: 21
+                                            }, this);
+                                        })
+                                    }, void 0, false, {
+                                        fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
+                                        lineNumber: 147,
+                                        columnNumber: 15
+                                    }, this),
+                                    selectedTravellerIds.length === 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                        className: "text-xs text-red-500 mt-1",
+                                        children: "Please select at least one traveller."
+                                    }, void 0, false, {
+                                        fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
+                                        lineNumber: 176,
+                                        columnNumber: 17
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
+                                lineNumber: 132,
+                                columnNumber: 13
                             }, this),
                             !hideWarning && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                 className: "text-xs text-red-600 mt-2",
                                 children: "This action cannot be undone. The booking will be marked for refund processing."
                             }, void 0, false, {
                                 fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                lineNumber: 93,
+                                lineNumber: 184,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                        lineNumber: 86,
+                        lineNumber: 116,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4872,12 +5005,12 @@ function RefundConfirmModal({ isOpen, bookingId, bookingDate, amount, onConfirm,
                                     children: "Cancel"
                                 }, void 0, false, {
                                     fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                    lineNumber: 100,
+                                    lineNumber: 192,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                lineNumber: 99,
+                                lineNumber: 191,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4887,30 +5020,33 @@ function RefundConfirmModal({ isOpen, bookingId, bookingDate, amount, onConfirm,
                                         if (onRequireAuth) onRequireAuth();
                                         return;
                                     }
-                                    onConfirm();
+                                    if (travellers.length > 0 && selectedTravellerIds.length === 0) {
+                                        return;
+                                    }
+                                    onConfirm(selectedTravellerIds);
                                 },
                                 className: "px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2",
                                 "aria-label": "Confirm refund",
-                                disabled: isProcessing || !isAuthenticated,
+                                disabled: isProcessing || !isAuthenticated || travellers.length > 0 && selectedTravellerIds.length === 0,
                                 children: [
                                     isProcessing ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                        lineNumber: 124,
+                                        lineNumber: 223,
                                         columnNumber: 15
                                     }, this) : null,
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         children: "Confirm Refund"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                        lineNumber: 126,
+                                        lineNumber: 225,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                lineNumber: 110,
+                                lineNumber: 202,
                                 columnNumber: 11
                             }, this),
                             !isAuthenticated && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4919,29 +5055,29 @@ function RefundConfirmModal({ isOpen, bookingId, bookingDate, amount, onConfirm,
                                 children: "Sign in required"
                             }, void 0, false, {
                                 fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                                lineNumber: 129,
+                                lineNumber: 228,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                        lineNumber: 98,
+                        lineNumber: 190,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-                lineNumber: 77,
+                lineNumber: 107,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/skytrips-admin/src/components/RefundConfirmModal.tsx",
-        lineNumber: 67,
+        lineNumber: 97,
         columnNumber: 5
     }, this);
 }
-_s(RefundConfirmModal, "3Gbes2n/axbv7ZW3EkTPobThX7o=");
+_s(RefundConfirmModal, "fPBUF3uOQ+E8M7mbwdmjVC7BpIU=");
 _c = RefundConfirmModal;
 var _c;
 __turbopack_context__.k.register(_c, "RefundConfirmModal");
@@ -5362,14 +5498,16 @@ function BookingRowMenu({ booking, onRefund, onReissue }) {
                 bookingId: booking.id,
                 bookingDate: booking.travelDate || `${booking.IssueDay || ""} ${booking.issueMonth || ""} ${booking.issueYear || ""}`,
                 amount: Number(booking.sellingPrice || booking.buyingPrice || 0),
+                travellers: booking.travellers || [],
                 isAuthenticated: isAuthenticated || !!localUser,
                 onRequireAuth: ()=>setIsSignInPromptOpen(true),
                 hideWarning: isAuthorizedUser,
-                onConfirm: async ()=>{
+                onConfirm: async (selectedTravellerIds)=>{
                     console.log("analytics:event", {
                         type: "refund_confirmed",
                         bookingId: booking.id,
-                        amount: booking.sellingPrice || booking.buyingPrice || 0
+                        amount: booking.sellingPrice || booking.buyingPrice || 0,
+                        selectedTravellerIds
                     });
                     setIsSubmitting(true);
                     let finalUserId = "";
@@ -5410,7 +5548,8 @@ function BookingRowMenu({ booking, onRefund, onReissue }) {
                                 uid: pendingUid,
                                 booking: booking,
                                 user_id: finalUserId,
-                                type: "Refund"
+                                type: "Refund",
+                                selected_travellers: selectedTravellerIds
                             })
                         });
                         if (!res.ok) {
@@ -5445,7 +5584,7 @@ function BookingRowMenu({ booking, onRefund, onReissue }) {
                 onClose: ()=>setIsSignInPromptOpen(false)
             }, void 0, false, {
                 fileName: "[project]/skytrips-admin/src/components/BookingRowMenu.tsx",
-                lineNumber: 304,
+                lineNumber: 307,
                 columnNumber: 9
             }, this)
         ]

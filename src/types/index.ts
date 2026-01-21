@@ -85,6 +85,7 @@ export interface ManageBooking {
   uid: string;
   booking_id: string | number;
   created_at: string;
+  selected_travellers?: string[];
   [key: string]: any;
 }
 

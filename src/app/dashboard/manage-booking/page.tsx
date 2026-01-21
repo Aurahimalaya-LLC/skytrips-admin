@@ -142,6 +142,7 @@ export default function ManageBookingPage() {
                 <th className="px-6 py-4">Type</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Amount</th>
+                <th className="px-6 py-4">Travellers</th>
                 <th className="px-6 py-4">Details</th>
                 <th className="px-6 py-4">Created</th>
                 <th className="px-6 py-4">Action</th>
@@ -184,6 +185,66 @@ export default function ManageBookingPage() {
                   </td>
                   <td className="px-6 py-3 text-slate-700 font-medium">
                     {row.amount ? `$${Number(row.amount).toFixed(2)}` : "-"}
+                  </td>
+                  <td className="px-6 py-3">
+                    <div className="flex flex-col gap-1">
+                      {(() => {
+                        const details = row.booking_details as any;
+                        const selectedIds =
+                          (row as any).selected_travellers || [];
+
+                        if (
+                          !details?.travellers ||
+                          details.travellers.length === 0
+                        ) {
+                          return (
+                            <span className="text-slate-500 text-xs">
+                              No travellers
+                            </span>
+                          );
+                        }
+
+                        // If no specific travellers selected, show "All Travellers" or list all if few
+                        // But wait, if selected_travellers is empty/null, it might mean ALL (legacy) or NONE (error)?
+                        // Based on our logic, we send selected_travellers. If empty, maybe we shouldn't have created the request?
+                        // Let's assume if it exists and has length, we filter.
+
+                        const travellersToShow =
+                          selectedIds.length > 0
+                            ? details.travellers.filter((t: any) =>
+                                selectedIds.includes(t.id || ""),
+                              )
+                            : details.travellers; // Fallback to all if none specified (or maybe logic dictates all)
+
+                        // If IDs don't match (e.g. temp IDs), we might fallback to showing all or just count
+                        const displayList =
+                          travellersToShow.length > 0
+                            ? travellersToShow
+                            : details.travellers;
+
+                        if (displayList.length > 2) {
+                          return (
+                            <span
+                              className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-700 font-medium"
+                              title={displayList
+                                .map((t: any) => `${t.firstName} ${t.lastName}`)
+                                .join(", ")}
+                            >
+                              {displayList.length} Travellers
+                            </span>
+                          );
+                        }
+
+                        return displayList.map((t: any, idx: number) => (
+                          <span
+                            key={idx}
+                            className="text-xs font-medium text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100"
+                          >
+                            {t.firstName} {t.lastName}
+                          </span>
+                        ));
+                      })()}
+                    </div>
                   </td>
                   <td
                     className="px-6 py-3 text-slate-600 max-w-xs truncate"
