@@ -37,8 +37,8 @@ interface FormData {
   phone: string;
   address: string;
   travellers: Traveller[]; // Array of travellers
-  travellerFirstName: string; // Deprecated but kept for compatibility/initial load
-  travellerLastName: string; // Deprecated but kept for compatibility/initial load
+  // travellerFirstName: string; // REMOVED
+  // travellerLastName: string; // REMOVED
   passportNumber: string; // Deprecated
   passportExpiry: string; // Deprecated
   nationality: string; // Deprecated
@@ -215,18 +215,6 @@ export default function EditBookingPage({
 
     if (formData.customerType === "new") {
       if (
-        !formData.travellerFirstName ||
-        formData.travellerFirstName.trim().length < 2
-      ) {
-        errors.travellerFirstName = "First name is required";
-      }
-      if (
-        !formData.travellerLastName ||
-        formData.travellerLastName.trim().length < 2
-      ) {
-        errors.travellerLastName = "Last name is required";
-      }
-      if (
         !formData.passportNumber ||
         formData.passportNumber.trim().length < 5
       ) {
@@ -261,8 +249,6 @@ export default function EditBookingPage({
       email: customer.email || "",
       phone: customer.phone || "",
       address: toAddressString(customer.address || ""),
-      travellerFirstName: prev.travellerFirstName || customer.firstName,
-      travellerLastName: prev.travellerLastName || customer.lastName,
     }));
     setFormErrors({});
   };
@@ -286,8 +272,6 @@ export default function EditBookingPage({
       // Sync primary if index 0
       const updates: any = { travellers: newTravellers };
       if (searchingTravellerIndex === 0) {
-        updates.travellerFirstName = traveller.first_name;
-        updates.travellerLastName = traveller.last_name;
         updates.passportNumber = traveller.passport_number || "";
         updates.passportExpiry = traveller.passport_expiry || "";
         updates.dob = traveller.dob || "";
@@ -305,8 +289,8 @@ export default function EditBookingPage({
     phone: "",
     address: "",
     travellers: [],
-    travellerFirstName: "",
-    travellerLastName: "",
+    // travellerFirstName: "",
+    // travellerLastName: "",
     passportNumber: "",
     passportExpiry: "",
     nationality: "Nepalese",
@@ -416,8 +400,8 @@ export default function EditBookingPage({
           loadedTravellers = [
             {
               id: Date.now().toString(),
-              firstName: data.travellerFirstName || "",
-              lastName: data.travellerLastName || "",
+              firstName: "",
+              lastName: "",
               passportNumber: data.passportNumber || "",
               passportExpiry: data.passportExpiry || "",
               dob: data.dob || "",
@@ -436,8 +420,8 @@ export default function EditBookingPage({
               ? ((data as any).address as string)
               : toAddressString((data as any).address || ""),
           travellers: loadedTravellers,
-          travellerFirstName: data.travellerFirstName || "",
-          travellerLastName: data.travellerLastName || "",
+          // travellerFirstName: data.travellerFirstName || "",
+          // travellerLastName: data.travellerLastName || "",
           passportNumber: data.passportNumber || "",
           passportExpiry: data.passportExpiry || "",
           nationality: data.nationality || "Nepalese",
@@ -568,8 +552,6 @@ export default function EditBookingPage({
       // Sync primary traveller (index 0) with flat fields for backward compatibility/UI
       if (index === 0) {
         const mapping: any = {
-          firstName: "travellerFirstName",
-          lastName: "travellerLastName",
           passportNumber: "passportNumber",
           passportExpiry: "passportExpiry",
           dob: "dob",
@@ -740,14 +722,8 @@ export default function EditBookingPage({
           customerIdToUse = existingCustomer.id;
         } else {
           // 2. Create new customer
-          const firstName =
-            formData.travellerFirstName ||
-            formData.travellers?.[0]?.firstName ||
-            "Unknown";
-          const lastName =
-            formData.travellerLastName ||
-            formData.travellers?.[0]?.lastName ||
-            "Traveller";
+          const firstName = formData.travellers?.[0]?.firstName || "Unknown";
+          const lastName = formData.travellers?.[0]?.lastName || "Traveller";
 
           const newCustomer = {
             firstName,
@@ -800,8 +776,8 @@ export default function EditBookingPage({
         email: formData.email,
         phone: formData.phone,
         // address: formData.address, // Still excluded
-        travellerFirstName: formData.travellerFirstName,
-        travellerLastName: formData.travellerLastName,
+        // travellerFirstName: formData.travellerFirstName, // REMOVED: Using travellers array
+        // travellerLastName: formData.travellerLastName,   // REMOVED: Using travellers array
         passportNumber: formData.passportNumber,
         passportExpiry: toDateOrNull(formData.passportExpiry),
         nationality: formData.nationality,
@@ -843,6 +819,14 @@ export default function EditBookingPage({
       // @ts-ignore
       delete rawUpdateData.address;
 
+      // Ensure deprecated fields are not sent to the backend
+      // @ts-ignore
+      delete rawUpdateData.travellerFirstName;
+      // @ts-ignore
+      delete rawUpdateData.travellerLastName;
+      // @ts-ignore
+      delete rawUpdateData.ticketNumber;
+
       // Schema Mapping & Validation Bypass
       // Note: The 'travellers' column and others should be present in the DB after applying the migration.
       // We map known field names to actual DB column names and filter out anything that doesn't match the known schema.
@@ -868,13 +852,13 @@ export default function EditBookingPage({
       const KNOWN_DB_COLUMNS = [
         "id",
         "created_at",
-        "travellerFirstName",
-        "travellerLastName",
+        // "travellerFirstName", // REMOVED
+        // "travellerLastName",  // REMOVED
         "passportNumber", // Added back as it might exist and is useful for legacy
         "passportExpiry", // Added back
         "nationality", // Added back
         "PNR",
-        "ticketNumber",
+        // "ticketNumber", // Deprecated, moved to travellers array
         "airlines",
         "origin",
         "transit",
@@ -1171,50 +1155,6 @@ export default function EditBookingPage({
                   }`}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                    {/* First Name */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                        First Name
-                      </label>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                          <span className="material-symbols-outlined text-slate-400 text-[18px]">
-                            person
-                          </span>
-                        </div>
-                        <input
-                          className="block w-full h-10 rounded-lg border pl-10 focus:ring sm:text-sm font-medium transition-colors border-slate-200 focus:border-primary focus:ring-primary/10 uppercase"
-                          id="travellerFirstName"
-                          name="travellerFirstName"
-                          type="text"
-                          value={formData.travellerFirstName}
-                          onChange={handleChange}
-                          placeholder="Given Name"
-                        />
-                      </div>
-                    </div>
-                    {/* Last Name */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                        Last Name
-                      </label>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                          <span className="material-symbols-outlined text-slate-400 text-[18px]">
-                            person
-                          </span>
-                        </div>
-                        <input
-                          className="block w-full h-10 rounded-lg border pl-10 focus:ring sm:text-sm font-medium transition-colors border-slate-200 focus:border-primary focus:ring-primary/10 uppercase"
-                          id="travellerLastName"
-                          name="travellerLastName"
-                          type="text"
-                          value={formData.travellerLastName}
-                          onChange={handleChange}
-                          placeholder="Surname"
-                        />
-                      </div>
-                    </div>
                     <div className="md:col-span-2">
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
                         Email Address

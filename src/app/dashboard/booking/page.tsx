@@ -88,10 +88,11 @@ export default function BookingPage() {
 
       if (debouncedSearch) {
         const isNumeric = /^\d+$/.test(debouncedSearch);
-        let orFilter = `travellerFirstName.ilike.*${debouncedSearch}*,travellerLastName.ilike.*${debouncedSearch}*,origin.eq.${debouncedSearch},destination.eq.${debouncedSearch},PNR.eq.${debouncedSearch}`;
+        // Deprecated fields removed from search filter
+        let orFilter = `origin.eq.${debouncedSearch},destination.eq.${debouncedSearch},PNR.eq.${debouncedSearch}`;
 
         if (isNumeric) {
-          orFilter += `,id.eq.${debouncedSearch},ticketNumber.ilike.*${debouncedSearch}*`;
+          orFilter += `,id.eq.${debouncedSearch}`;
         }
 
         query = query.or(orFilter);
@@ -203,72 +204,83 @@ export default function BookingPage() {
       let bookingToSave = { ...booking };
 
       // Handle New Customer Creation logic
-      if (booking.contactType === 'new' && booking.email) {
+      if (booking.contactType === "new" && booking.email) {
         console.log("Processing new customer creation for:", booking.email);
-        
+
         // 1. Check if customer already exists
         const { data: existingCustomer, error: searchError } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('email', booking.email)
+          .from("customers")
+          .select("id")
+          .eq("email", booking.email)
           .single();
 
-        if (searchError && searchError.code !== 'PGRST116') {
-             // PGRST116 is "Row not found" - ignore that, but log others
-             console.error("Error searching for existing customer:", searchError);
+        if (searchError && searchError.code !== "PGRST116") {
+          // PGRST116 is "Row not found" - ignore that, but log others
+          console.error("Error searching for existing customer:", searchError);
         }
 
         let customerIdToUse = existingCustomer?.id;
 
         if (!customerIdToUse) {
           // 2. Create new customer
-          const firstName = booking.travellerFirstName || booking.travellers?.[0]?.firstName || 'Unknown';
-          const lastName = booking.travellerLastName || booking.travellers?.[0]?.lastName || 'Traveller';
-          
+          const firstName = booking.travellers?.[0]?.firstName || "Unknown";
+          const lastName = booking.travellers?.[0]?.lastName || "Traveller";
+
           const newCustomer = {
             firstName,
             lastName,
             email: booking.email,
-            phone: booking.phone || '',
-            country: booking.nationality || 'Nepalese',
-            isActive: 'true',
-            isVerified: 'false',
-            userType: 'Traveler',
-            isDisabled: 'false',
-            phoneCountryCode: '+977', // Default or extract
-            dateOfBirth: booking.travellers?.[0]?.dob || booking.dob || '',
-            gender: 'N/A',
+            phone: booking.phone || "",
+            country: booking.nationality || "Nepalese",
+            isActive: "true",
+            isVerified: "false",
+            userType: "Traveler",
+            isDisabled: "false",
+            phoneCountryCode: "+977", // Default or extract
+            dateOfBirth: booking.travellers?.[0]?.dob || booking.dob || "",
+            gender: "N/A",
             address: {}, // JSONB default
             passport: {
-                number: booking.passportNumber || booking.travellers?.[0]?.passportNumber || '',
-                expiryDate: booking.passportExpiry || booking.travellers?.[0]?.passportExpiry || '',
-                issueCountry: booking.nationality || 'Nepalese'
+              number:
+                booking.passportNumber ||
+                booking.travellers?.[0]?.passportNumber ||
+                "",
+              expiryDate:
+                booking.passportExpiry ||
+                booking.travellers?.[0]?.passportExpiry ||
+                "",
+              issueCountry: booking.nationality || "Nepalese",
             },
             // created_at: new Date().toISOString(), // Removed to let DB handle it or avoid error if column missing
             // socialProvider: 'email'
           };
 
           const { data: createdCustomer, error: createError } = await supabase
-            .from('customers')
+            .from("customers")
             .insert([newCustomer])
             .select("id")
             .single();
 
           if (createError) {
             console.error("Failed to create new customer:", createError);
-            throw new Error(`Failed to create customer profile: ${createError.message}`);
+            throw new Error(
+              `Failed to create customer profile: ${createError.message}`,
+            );
           }
 
           console.log("New customer created successfully:", createdCustomer.id);
           customerIdToUse = createdCustomer.id;
         } else {
-            console.log("Customer already exists, linking to ID:", customerIdToUse);
+          console.log(
+            "Customer already exists, linking to ID:",
+            customerIdToUse,
+          );
         }
 
         // Update booking with the customer ID
         bookingToSave.customerid = customerIdToUse;
         // Also update the 'customer' object in the booking to reflect the link immediately in UI if needed
-        // bookingToSave.customer = { id: customerIdToUse, ... } as any; 
+        // bookingToSave.customer = { id: customerIdToUse, ... } as any;
       }
 
       if (editingBooking?.id) {
@@ -301,7 +313,7 @@ export default function BookingPage() {
                 html: `
                   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
                     <h2 style="color: #2563eb;">Booking Confirmation</h2>
-                    <p>Dear ${booking.travellerFirstName || "Customer"},</p>
+                    <p>Dear ${booking.travellers?.[0]?.firstName || "Customer"},</p>
                     <p>Your booking has been successfully created.</p>
                     <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
                       <p style="margin: 5px 0;"><strong>PNR:</strong> ${
@@ -653,8 +665,8 @@ export default function BookingPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-slate-900 font-medium text-sm">
-                        {booking.travellerLastName ||
-                          booking.travellers?.[0]?.lastName ||
+                        {booking.travellers?.[0]?.lastName ||
+                          // booking.travellerLastName || // REMOVED
                           "N/A"}
                       </span>
                     </td>
@@ -665,21 +677,19 @@ export default function BookingPage() {
                           style={{
                             backgroundImage: `url("https://ui-avatars.com/api/?name=${encodeURIComponent(
                               `${
-                                booking.travellerFirstName ||
                                 booking.travellers?.[0]?.firstName ||
+                                // booking.travellerFirstName || // REMOVED
                                 ""
                               } ${
-                                booking.travellerLastName ||
                                 booking.travellers?.[0]?.lastName ||
+                                // booking.travellerLastName || // REMOVED
                                 ""
                               }`,
                             )}&background=random")`,
                           }}
                         ></div>
                         <span className="text-slate-900 font-medium text-sm">
-                          {booking.travellerFirstName ||
-                            booking.travellers?.[0]?.firstName ||
-                            "N/A"}
+                          {booking.travellers?.[0]?.firstName || "N/A"}
                         </span>
                       </div>
                     </td>
@@ -698,6 +708,22 @@ export default function BookingPage() {
                       <span className="bg-blue-50 text-primary px-2 py-1 rounded text-xs font-bold">
                         {booking.PNR}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        {booking.travellers && booking.travellers.length > 0 ? (
+                          booking.travellers.map((t, idx) => (
+                            <span
+                              key={idx}
+                              className="text-slate-900 font-medium text-sm"
+                            >
+                              {t.eticketNumber || "N/A"}
+                            </span>
+                          ))
+                        ) : (
+                          <></>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">

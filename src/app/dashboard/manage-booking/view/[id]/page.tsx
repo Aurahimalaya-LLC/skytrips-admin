@@ -190,7 +190,8 @@ export default function ManageBookingViewPage() {
                   Ticket No.
                 </label>
                 <p className="mt-1 text-base font-medium text-slate-900 font-mono">
-                  {booking.ticketNumber || "N/A"}
+                  {booking.travellers?.[0]?.eticketNumber ||
+                    "N/A"}
                 </p>
               </div>
               <div>
@@ -198,7 +199,7 @@ export default function ManageBookingViewPage() {
                   Passenger Name
                 </label>
                 <p className="mt-1 text-base font-medium text-slate-900">
-                  {booking.travellerFirstName} {booking.travellerLastName}
+                  {booking.customer.firstName} {booking.customer.lastName}
                 </p>
               </div>
               <div>

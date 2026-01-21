@@ -1,9 +1,6 @@
 export interface Booking {
   id?: number;
-  travellerFirstName?: string;
-  travellerLastName?: string;
   PNR: string;
-  ticketNumber: string;
   airlines: string;
   origin: string;
   transit: string;
