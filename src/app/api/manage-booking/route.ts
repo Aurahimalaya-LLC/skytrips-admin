@@ -5,7 +5,7 @@ import { getAdminClient } from "@/lib/supabase-server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { uid, booking, user_id, type } = body;
+    const { uid, booking, user_id, type, selected_travellers } = body;
 
     if (!uid || !booking || !user_id) {
       return NextResponse.json(
@@ -31,7 +31,8 @@ export async function POST(req: Request) {
       status: "Pending",
       booking_details: booking, // JSONB column
       amount: booking.sellingPrice || booking.buyingPrice || 0,
-      reason: "Requested via Admin Dashboard"
+      reason: "Requested via Admin Dashboard",
+      selected_travellers: selected_travellers || [] // Storing selected travellers IDs
     };
 
     const { error } = await supabase

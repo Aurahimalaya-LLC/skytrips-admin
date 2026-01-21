@@ -1,9 +1,6 @@
 export interface Booking {
   id?: number;
-  travellerFirstName?: string;
-  travellerLastName?: string;
   PNR: string;
-  ticketNumber: string;
   airlines: string;
   origin: string;
   transit: string;
@@ -88,6 +85,7 @@ export interface ManageBooking {
   uid: string;
   booking_id: string | number;
   created_at: string;
+  selected_travellers?: string[];
   [key: string]: any;
 }
 

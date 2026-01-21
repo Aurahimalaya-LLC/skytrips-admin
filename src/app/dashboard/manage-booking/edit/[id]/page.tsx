@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Booking, ManageBooking } from "@/types";
+import { Booking, ManageBooking, Reason } from "@/types";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -19,12 +19,27 @@ export default function ManageBookingEditPage() {
     email: string;
     agency?: string;
   } | null>(null);
+  const [reasons, setReasons] = useState<Reason[]>([]);
 
   useEffect(() => {
     if (id) {
       fetchRecord(id);
     }
+    fetchReasons();
   }, [id]);
+
+  const fetchReasons = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("reasons")
+        .select("*")
+        .order("title", { ascending: true });
+      if (error) throw error;
+      setReasons(data || []);
+    } catch (err) {
+      console.error("Error fetching reasons:", err);
+    }
+  };
 
   const fetchRecord = async (uid: string) => {
     try {
@@ -67,6 +82,33 @@ export default function ManageBookingEditPage() {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    // const formData = new FormData(e.currentTarget);
+    // const reason = formData.get("reason") as string;
+    // const notes = formData.get("notes") as string;
+
+    try {
+      if (!id) {
+        console.error("No ID found for navigation");
+        alert("Error: Booking ID is missing");
+        setLoading(false);
+        return;
+      }
+
+      console.log(
+        "Navigating to:",
+        `/dashboard/manage-booking/edit/${id}/flight-details`,
+      );
+      // Navigate to the next step: Flight Booking Details
+      router.push(`/dashboard/manage-booking/edit/${id}/flight-details`);
+    } catch (err) {
+      console.error("Error navigating:", err);
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px]">
@@ -92,6 +134,17 @@ export default function ManageBookingEditPage() {
     );
   }
 
+  const selectedTravellerIds = (record as any).selected_travellers || [];
+  const travellers = booking.travellers || [];
+  const selectedTravellers = travellers.filter((t: any) =>
+    selectedTravellerIds.includes(t.id),
+  );
+
+  // If no specific travellers are selected in the record, fall back to showing all travellers
+  // or handle as per business logic. For now, let's show selected ones if any, else all.
+  const displayTravellers =
+    selectedTravellers.length > 0 ? selectedTravellers : travellers;
+
   const sellingPrice = parseFloat(booking.sellingPrice || "0");
   const costPrice = parseFloat(booking.buyingPrice || "0");
   const profit = sellingPrice - costPrice;
@@ -113,376 +166,378 @@ export default function ManageBookingEditPage() {
               href="/dashboard/manage-booking"
               className="hover:text-primary"
             >
-              Manage Bookings
+              Manage Booking
             </Link>
             <span className="material-symbols-outlined text-[14px]">
               chevron_right
             </span>
             <span className="font-medium text-slate-900">
-              BK-{record.booking_id} Details
+              Management Details
             </span>
           </div>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-1">
             <div>
               <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
-                Flight Booking Details
+                Booking Management Details
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Detailed view of booking #BK-{record.booking_id} and its
-                history.
+                Manage refund, reissue, or cancellation for selected booking.
               </p>
             </div>
-            <div className="flex gap-3">
-              <button className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
-                <span className="material-symbols-outlined text-[18px]">
-                  print
+            <span
+              className={`inline-flex items-center rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset ${
+                record.status === "Completed"
+                  ? "bg-green-50 text-green-700 ring-green-600/20"
+                  : "bg-yellow-50 text-yellow-700 ring-yellow-600/20"
+              }`}
+            >
+              {record.status || "Pending"}
+            </span>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <span className="material-symbols-outlined text-slate-400">
+                flight
+              </span>
+              Flight Details
+            </h3>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8">
+              <div>
+                <label className="block text-xs font-medium uppercase text-slate-500">
+                  Booking ID
+                </label>
+                <p className="mt-1 text-base font-medium text-slate-900 font-mono">
+                  #{record.booking_id}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium uppercase text-slate-500">
+                  PNR
+                </label>
+                <p className="mt-1 text-base font-medium text-slate-900 font-mono">
+                  {booking.PNR || "N/A"}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium uppercase text-slate-500">
+                  Issued Date
+                </label>
+                <p className="mt-1 text-base font-medium text-slate-900">
+                  {booking.IssueDay} {booking.issueMonth}, {booking.issueYear}
+                </p>
+              </div>
+              <div className="col-span-1 md:col-span-2 lg:col-span-3">
+                <label className="block text-xs font-medium uppercase text-slate-500 mb-2">
+                  Passengers
+                </label>
+                <div className="space-y-2">
+                  {displayTravellers.map((traveller: any, index: number) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                          {traveller.firstName?.[0]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {traveller.firstName} {traveller.lastName}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {traveller.nationality || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-slate-500 uppercase">
+                          Ticket No.
+                        </p>
+                        <p className="text-sm font-mono font-medium text-slate-900">
+                          {traveller.eticketNumber || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {displayTravellers.length === 0 && (
+                    <p className="text-sm text-slate-500 italic">
+                      No passenger details available.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium uppercase text-slate-500">
+                  Route
+                </label>
+                <div className="mt-1 flex items-center gap-2 text-base font-medium text-slate-900">
+                  <span>{booking.origin}</span>
+                  <span className="material-symbols-outlined text-slate-400 text-[16px]">
+                    arrow_forward
+                  </span>
+                  <span>{booking.destination}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-col">
+                <span className="text-xs text-slate-500">Selling Price</span>
+                <span className="text-lg font-bold text-slate-900">
+                  ${sellingPrice.toFixed(2)}
                 </span>
-                Print
-              </button>
-              <Link
-                href={`/dashboard/manage-booking/edit/${id}/financial-summary`}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                Next
-                <span className="material-symbols-outlined text-[18px]">
-                  arrow_forward
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-slate-500">Cost Price</span>
+                <span className="text-lg font-bold text-slate-700">
+                  ${costPrice.toFixed(2)}
                 </span>
-              </Link>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-slate-500">Profit Margin</span>
+                <span
+                  className={`text-lg font-bold flex items-center gap-1 ${profit >= 0 ? "text-emerald-600" : "text-red-600"}`}
+                >
+                  {profit >= 0 ? "+" : ""}${profit.toFixed(2)}
+                  <span className="text-xs font-normal text-slate-500">
+                    ({profitPercent}%)
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 flex flex-col gap-6">
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-orange-50/50">
-                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-orange-600">
-                    pending_actions
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-6 py-4">
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <span className="material-symbols-outlined text-slate-400">
+                edit_document
+              </span>
+              Management Action
+            </h3>
+          </div>
+          <form className="flex flex-col" onSubmit={handleSubmit}>
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="col-span-1">
+                <label
+                  className="block text-sm font-medium leading-6 text-slate-900"
+                  htmlFor="requested-by"
+                >
+                  Requested by
+                </label>
+                <div className="mt-2">
+                  <input
+                    className="block w-full rounded-md border-0 py-2 px-3 text-slate-500 shadow-sm ring-1 ring-inset ring-slate-300 bg-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 cursor-not-allowed"
+                    disabled
+                    id="requested-by"
+                    name="requested-by"
+                    readOnly
+                    type="text"
+                    value={requester?.name || "Loading..."}
+                  />
+                </div>
+              </div>
+              <div className="col-span-1">
+                <label
+                  className="block text-sm font-medium leading-6 text-slate-900"
+                  htmlFor="agency"
+                >
+                  Requested Agency
+                </label>
+                <div className="mt-2">
+                  <input
+                    className="block w-full rounded-md border-0 py-2 px-3 text-slate-500 shadow-sm ring-1 ring-inset ring-slate-300 bg-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 cursor-not-allowed"
+                    disabled
+                    id="agency"
+                    name="agency"
+                    readOnly
+                    type="text"
+                    value={requester?.agency || "Travel World Inc."}
+                  />
+                </div>
+              </div>
+              <div className="col-span-1 md:col-span-2">
+                <label
+                  className="block text-sm font-medium leading-6 text-slate-900"
+                  htmlFor="reason"
+                >
+                  Reason for Action
+                </label>
+                <div className="mt-2">
+                  <select
+                    className="block w-full rounded-md border-0 py-2.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                    id="reason"
+                    name="reason"
+                    defaultValue={record.reason || ""}
+                  >
+                    <option value="">Select a reason...</option>
+                    {reasons.length > 0 ? (
+                      reasons.map((reason) => (
+                        <option key={reason.id} value={reason.title}>
+                          {reason.title}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option>Customer Refund Request</option>
+                        <option>Flight Cancellation</option>
+                        <option>Schedule Change</option>
+                        <option>Duplicate Booking</option>
+                        <option>Ticket Reissue</option>
+                        <option>Other</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+              </div>
+              <div className="col-span-1 md:col-span-2">
+                <label
+                  className="block text-sm font-medium leading-6 text-slate-900"
+                  htmlFor="notes"
+                >
+                  Notes / Remarks
+                </label>
+                <div className="mt-2">
+                  <textarea
+                    className="block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                    id="notes"
+                    name="notes"
+                    placeholder="Add any additional details about this request..."
+                    rows={3}
+                  ></textarea>
+                </div>
+              </div>
+              <div className="col-span-1 md:col-span-2 pt-4 border-t border-slate-200 mt-2">
+                <h4 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-slate-400 text-[20px]">
+                    forward_to_inbox
                   </span>
-                  Refund Request Summary
-                </h3>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1 text-sm font-medium text-orange-700 ring-1 ring-inset ring-orange-600/20">
-                  Waiting Response from Agency
-                </span>
-              </div>
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
-                <div>
-                  <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                    Reason
-                  </div>
-                  <div className="text-sm text-slate-900 font-medium">
-                    {record.reason || "Customer Cancellation (Medical)"}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                    Request Date
-                  </div>
-                  <div className="text-sm text-slate-900 font-medium">
-                    {new Date(record.created_at).toLocaleString()}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                    Requested By
-                  </div>
-                  <div className="text-sm text-slate-900 font-medium">
-                    {requester?.name || "Loading..."}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                    Handling Agency
-                  </div>
-                  <div className="text-sm text-slate-900 font-medium">
-                    {requester?.agency || "Global Travels Inc."}
-                  </div>
-                </div>
-                <div className="md:col-span-2">
-                  <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                    Notes / Remarks
-                  </div>
-                  <div className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    {record.reason_detail ||
-                      "Request forwarded to handling agency. Awaiting confirmation regarding cancellation fees and refund eligibility from their side before processing."}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="border-b border-slate-200 px-6 py-4">
-                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-slate-400">
-                    airplane_ticket
-                  </span>
-                  Flight Information
-                </h3>
-              </div>
-              <div className="p-6">
-                <div className="flex flex-col gap-6">
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="flex items-center gap-4 w-full sm:w-auto">
-                      <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-slate-500 shadow-sm">
-                        <span className="font-bold text-xs">
-                          {booking.origin}
-                        </span>
+                  Notify Customer
+                </h4>
+                <div className="space-y-5">
+                  <div className="flex flex-col sm:flex-row gap-6">
+                    <div className="relative flex items-start">
+                      <div className="flex h-6 items-center">
+                        <input
+                          aria-describedby="notify-email-description"
+                          defaultChecked
+                          className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                          id="notify-email"
+                          name="notify-email"
+                          type="checkbox"
+                        />
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-lg font-bold text-slate-900">
-                          {booking.origin}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          Departure Airport
-                        </span>
-                        <span className="text-xs font-medium text-slate-700 mt-0.5">
-                          10:00 AM
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-center flex-1 px-4 min-w-[100px] w-full sm:w-auto">
-                      <span className="text-xs text-slate-400 mb-1">
-                        Duration
-                      </span>
-                      <div className="w-full h-px bg-slate-300 relative flex items-center justify-center">
-                        <span className="absolute h-2 w-2 rounded-full bg-slate-300 left-0"></span>
-                        <span
-                          className="material-symbols-outlined absolute text-slate-400 bg-slate-50 px-1"
-                          style={{
-                            fontSize: "16px",
-                            transform: "rotate(90deg)",
-                          }}
+                      <div className="ml-3 text-sm leading-6">
+                        <label
+                          className="font-medium text-slate-900"
+                          htmlFor="notify-email"
                         >
-                          flight
-                        </span>
-                        <span className="absolute h-2 w-2 rounded-full bg-slate-300 right-0"></span>
+                          Send Email Update
+                        </label>
+                        <p
+                          className="text-slate-500 text-xs"
+                          id="notify-email-description"
+                        >
+                          Notify {booking.email || "customer"}
+                        </p>
                       </div>
-                      <span className="text-xs text-slate-400 mt-1">
-                        Direct
-                      </span>
                     </div>
-                    <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
-                      <div className="flex flex-col text-right">
-                        <span className="text-lg font-bold text-slate-900">
-                          {booking.destination}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          Arrival Airport
-                        </span>
-                        <span className="text-xs font-medium text-slate-700 mt-0.5">
-                          10:05 PM
-                        </span>
+                    <div className="relative flex items-start">
+                      <div className="flex h-6 items-center">
+                        <input
+                          aria-describedby="notify-sms-description"
+                          className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                          id="notify-sms"
+                          name="notify-sms"
+                          type="checkbox"
+                        />
                       </div>
-                      <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-slate-500 shadow-sm">
-                        <span className="font-bold text-xs">
-                          {booking.destination}
-                        </span>
+                      <div className="ml-3 text-sm leading-6">
+                        <label
+                          className="font-medium text-slate-900"
+                          htmlFor="notify-sms"
+                        >
+                          Send SMS Notification
+                        </label>
+                        <p
+                          className="text-slate-500 text-xs"
+                          id="notify-sms-description"
+                        >
+                          Alert to {booking.phone || "phone"}
+                        </p>
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    <div>
-                      <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                        Booking ID
-                      </div>
-                      <div className="text-sm font-semibold text-slate-900">
-                        BK-{record.booking_id}
-                      </div>
+                  <div>
+                    <label
+                      className="block text-sm font-medium leading-6 text-slate-900"
+                      htmlFor="notification-template"
+                    >
+                      Custom Notification Messages
+                    </label>
+                    <div className="mt-2">
+                      <select
+                        className="block w-full rounded-md border-0 py-2.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                        id="notification-template"
+                        name="notification-template"
+                      >
+                        <option>Select a message template...</option>
+                        <option>Refund Processed Successfully</option>
+                        <option>Ticket Reissued - New Details Attached</option>
+                        <option>Booking Cancellation Confirmed</option>
+                        <option>Flight Schedule Change Notification</option>
+                        <option>Partial Refund Approved</option>
+                        <option>Custom Message</option>
+                      </select>
                     </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                        PNR
-                      </div>
-                      <div className="text-sm font-semibold text-slate-900 font-mono">
-                        {booking.PNR || "N/A"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                        Ticket No.
-                      </div>
-                      <div className="text-sm font-semibold text-slate-900">
-                        {booking.ticketNumber || "N/A"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                        Issued Date
-                      </div>
-                      <div className="text-sm font-semibold text-slate-900">
-                        {booking.IssueDay} {booking.issueMonth},{" "}
-                        {booking.issueYear}
-                      </div>
-                    </div>
-                    <div className="col-span-2">
-                      <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                        Passenger Name
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
-                          {booking.travellerFirstName?.[0]}
-                        </div>
-                        <div className="text-sm font-semibold text-slate-900">
-                          Ms. {booking.travellerFirstName}{" "}
-                          {booking.travellerLastName}
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                        Buying Price
-                      </div>
-                      <div className="text-sm font-semibold text-slate-900">
-                        ${costPrice.toFixed(2)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                        Selling Price
-                      </div>
-                      <div className="text-sm font-semibold text-primary">
-                        ${sellingPrice.toFixed(2)}
-                      </div>
+                  </div>
+                  <div>
+                    <label
+                      className="block text-sm font-medium leading-6 text-slate-900"
+                      htmlFor="notification-message"
+                    >
+                      Message Content
+                    </label>
+                    <div className="mt-2">
+                      <textarea
+                        className="block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                        id="notification-message"
+                        name="notification-message"
+                        placeholder="e.g. Your refund has been processed successfully. Please allow 5-7 business days for the amount to reflect in your account."
+                        rows={3}
+                      ></textarea>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="flex flex-col gap-6">
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-200 px-6 py-4">
-                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-slate-400">
-                    history
-                  </span>
-                  Communication Log
-                </h3>
-              </div>
-              <div className="p-6">
-                <ol className="relative border-l border-slate-200 ml-2">
-                  <li className="mb-8 ml-6">
-                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-orange-100 ring-4 ring-white">
-                      <span
-                        className="material-symbols-outlined text-orange-600"
-                        style={{ fontSize: "14px" }}
-                      >
-                        hourglass_empty
-                      </span>
-                    </span>
-                    <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
-                      Waiting for Agency Response
-                    </h3>
-                    <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
-                      Current Status
-                    </time>
-                    <p className="mb-2 text-sm font-normal text-slate-500">
-                      Refund request has been sent to the partner agency.
-                      Awaiting their confirmation on waiver policy.
-                    </p>
-                  </li>
-                  <li className="mb-8 ml-6">
-                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 ring-4 ring-white">
-                      <span
-                        className="material-symbols-outlined text-blue-600"
-                        style={{ fontSize: "14px" }}
-                      >
-                        send
-                      </span>
-                    </span>
-                    <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
-                      Request Sent to Agency
-                    </h3>
-                    <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
-                      24 Oct, 2023 11:45
-                    </time>
-                    <div className="p-3 text-xs italic font-normal text-slate-500 border border-slate-200 rounded-lg bg-slate-50">
-                      Ref: AGY-REQ-2209. Forwarded via agency portal.
-                    </div>
-                  </li>
-                  <li className="mb-8 ml-6">
-                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 ring-4 ring-white">
-                      <span
-                        className="material-symbols-outlined text-slate-600"
-                        style={{ fontSize: "14px" }}
-                      >
-                        mail
-                      </span>
-                    </span>
-                    <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
-                      Customer Notified
-                    </h3>
-                    <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
-                      24 Oct, 2023 10:45
-                    </time>
-                    <p className="text-sm font-normal text-slate-500">
-                      Receipt of refund request acknowledged via email.
-                    </p>
-                  </li>
-                  <li className="ml-6">
-                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 ring-4 ring-white">
-                      <span
-                        className="material-symbols-outlined text-slate-600"
-                        style={{ fontSize: "14px" }}
-                      >
-                        assignment_return
-                      </span>
-                    </span>
-                    <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
-                      Refund Requested
-                    </h3>
-                    <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
-                      24 Oct, 2023 10:30
-                    </time>
-                    <p className="text-sm font-normal text-slate-500">
-                      By {booking.travellerFirstName} (Customer) - Reason:
-                      Medical
-                    </p>
-                  </li>
-                </ol>
-              </div>
+            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200 rounded-b-xl">
+              <button
+                className="rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 transition-all"
+                type="button"
+                onClick={() => router.back()}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-all"
+                type="submit"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  check_circle
+                </span>
+                Confirm Action
+              </button>
             </div>
-
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="p-6">
-                <h3 className="text-sm font-semibold text-slate-900 mb-4">
-                  Quick Actions
-                </h3>
-                <div className="flex flex-col gap-3">
-                  <button className="w-full flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-                    <span className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-slate-400">
-                        mail
-                      </span>
-                      Resend Notification
-                    </span>
-                    <span
-                      className="material-symbols-outlined text-slate-400"
-                      style={{ fontSize: "16px" }}
-                    >
-                      chevron_right
-                    </span>
-                  </button>
-                  <button className="w-full flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-                    <span className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-slate-400">
-                        receipt_long
-                      </span>
-                      Download Invoice
-                    </span>
-                    <span
-                      className="material-symbols-outlined text-slate-400"
-                      style={{ fontSize: "16px" }}
-                    >
-                      chevron_right
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>
