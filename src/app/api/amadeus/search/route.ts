@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import type { FlightOffer } from "@/types/flight-search";
 
 export const runtime = "nodejs";
 
@@ -18,104 +17,6 @@ function parseIata(input?: string): string {
   const last = tokens[tokens.length - 1];
   if (/^[A-Z]{3}$/.test(last)) return last;
   return input.trim();
-}
-
-async function getAccessToken() {
-  const baseUrl = getEnv("NEXT_PUBLIC_AMADEUS_BASE_URL", "https://test.travel.api.amadeus.com/");
-  const clientId = getEnv("NEXT_PUBLIC_AMADEUS_API_KEY");
-  const clientSecret = getEnv("NEXT_PUBLIC_AMADEUS_API_SECRET");
-  const oauthUri = getEnv("NEXT_PUBLIC_AMADEUS_OAUTH_URI", "v1/security/oauth2/token");
-
-  if (!clientId || !clientSecret) {
-    throw new Error("Amadeus credentials missing");
-  }
-
-  const url = new URL(oauthUri, baseUrl).toString();
-  const body = new URLSearchParams({
-    grant_type: "client_credentials",
-    client_id: clientId,
-    client_secret: clientSecret,
-  }).toString();
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
-  });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    throw new Error(`Amadeus OAuth failed: ${res.status} ${errText}`);
-  }
-  const data = await res.json();
-  return data.access_token as string;
-}
-
-interface AmadeusSegment {
-  carrierCode?: string;
-  number?: string;
-  aircraft?: { code?: string };
-  departure?: { iataCode?: string; at?: string };
-  arrival?: { iataCode?: string; at?: string };
-}
-
-interface AmadeusItinerary {
-  segments: AmadeusSegment[];
-  duration?: string;
-}
-
-interface AmadeusOffer {
-  id: string;
-  itineraries?: AmadeusItinerary[];
-  price?: { grandTotal?: string; total?: string; currency?: string };
-  validatingAirlineCodes?: string[];
-  oneWay?: boolean;
-}
-
-function mapOffers(data: AmadeusOffer[]): FlightOffer[] {
-  return (data || []).map((offer: AmadeusOffer) => {
-    const itinerary = offer.itineraries?.[0];
-    const segments: AmadeusSegment[] = itinerary?.segments || [];
-    const first = segments[0] || {};
-    const last = segments[segments.length - 1] || {};
-    const priceAmount = Number(offer.price?.grandTotal || offer.price?.total || 0);
-    const currency = offer.price?.currency || "USD";
-    const carrier = first.carrierCode || offer.validatingAirlineCodes?.[0] || "";
-    const flightNumber = `${first.carrierCode || ""}-${first.number || ""}`.trim();
-
-    return {
-      id: offer.id,
-      airline: {
-        name: carrier,
-        code: carrier,
-        logo: `https://pics.avs.io/300/300/${carrier}.png`,
-      },
-      flightNumber,
-      aircraft: first.aircraft?.code,
-      departure: {
-        city: first.departure?.iataCode || "",
-        code: first.departure?.iataCode || "",
-        time: first.departure?.at ? new Date(first.departure.at).toISOString().slice(11, 16) : "",
-        date: first.departure?.at ? new Date(first.departure.at).toISOString().slice(0, 10) : undefined,
-      },
-      arrival: {
-        city: last.arrival?.iataCode || "",
-        code: last.arrival?.iataCode || "",
-        time: last.arrival?.at ? new Date(last.arrival.at).toISOString().slice(11, 16) : "",
-        date: last.arrival?.at ? new Date(last.arrival.at).toISOString().slice(0, 10) : undefined,
-      },
-      duration: itinerary?.duration || "",
-      stops: {
-        count: Math.max(segments.length - 1, 0),
-        locations: segments.slice(1, -1).map((s: AmadeusSegment) => s.departure?.iataCode).filter(Boolean),
-      },
-      price: priceAmount,
-      currency,
-      tags: offer.oneWay ? ["One Way"] : undefined,
-    };
-  });
 }
 
 export async function GET(req: Request) {
@@ -138,38 +39,71 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: false, error: "missing_params" }, { status: 400 });
     }
 
-    const token = await getAccessToken();
-    const baseUrl = getEnv("NEXT_PUBLIC_AMADEUS_BASE_URL", "https://test.travel.api.amadeus.com/");
-    const searchUri = getEnv("NEXT_PUBLIC_AMADEUS_OFFER_SEARCH_URI", "v2/shopping/flight-offers");
-    const url = new URL(searchUri, baseUrl);
+    const departureDateOnly = departDate.split("T")[0];
+    const returnDateOnly = returnDate ? returnDate.split("T")[0] : "";
+    const tripTypeApi = tripType === "One Way" ? "ONE_WAY" : "ROUND_TRIP";
 
-    url.searchParams.set("originLocationCode", origin);
-    url.searchParams.set("destinationLocationCode", destination);
-    url.searchParams.set("departureDate", departDate);
-    if (tripType !== "One Way" && returnDate) {
-      url.searchParams.set("returnDate", returnDate);
-    }
-    url.searchParams.set("adults", String(adults));
-    if (children > 0) url.searchParams.set("children", String(children));
-    if (infants > 0) url.searchParams.set("infants", String(infants));
-    url.searchParams.set("travelClass", travelClass); // ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST
-    if (nonStop) url.searchParams.set("nonStop", nonStop);
-    url.searchParams.set("currencyCode", "USD");
-
-    const res = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const originDestinations: Array<{
+      id: string;
+      originLocationCode: string;
+      destinationLocationCode: string;
+      departureDateTimeRange: { date: string };
+    }> = [
+      {
+        id: "1",
+        originLocationCode: origin,
+        destinationLocationCode: destination,
+        departureDateTimeRange: { date: departureDateOnly },
       },
+    ];
+
+    if (tripType !== "One Way" && returnDateOnly) {
+      originDestinations.push({
+        id: "2",
+        originLocationCode: destination,
+        destinationLocationCode: origin,
+        departureDateTimeRange: { date: returnDateOnly },
+      });
+    }
+
+    const baseUrl = getEnv("NEXT_PUBLIC_API_BASE_URL", "https://dev-api.skytrips.com.au/");
+    const path = "flight-search/family-tree/price-group";
+    const url = new URL(path, baseUrl).toString();
+    const clientRef = getEnv("NEXT_PUBLIC_SKYTRIPS_CLIENT_REF", "1223");
+
+    const reqBody = {
+      originDestinations,
+      adults,
+      children,
+      infants,
+      travelClass,
+      currencyCode: "AUD",
+      tripType: tripTypeApi,
+      manualSort: "PRICE_LOW_TO_HIGH",
+      groupByPrice: true,
+      origin,
+      destination,
+      departureDate: departureDateOnly,
+      ...(returnDateOnly ? { returnDate: returnDateOnly } : {}),
+      nonStop: nonStop === "true",
+    };
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "ama-client-ref": clientRef,
+      },
+      body: JSON.stringify(reqBody),
     });
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      return NextResponse.json({ ok: false, error: "amadeus_error", details: text }, { status: res.status });
+      return NextResponse.json({ ok: false, error: "skytrips_error", details: text }, { status: res.status });
     }
 
     const json = await res.json();
-    const offers = mapOffers(json?.data || []);
-    return NextResponse.json({ ok: true, offers });
+    return NextResponse.json({ ok: true, raw: json });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ ok: false, error: "server_error", message }, { status: 500 });
@@ -213,50 +147,50 @@ export async function POST(req: Request) {
     })) {
       return NextResponse.json({ ok: false, error: "missing_params" }, { status: 400 });
     }
+    const firstSegment = segmentsIn[0];
+    const lastSegment = segmentsIn[segmentsIn.length - 1];
+    const origin = parseIata(firstSegment.origin);
+    const destination = parseIata(lastSegment.destination);
+    const departureDate = (firstSegment.date || "").split("T")[0];
+    const returnDate = (lastSegment.date || "").split("T")[0];
 
-    const travelers: Array<{ id: string; travelerType: "ADULT" | "CHILD" | "HELD_INFANT" }> = [];
-    for (let i = 0; i < adults; i++) travelers.push({ id: String(travelers.length + 1), travelerType: "ADULT" });
-    for (let i = 0; i < children; i++) travelers.push({ id: String(travelers.length + 1), travelerType: "CHILD" });
-    for (let i = 0; i < infants; i++) travelers.push({ id: String(travelers.length + 1), travelerType: "HELD_INFANT" });
-
-    const token = await getAccessToken();
-    const baseUrl = getEnv("NEXT_PUBLIC_AMADEUS_BASE_URL", "https://test.travel.api.amadeus.com/");
-    const searchUri = getEnv("NEXT_PUBLIC_AMADEUS_OFFER_SEARCH_URI", "v2/shopping/flight-offers");
-    const url = new URL(searchUri, baseUrl).toString();
+    const baseUrl = getEnv("NEXT_PUBLIC_SKYTRIPS_API_BASE", "https://dev-api.skytrips.com.au/");
+    const path = "flight-search/family-tree/price-group";
+    const url = new URL(path, baseUrl).toString();
+    const clientRef = getEnv("NEXT_PUBLIC_SKYTRIPS_CLIENT_REF", "1223");
 
     const reqBody = {
-      currencyCode: "USD",
       originDestinations,
-      travelers,
-      sources: ["GDS"],
-      searchCriteria: {
-        cabinRestrictions: [
-          {
-            cabin: travelClass,
-            coverage: "MOST_SEGMENTS",
-            originDestinationIds: originDestinations.map(od => od.id),
-          },
-        ],
-      },
+      adults,
+      children,
+      infants,
+      travelClass,
+      currencyCode: "AUD",
+      tripType: "ONE_WAY",
+      manualSort: "PRICE_LOW_TO_HIGH",
+      groupByPrice: true,
+      origin,
+      destination,
+      departureDate,
+      returnDate,
     };
 
     const res = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
+        "ama-client-ref": clientRef,
       },
       body: JSON.stringify(reqBody),
     });
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      return NextResponse.json({ ok: false, error: "amadeus_error", details: text }, { status: res.status });
+      return NextResponse.json({ ok: false, error: "skytrips_error", details: text }, { status: res.status });
     }
 
     const json = await res.json();
-    const offers = mapOffers(json?.data || []);
-    return NextResponse.json({ ok: true, offers });
+    return NextResponse.json({ ok: true, raw: json });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ ok: false, error: "server_error", message }, { status: 500 });

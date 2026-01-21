@@ -1,23 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import { useRouter } from "next/navigation";
 
 interface FlightSearchWidgetProps {
   className?: string;
 }
-
-const AIRLINES = [
-  { code: "EK", name: "Emirates" },
-  { code: "QR", name: "Qatar Airways" },
-  { code: "SQ", name: "Singapore Airlines" },
-  { code: "CX", name: "Cathay Pacific" },
-  { code: "BA", name: "British Airways" },
-  { code: "QF", name: "Qantas" },
-  { code: "UA", name: "United Airlines" },
-  { code: "AA", name: "American Airlines" },
-];
 
 export default function FlightSearchWidget({ className = "" }: FlightSearchWidgetProps) {
   const router = useRouter();
@@ -32,26 +21,7 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
     class: "Economy",
   });
   const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
-  const [showAirlineDropdown, setShowAirlineDropdown] = useState(false);
-  const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
-  const airlineDropdownRef = useRef<HTMLDivElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        airlineDropdownRef.current &&
-        !airlineDropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowAirlineDropdown(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   const [formData, setFormData] = useState({
     origin: "",
@@ -90,16 +60,6 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
         return n;
       });
     }
-  };
-
-  const handleAirlineToggle = (code: string) => {
-    setSelectedAirlines((prev) => {
-      if (prev.includes(code)) {
-        return prev.filter((c) => c !== code);
-      } else {
-        return [...prev, code];
-      }
-    });
   };
 
   const handlePassengerChange = (type: string, operation: "inc" | "dec") => {
@@ -175,12 +135,15 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
         const json = await res.json();
         if (!res.ok || !json.ok) {
           setErrors((prev) => ({ ...prev, origin: "Search failed. Try again." }));
-          setLoading(false);
           return;
         }
         const key = `mc_${Math.random().toString(36).slice(2)}`;
-        sessionStorage.setItem(`amadeusCache:${key}`, JSON.stringify(json.offers || []));
-        router.push(`/dashboard/flights/results?type=Multi-city&k=${key}`);
+        sessionStorage.setItem(`amadeusCache:${key}`, JSON.stringify(json.raw || {}));
+        const params = new URLSearchParams({
+          type: "Multi-city",
+          k: key,
+        });
+        router.push(`/dashboard/flights/results?${params.toString()}`);
       } else {
         const params = new URLSearchParams({
           origin: formData.origin,
@@ -193,20 +156,11 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
           class: passengers.class,
           type: tripType,
         });
-        const res = await fetch(`/api/amadeus/search?${params.toString()}`);
-        const json = await res.json();
-        if (!res.ok || !json.ok) {
-          setErrors((prev) => ({ ...prev, origin: "Search failed. Try again." }));
-          setLoading(false);
-          return;
-        }
-        const key = `amadeusCache:${params.toString()}`;
-        sessionStorage.setItem(key, JSON.stringify(json.offers || []));
-        router.push(`/dashboard/flights/results?${params.toString()}&cached=1`);
+        router.push(`/dashboard/flights/results?${params.toString()}`);
       }
-      
     } catch (error) {
       console.error("Search failed", error);
+    } finally {
       setLoading(false);
     }
   };
@@ -530,102 +484,26 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
 
       {/* Bottom Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-center mt-6 pt-6 border-t border-slate-100 gap-4">
-        <div className="flex gap-6">
-           <label className="flex items-center gap-2 cursor-pointer group">
-              <input type="checkbox" className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary" />
-              <span className="text-sm font-medium text-slate-600 group-hover:text-primary transition-colors">Direct Flights Only</span>
-           </label>
-           <label className="flex items-center gap-2 cursor-pointer group">
-              <input type="checkbox" className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary" />
-              <span className="text-sm font-medium text-slate-600 group-hover:text-primary transition-colors">Refundable Fares</span>
-           </label>
-        </div>
+        <div className="flex gap-6"></div>
 
         <div className="flex gap-4 w-full sm:w-auto">
-             {/* Airline Preference - Multi-select */}
-             <div className="relative w-full sm:w-56" ref={airlineDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowAirlineDropdown(!showAirlineDropdown)}
-                  className="w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg p-2.5 focus:ring-primary focus:border-primary flex items-center justify-between transition-colors hover:border-primary/50"
-                >
-                  <span className="truncate">
-                    {selectedAirlines.length === 0
-                      ? "Preferred Airline (Any)"
-                      : selectedAirlines.length === 1
-                      ? AIRLINES.find(a => a.code === selectedAirlines[0])?.name
-                      : `${selectedAirlines.length} Airlines Selected`}
-                  </span>
-                  <span className="material-symbols-outlined text-slate-400 text-[20px]">
-                    arrow_drop_down
-                  </span>
-                </button>
-
-                {showAirlineDropdown && (
-                  <div className="absolute bottom-full mb-2 left-0 w-full bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 animate-in fade-in zoom-in-95 duration-200 max-h-60 overflow-y-auto">
-                    <div className="space-y-1">
-                      {AIRLINES.map((airline) => {
-                        const isSelected = selectedAirlines.includes(airline.code);
-                        return (
-                          <div
-                            key={airline.code}
-                            onClick={() => handleAirlineToggle(airline.code)}
-                            className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
-                              isSelected ? "bg-blue-50" : "hover:bg-slate-50"
-                            }`}
-                          >
-                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                              isSelected ? "bg-primary border-primary" : "border-slate-300 bg-white"
-                            }`}>
-                              {isSelected && (
-                                <span className="material-symbols-outlined text-white text-[14px] font-bold">
-                                  check
-                                </span>
-                              )}
-                            </div>
-                            <span className={`text-sm font-medium ${
-                              isSelected ? "text-primary" : "text-slate-700"
-                            }`}>
-                              {airline.name}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {selectedAirlines.length > 0 && (
-                      <div className="pt-2 mt-2 border-t border-slate-100">
-                        <button
-                          onClick={() => {
-                            setSelectedAirlines([]);
-                            setShowAirlineDropdown(false);
-                          }}
-                          className="w-full py-1.5 text-xs font-bold text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          Clear Selection
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-             </div>
-
-            <button
-                onClick={handleSearch}
-                disabled={loading}
-                className="bg-primary hover:bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
-            >
-                {loading ? (
-                    <>
-                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                        Searching...
-                    </>
-                ) : (
-                    <>
-                        <span className="material-symbols-outlined">search</span>
-                        Search Flights
-                    </>
-                )}
-            </button>
+          <button
+            onClick={handleSearch}
+            disabled={loading}
+            className="bg-primary hover:bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
+          >
+            {loading ? (
+              <>
+                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                Searching...
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined">search</span>
+                Search Flights
+              </>
+            )}
+          </button>
         </div>
       </div>
       {loading && (
