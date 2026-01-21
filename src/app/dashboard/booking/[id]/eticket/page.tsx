@@ -99,7 +99,8 @@ export default function ETicketPage({
   };
 
   const ticketNumber =
-    booking.ticketNumber || `TKT-${String(booking.id).padStart(10, "0")}`;
+    booking.travellers?.[0]?.eticketNumber ||
+    `TKT-${String(booking.id).padStart(10, "0")}`;
   const issueDate = booking.created_at
     ? new Date(booking.created_at).toLocaleDateString("en-GB", {
         day: "2-digit",
@@ -207,7 +208,7 @@ export default function ETicketPage({
               htmlEl.style.setProperty(
                 "background-color",
                 "#ffffff",
-                "important"
+                "important",
               );
             }
             if (style.borderColor && style.borderColor.includes("oklab")) {
@@ -228,7 +229,7 @@ export default function ETicketPage({
         0,
         0,
         imgWidth,
-        imgHeight
+        imgHeight,
       );
 
       const pdfBase64 = pdf.output("datauristring");
@@ -242,7 +243,9 @@ export default function ETicketPage({
           message: data.message
             .replace(
               "{NAME}",
-              `${booking.travellerFirstName} ${booking.travellerLastName}`
+              booking.customer
+                ? `${booking.customer.firstName} ${booking.customer.lastName}`
+                : `${booking.travellers?.[0]?.firstName || ""} ${booking.travellers?.[0]?.lastName || ""}`,
             )
             .replace("{PNR}", booking.PNR || "")
             .replace("{ORIGIN}", booking.origin)
@@ -274,7 +277,9 @@ export default function ETicketPage({
           isOpen={isEmailModalOpen}
           onClose={() => setIsEmailModalOpen(false)}
           recipient={{
-            name: `${booking.travellerFirstName} ${booking.travellerLastName}`,
+            name: booking.customer
+              ? `${booking.customer.firstName} ${booking.customer.lastName}`
+              : `${booking.travellers?.[0]?.firstName || ""} ${booking.travellers?.[0]?.lastName || ""}`,
             email: booking.email || "",
             phone: booking.phone,
             organization: (booking as any).companyName || "Individual",
@@ -736,7 +741,7 @@ export default function ETicketPage({
                     ))
                   ) : (
                     <tr>
-                      <td className="px-6 py-4 font-bold text-slate-900">
+                      {/* <td className="px-6 py-4 font-bold text-slate-900">
                         {booking.travellerFirstName} {booking.travellerLastName}
                       </td>
                       <td className="px-6 py-4 font-mono text-slate-600">
@@ -747,7 +752,7 @@ export default function ETicketPage({
                       </td>
                       <td className="px-6 py-4 text-emerald-600 font-bold">
                         Confirmed
-                      </td>
+                      </td> */}
                     </tr>
                   )}
                 </tbody>

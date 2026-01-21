@@ -207,20 +207,22 @@ export default function BookingRowMenu({
       {isRefundOpen && (
         <RefundConfirmModal
           isOpen={isRefundOpen}
-          bookingId={booking.id}
+          bookingId={booking.id!}
           bookingDate={
             booking.travelDate ||
             `${booking.IssueDay || ""} ${booking.issueMonth || ""} ${booking.issueYear || ""}`
           }
           amount={Number(booking.sellingPrice || booking.buyingPrice || 0)}
+          travellers={booking.travellers || []}
           isAuthenticated={isAuthenticated || !!localUser}
           onRequireAuth={() => setIsSignInPromptOpen(true)}
           hideWarning={isAuthorizedUser}
-          onConfirm={async () => {
+          onConfirm={async (selectedTravellerIds) => {
             console.log("analytics:event", {
               type: "refund_confirmed",
               bookingId: booking.id,
               amount: booking.sellingPrice || booking.buyingPrice || 0,
+              selectedTravellerIds,
             });
             setIsSubmitting(true);
 
@@ -266,6 +268,7 @@ export default function BookingRowMenu({
                   booking: booking,
                   user_id: finalUserId,
                   type: "Refund",
+                  selected_travellers: selectedTravellerIds,
                 }),
               });
 

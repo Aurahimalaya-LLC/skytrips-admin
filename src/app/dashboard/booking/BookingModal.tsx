@@ -242,18 +242,18 @@ export default function BookingModal({
         }));
       } else {
         // Fallback to flat fields
-        loadedTravellers = [
-          {
-            id: Date.now().toString(),
-            firstName: booking.travellerFirstName || "",
-            lastName: booking.travellerLastName || "",
-            passportNumber: booking.passportNumber || "",
-            passportExpiry: booking.passportExpiry || "",
-            dob: booking.dob || "",
-            nationality: booking.nationality || "Nepalese",
-            eticketNumber: "",
-          },
-        ];
+        // loadedTravellers = [
+        //   {
+        //     id: Date.now().toString(),
+        //     firstName: booking.travellerFirstName || "",
+        //     lastName: booking.travellerLastName || "",
+        //     passportNumber: booking.passportNumber || "",
+        //     passportExpiry: booking.passportExpiry || "",
+        //     dob: booking.dob || "",
+        //     nationality: booking.nationality || "Nepalese",
+        //     eticketNumber: "",
+        //   },
+        // ];
       }
 
       setFormData((prev) => ({
@@ -663,16 +663,13 @@ export default function BookingModal({
 
     // Map back to the Booking interface structure before saving
     const bookingToSave: Partial<Booking> = {
-      // Legacy flat fields - keeping firstName/lastName for list view compatibility if columns exist
-      // But prioritizing travellers array for data integrity
-      travellerFirstName:
-        formData.travellers[0]?.firstName || formData.travellerFirstName,
-      travellerLastName:
-        formData.travellers[0]?.lastName || formData.travellerLastName,
+      // Legacy flat fields removed to prevent usage
+      // travellerFirstName: ... // REMOVED
+      // travellerLastName: ...  // REMOVED
 
       // Core booking fields
       PNR: formData.pnr,
-      ticketNumber: formData.ticketNumber || formData.pnr + "01",
+      // ticketNumber: ... // REMOVED
       airlines: formData.airlines,
       travelDate: toDateOrNull(formData.travelDate),
       departureDate: toDateOrNull(formData.travelDate),
@@ -900,63 +897,63 @@ export default function BookingModal({
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div>
-                            <label
-                              className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
-                              htmlFor="email"
-                            >
-                              Email Address
-                            </label>
-                            <div className="relative rounded-lg shadow-sm">
-                              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                                <span
-                                  className="material-symbols-outlined text-slate-400"
-                                  style={{ fontSize: "20px" }}
-                                >
-                                  email
-                                </span>
+                              <label
+                                className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
+                                htmlFor="email"
+                              >
+                                Email Address
+                              </label>
+                              <div className="relative rounded-lg shadow-sm">
+                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                  <span
+                                    className="material-symbols-outlined text-slate-400"
+                                    style={{ fontSize: "20px" }}
+                                  >
+                                    email
+                                  </span>
+                                </div>
+                                <input
+                                  className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
+                                  id="email"
+                                  name="email"
+                                  type="email"
+                                  value={formData.email}
+                                  onChange={handleChange}
+                                  placeholder="customer@email.com"
+                                  disabled={isReadOnly}
+                                />
                               </div>
-                              <input
-                                className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
-                                id="email"
-                                name="email"
-                                type="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                placeholder="customer@email.com"
-                                disabled={isReadOnly}
-                              />
                             </div>
-                          </div>
-                          <div>
-                            <label
-                              className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
-                              htmlFor="phone"
-                            >
-                              Phone Number
-                            </label>
-                            <div className="relative rounded-lg shadow-sm">
-                              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                                <span
-                                  className="material-symbols-outlined text-slate-400"
-                                  style={{ fontSize: "20px" }}
-                                >
-                                  phone
-                                </span>
+                            <div>
+                              <label
+                                className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
+                                htmlFor="phone"
+                              >
+                                Phone Number
+                              </label>
+                              <div className="relative rounded-lg shadow-sm">
+                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                  <span
+                                    className="material-symbols-outlined text-slate-400"
+                                    style={{ fontSize: "20px" }}
+                                  >
+                                    phone
+                                  </span>
+                                </div>
+                                <input
+                                  className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
+                                  id="phone"
+                                  name="phone"
+                                  type="tel"
+                                  value={formData.phone}
+                                  onChange={handleChange}
+                                  placeholder="+61 XXX XXX XXX"
+                                  disabled={isReadOnly}
+                                />
                               </div>
-                              <input
-                                className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
-                                id="phone"
-                                name="phone"
-                                type="tel"
-                                value={formData.phone}
-                                onChange={handleChange}
-                                placeholder="+61 XXX XXX XXX"
-                                disabled={isReadOnly}
-                              />
                             </div>
                           </div>
                         </div>
-                      </div>
                       )}
                     </div>
                   </div>
