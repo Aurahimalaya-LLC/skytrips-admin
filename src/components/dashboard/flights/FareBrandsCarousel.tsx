@@ -1,76 +1,15 @@
-"use client";
+ "use client";
 
 import { useRef } from "react";
-
-interface FareBrand {
-  id: string;
-  name: string;
-  price: number;
-  currency: string;
-  recommended?: boolean;
-  features: {
-    included: boolean;
-    text: string;
-  }[];
-}
+import type { FareBrand } from "@/types/flight-search";
 
 interface FareBrandsCarouselProps {
-  basePrice: number;
-  currency: string;
+  brands: FareBrand[];
   onSelect: (brandId: string) => void;
 }
 
-export default function FareBrandsCarousel({ basePrice, currency, onSelect }: FareBrandsCarouselProps) {
+export default function FareBrandsCarousel({ brands, onSelect }: FareBrandsCarouselProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // Mock data generation based on base price
-  const brands: FareBrand[] = [
-    {
-      id: "light",
-      name: "ECONOMY LIGHT",
-      price: basePrice,
-      currency: currency,
-      features: [
-        { included: false, text: "No Checked Bag" },
-        { included: true, text: "7kg Cabin Bag" },
-        { included: false, text: "Non-refundable" },
-      ]
-    },
-    {
-      id: "standard",
-      name: "ECONOMY STANDARD",
-      price: Math.round(basePrice * 1.18),
-      currency: currency,
-      recommended: true,
-      features: [
-        { included: true, text: "23kg Checked Bag" },
-        { included: true, text: "7kg Cabin Bag" },
-        { included: true, text: "Refund Fee Applies" },
-      ]
-    },
-    {
-      id: "flex",
-      name: "ECONOMY FLEX",
-      price: Math.round(basePrice * 1.42),
-      currency: currency,
-      features: [
-        { included: true, text: "2 x 23kg Bags" },
-        { included: true, text: "Free Cancellation" },
-        { included: true, text: "Priority Boarding" },
-      ]
-    },
-    {
-      id: "business",
-      name: "BUSINESS SAVER",
-      price: Math.round(basePrice * 2.5),
-      currency: currency,
-      features: [
-        { included: true, text: "2 x 32kg Bags" },
-        { included: true, text: "Lounge Access" },
-        { included: true, text: "Priority Boarding" },
-      ]
-    }
-  ];
 
   const scroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
@@ -115,7 +54,7 @@ export default function FareBrandsCarousel({ basePrice, currency, onSelect }: Fa
               key={brand.id} 
               className={`min-w-[240px] md:min-w-[260px] p-5 rounded-xl border-2 cursor-pointer transition-all snap-center relative bg-white flex flex-col ${
                 brand.recommended 
-                  ? "border-primary shadow-lg shadow-blue-500/10 scale-[1.02] z-10" 
+                  ? "border-primary/70 shadow-md shadow-blue-500/10"
                   : "border-slate-100 hover:border-slate-300 hover:shadow-md"
               }`}
               onClick={() => onSelect(brand.id)}
@@ -123,16 +62,10 @@ export default function FareBrandsCarousel({ basePrice, currency, onSelect }: Fa
               tabIndex={0}
               onKeyDown={(e) => e.key === "Enter" && onSelect(brand.id)}
             >
-              {brand.recommended && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
-                  Recommended
-                </div>
-              )}
-
               <div className="mb-4">
                 <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{brand.name}</h5>
                 <p className="text-2xl font-black text-slate-900">
-                  ${brand.price}<span className="text-sm font-bold text-slate-400">.00</span>
+                  {brand.currency} {brand.price.toFixed(2)}
                 </p>
               </div>
 

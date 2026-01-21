@@ -1,3 +1,15 @@
+export interface FareBrand {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
+  recommended?: boolean;
+  features: {
+    included: boolean;
+    text: string;
+  }[];
+}
+
 export interface FlightOffer {
   id: string;
   airline: {
@@ -27,6 +39,7 @@ export interface FlightOffer {
   price: number;
   currency: string;
   tags?: string[]; // "Refundable", "Seat Choice"
+  fareBrands?: FareBrand[];
 }
 
 export interface FlightFilterState {

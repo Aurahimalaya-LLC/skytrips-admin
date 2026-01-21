@@ -35,13 +35,31 @@ interface RawFareRule {
 
 interface RawAmenity {
   description?: string;
+  isChargeable?: boolean;
+  amenityType?: string;
 }
 
 interface RawFareDetailsBySegment {
+  cabin?: string;
+  fareBasis?: string;
+  brandedFare?: string;
+  brandedFareLabel?: string;
+  class?: string;
+  includedCheckedBags?: {
+    quantity?: number;
+  };
+  includedCabinBags?: {
+    quantity?: number;
+  };
   amenities?: RawAmenity[];
 }
 
 interface RawTravelerPricing {
+  price?: {
+    currency?: string;
+    total?: string | number;
+    base?: string | number;
+  };
   fareDetailsBySegment?: RawFareDetailsBySegment[];
 }
 
@@ -59,6 +77,7 @@ interface RawFlightOffer {
     rules?: RawFareRule[];
   };
   travelerPricings?: RawTravelerPricing[];
+  samePriceOffers?: RawFlightOffer[];
 }
 
 interface RawDictionaries {
@@ -85,6 +104,7 @@ function FlightResultsContent() {
   const [flights, setFlights] = useState<FlightOffer[]>([]);
   const [visibleCount, setVisibleCount] = useState(10);
   const [rawDictionaries, setRawDictionaries] = useState<RawDictionaries | undefined>(undefined);
+  const rawOffersByIdRef = useRef<Record<string, RawFlightOffer>>({});
 
   // Extract params
   const originParam = searchParams.get("origin") || "";
@@ -336,6 +356,13 @@ function FlightResultsContent() {
             const rawObj = JSON.parse(cached) as RawApiResponse;
             const offers = rawObj.data || [];
             setRawDictionaries(rawObj.dictionaries);
+            rawOffersByIdRef.current = {};
+            offers.forEach((offer) => {
+              if (offer?.id !== undefined && offer?.id !== null) {
+                const id = String(offer.id);
+                rawOffersByIdRef.current[id] = offer;
+              }
+            });
             setFlights(mapRawToOffers(offers, rawObj.dictionaries));
           } else {
             setFlights([]);
@@ -361,6 +388,13 @@ function FlightResultsContent() {
             const rawObj = (json.raw || {}) as RawApiResponse;
             const offers = rawObj.data || [];
             setRawDictionaries(rawObj.dictionaries);
+            rawOffersByIdRef.current = {};
+            offers.forEach((offer) => {
+              if (offer?.id !== undefined && offer?.id !== null) {
+                const id = String(offer.id);
+                rawOffersByIdRef.current[id] = offer;
+              }
+            });
             setFlights(mapRawToOffers(offers, rawObj.dictionaries));
           }
         }
@@ -373,6 +407,8 @@ function FlightResultsContent() {
     };
     fetchOffers();
   }, [originParam, destinationParam, departParam, returnParam, adultsParam, childrenParam, infantsParam, classParam, typeParam, cacheKey]);
+
+  const getRawOfferById = (id: string) => rawOffersByIdRef.current[id];
 
   const filteredFlights = flights.filter((offer) => {
     if (airlinesParam.length > 0 && !airlinesParam.includes((offer.airline.code || "").toUpperCase())) {
@@ -494,28 +530,48 @@ function FlightResultsContent() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           
-          {/* Sidebar */}
           <aside className="lg:col-span-1 hidden lg:block">
-             <FlightFilterSidebar
-               selectedAirlines={airlinesParam}
-               selectedStops={stopsParam}
-               directOnly={directOnly}
-               refundableOnly={refundableOnly}
-               priceRange={rawDictionaries?.priceRange}
-               priceFilterMin={priceFilterMin}
-               priceFilterMax={priceFilterMax}
-               transitOptions={rawDictionaries?.transitOptions}
-               departureTimes={rawDictionaries?.departureTimes}
-               arrivalTimes={rawDictionaries?.arrivalTimes}
-               airlinesSummary={rawDictionaries?.airlines}
-               onToggleDirect={handleToggleDirect}
-               onToggleRefundable={handleToggleRefundable}
-               onToggleAirline={handleToggleAirline}
-               onToggleStop={handleToggleStops}
-               onChangePriceRange={handlePriceRangeChange}
-               selectedTime={timeSlotParam || undefined}
-               onChangeTime={handleTimeSlotChange}
-             />
+            {loading ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6 animate-pulse">
+                <div className="h-4 w-32 bg-slate-200 rounded" />
+                <div className="space-y-3">
+                  <div className="h-3 w-full bg-slate-200 rounded" />
+                  <div className="h-3 w-5/6 bg-slate-200 rounded" />
+                  <div className="h-3 w-4/6 bg-slate-200 rounded" />
+                </div>
+                <div className="space-y-3">
+                  <div className="h-4 w-24 bg-slate-200 rounded" />
+                  <div className="h-3 w-full bg-slate-200 rounded" />
+                  <div className="h-3 w-4/5 bg-slate-200 rounded" />
+                </div>
+                <div className="space-y-3">
+                  <div className="h-4 w-28 bg-slate-200 rounded" />
+                  <div className="h-3 w-full bg-slate-200 rounded" />
+                  <div className="h-3 w-3/4 bg-slate-200 rounded" />
+                </div>
+              </div>
+            ) : (
+              <FlightFilterSidebar
+                selectedAirlines={airlinesParam}
+                selectedStops={stopsParam}
+                directOnly={directOnly}
+                refundableOnly={refundableOnly}
+                priceRange={rawDictionaries?.priceRange}
+                priceFilterMin={priceFilterMin}
+                priceFilterMax={priceFilterMax}
+                transitOptions={rawDictionaries?.transitOptions}
+                departureTimes={rawDictionaries?.departureTimes}
+                arrivalTimes={rawDictionaries?.arrivalTimes}
+                airlinesSummary={rawDictionaries?.airlines}
+                onToggleDirect={handleToggleDirect}
+                onToggleRefundable={handleToggleRefundable}
+                onToggleAirline={handleToggleAirline}
+                onToggleStop={handleToggleStops}
+                onChangePriceRange={handlePriceRangeChange}
+                selectedTime={timeSlotParam || undefined}
+                onChangeTime={handleTimeSlotChange}
+              />
+            )}
           </aside>
 
           {/* Results List */}
@@ -541,30 +597,74 @@ function FlightResultsContent() {
               </div>
             </div>
 
-            {/* Content */}
             {loading ? (
-              <div className="space-y-4">
-                 {[1, 2, 3].map(i => (
-                   <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 animate-pulse h-48">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-12 h-12 rounded-full bg-slate-200"></div>
-                        <div className="space-y-2">
-                          <div className="h-4 w-32 bg-slate-200 rounded"></div>
-                          <div className="h-3 w-20 bg-slate-200 rounded"></div>
+              <div className="space-y-6">
+                <div className="bg-gradient-to-r from-primary/5 via-sky-50 to-emerald-50 border border-primary/10 rounded-2xl px-6 py-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-primary text-xl animate-bounce">flight_takeoff</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">
+                        Searching the best fares for you
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        This can take a few seconds while we scan multiple airlines
+                      </p>
+                    </div>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-4 text-xs font-medium text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-base">travel_explore</span>
+                      <span>{origin} → {destination}</span>
+                    </div>
+                    <span className="h-5 w-px bg-slate-200" />
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-amber-500 text-base">schedule</span>
+                      <span>
+                        {typeParam === "One Way" ? departDate : `${departDate} – ${returnDate}`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 animate-pulse"
+                    >
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-slate-200" />
+                          <div className="space-y-2">
+                            <div className="h-4 w-32 bg-slate-200 rounded" />
+                            <div className="h-3 w-24 bg-slate-200 rounded" />
+                          </div>
+                        </div>
+                        <div className="h-6 w-16 bg-slate-200 rounded-full" />
+                      </div>
+                      <div className="flex items-center justify-between gap-6">
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 w-20 bg-slate-200 rounded" />
+                          <div className="h-3 w-24 bg-slate-200 rounded" />
+                        </div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 w-24 bg-slate-200 rounded" />
+                          <div className="h-3 w-16 bg-slate-200 rounded" />
+                        </div>
+                        <div className="flex-1 flex flex-col items-end gap-2">
+                          <div className="h-5 w-24 bg-slate-200 rounded" />
+                          <div className="h-9 w-28 bg-slate-200 rounded-full" />
                         </div>
                       </div>
-                      <div className="flex justify-between">
-                         <div className="h-8 w-20 bg-slate-200 rounded"></div>
-                         <div className="h-8 w-40 bg-slate-200 rounded"></div>
-                         <div className="h-8 w-20 bg-slate-200 rounded"></div>
-                      </div>
-                   </div>
-                 ))}
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="space-y-6">
                 {visibleFlights.map(offer => (
-                  <FlightResultCard key={offer.id} offer={offer} />
+                  <FlightResultCard key={offer.id} offer={offer} getRawOffer={getRawOfferById} />
                 ))}
 
                 {/* Load More */}
