@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Booking, ManageBooking, Reason } from "@/types";
+import { Booking, ManageBooking } from "@/types";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -19,27 +19,12 @@ export default function ManageBookingViewPage() {
     email: string;
     agency?: string;
   } | null>(null);
-  const [reasons, setReasons] = useState<Reason[]>([]);
 
   useEffect(() => {
     if (id) {
       fetchRecord(id);
     }
-    fetchReasons();
   }, [id]);
-
-  const fetchReasons = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("reasons")
-        .select("*")
-        .order("title", { ascending: true });
-      if (error) throw error;
-      setReasons(data || []);
-    } catch (err) {
-      console.error("Error fetching reasons:", err);
-    }
-  };
 
   const fetchRecord = async (uid: string) => {
     try {
@@ -107,6 +92,7 @@ export default function ManageBookingViewPage() {
     );
   }
 
+  // Calculate pricing logic safely
   const sellingPrice = parseFloat(booking.sellingPrice || "0");
   const costPrice = parseFloat(booking.buyingPrice || "0");
   const profit = sellingPrice - costPrice;
@@ -199,7 +185,7 @@ export default function ManageBookingViewPage() {
                   Passenger Name
                 </label>
                 <p className="mt-1 text-base font-medium text-slate-900">
-                  {booking.customer.firstName} {booking.customer.lastName}
+                  {booking.customer?.firstName || booking.travellers?.[0]?.firstName} {booking.customer?.lastName || booking.travellers?.[0]?.lastName}
                 </p>
               </div>
               <div>
@@ -254,229 +240,135 @@ export default function ManageBookingViewPage() {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-6 py-4">
-            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-              <span className="material-symbols-outlined text-slate-400">
-                edit_document
-              </span>
-              Management Action
-            </h3>
-          </div>
-          <form className="flex flex-col">
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="col-span-1">
-                <label
-                  className="block text-sm font-medium leading-6 text-slate-900"
-                  htmlFor="requested-by"
-                >
-                  Requested by
-                </label>
-                <div className="mt-2">
-                  <input
-                    className="block w-full rounded-md border-0 py-2 px-3 text-slate-500 shadow-sm ring-1 ring-inset ring-slate-300 bg-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 cursor-not-allowed"
-                    disabled
-                    id="requested-by"
-                    name="requested-by"
-                    readOnly
-                    type="text"
-                    value={requester?.name || "Loading..."}
-                  />
-                </div>
-              </div>
-              <div className="col-span-1">
-                <label
-                  className="block text-sm font-medium leading-6 text-slate-900"
-                  htmlFor="agency"
-                >
-                  Requested Agency
-                </label>
-                <div className="mt-2">
-                  <input
-                    className="block w-full rounded-md border-0 py-2 px-3 text-slate-500 shadow-sm ring-1 ring-inset ring-slate-300 bg-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 cursor-not-allowed"
-                    disabled
-                    id="agency"
-                    name="agency"
-                    readOnly
-                    type="text"
-                    value={requester?.agency || "Travel World Inc."}
-                  />
-                </div>
-              </div>
-              <div className="col-span-1 md:col-span-2">
-                <label
-                  className="block text-sm font-medium leading-6 text-slate-900"
-                  htmlFor="reason"
-                >
-                  Reason for Action
-                </label>
-                <div className="mt-2">
-                  <select
-                    className="block w-full rounded-md border-0 py-2.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
-                    id="reason"
-                    name="reason"
-                    defaultValue={record.reason || ""}
-                  >
-                    <option value="">Select a reason...</option>
-                    {reasons.length > 0 ? (
-                      reasons.map((reason) => (
-                        <option key={reason.id} value={reason.title}>
-                          {reason.title}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option>Customer Refund Request</option>
-                        <option>Flight Cancellation</option>
-                        <option>Schedule Change</option>
-                        <option>Duplicate Booking</option>
-                        <option>Ticket Reissue</option>
-                        <option>Other</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-              </div>
-              <div className="col-span-1 md:col-span-2">
-                <label
-                  className="block text-sm font-medium leading-6 text-slate-900"
-                  htmlFor="notes"
-                >
-                  Notes / Remarks
-                </label>
-                <div className="mt-2">
-                  <textarea
-                    className="block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
-                    id="notes"
-                    name="notes"
-                    placeholder="Add any additional details about this request..."
-                    rows={3}
-                  ></textarea>
-                </div>
-              </div>
-              <div className="col-span-1 md:col-span-2 pt-4 border-t border-slate-200 mt-2">
-                <h4 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-slate-400 text-[20px]">
-                    forward_to_inbox
+              <div className="border-b border-slate-200 px-6 py-4">
+                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-slate-400">
+                    history
                   </span>
-                  Notify Customer
-                </h4>
-                <div className="space-y-5">
-                  <div className="flex flex-col sm:flex-row gap-6">
-                    <div className="relative flex items-start">
-                      <div className="flex h-6 items-center">
-                        <input
-                          aria-describedby="notify-email-description"
-                          defaultChecked
-                          className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                          id="notify-email"
-                          name="notify-email"
-                          type="checkbox"
-                        />
-                      </div>
-                      <div className="ml-3 text-sm leading-6">
-                        <label
-                          className="font-medium text-slate-900"
-                          htmlFor="notify-email"
-                        >
-                          Send Email Update
-                        </label>
-                        <p
-                          className="text-slate-500 text-xs"
-                          id="notify-email-description"
-                        >
-                          Notify {booking.email || "customer"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="relative flex items-start">
-                      <div className="flex h-6 items-center">
-                        <input
-                          aria-describedby="notify-sms-description"
-                          className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                          id="notify-sms"
-                          name="notify-sms"
-                          type="checkbox"
-                        />
-                      </div>
-                      <div className="ml-3 text-sm leading-6">
-                        <label
-                          className="font-medium text-slate-900"
-                          htmlFor="notify-sms"
-                        >
-                          Send SMS Notification
-                        </label>
-                        <p
-                          className="text-slate-500 text-xs"
-                          id="notify-sms-description"
-                        >
-                          Alert to {booking.phone || "phone"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <label
-                      className="block text-sm font-medium leading-6 text-slate-900"
-                      htmlFor="notification-template"
-                    >
-                      Custom Notification Messages
-                    </label>
-                    <div className="mt-2">
-                      <select
-                        className="block w-full rounded-md border-0 py-2.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
-                        id="notification-template"
-                        name="notification-template"
+                  Communication Log
+                </h3>
+              </div>
+              <div className="p-6">
+                <ol className="relative border-l border-slate-200 ml-2">
+                  <li className="mb-8 ml-6">
+                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-orange-100 ring-4 ring-white">
+                      <span
+                        className="material-symbols-outlined text-orange-600"
+                        style={{ fontSize: "14px" }}
                       >
-                        <option>Select a message template...</option>
-                        <option>Refund Processed Successfully</option>
-                        <option>Ticket Reissued - New Details Attached</option>
-                        <option>Booking Cancellation Confirmed</option>
-                        <option>Flight Schedule Change Notification</option>
-                        <option>Partial Refund Approved</option>
-                        <option>Custom Message</option>
-                      </select>
+                        hourglass_empty
+                      </span>
+                    </span>
+                    <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
+                      Waiting for Agency Response
+                    </h3>
+                    <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
+                      Current Status
+                    </time>
+                    <p className="mb-2 text-sm font-normal text-slate-500">
+                      Refund request has been sent to the partner agency.
+                      Awaiting their confirmation on waiver policy.
+                    </p>
+                  </li>
+                  <li className="mb-8 ml-6">
+                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 ring-4 ring-white">
+                      <span
+                        className="material-symbols-outlined text-blue-600"
+                        style={{ fontSize: "14px" }}
+                      >
+                        send
+                      </span>
+                    </span>
+                    <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
+                      Request Sent to Agency
+                    </h3>
+                    <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
+                      24 Oct, 2023 11:45
+                    </time>
+                    <div className="p-3 text-xs italic font-normal text-slate-500 border border-slate-200 rounded-lg bg-slate-50">
+                      Ref: AGY-REQ-2209. Forwarded via agency portal.
                     </div>
-                  </div>
-                  <div>
-                    <label
-                      className="block text-sm font-medium leading-6 text-slate-900"
-                      htmlFor="notification-message"
+                  </li>
+                  <li className="mb-8 ml-6">
+                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 ring-4 ring-white">
+                      <span
+                        className="material-symbols-outlined text-slate-600"
+                        style={{ fontSize: "14px" }}
+                      >
+                        mail
+                      </span>
+                    </span>
+                    <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
+                      Customer Notified
+                    </h3>
+                    <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
+                      24 Oct, 2023 10:45
+                    </time>
+                    <p className="text-sm font-normal text-slate-500">
+                      Receipt of refund request acknowledged via email.
+                    </p>
+                  </li>
+                  <li className="ml-6">
+                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 ring-4 ring-white">
+                      <span
+                        className="material-symbols-outlined text-slate-600"
+                        style={{ fontSize: "14px" }}
+                      >
+                        assignment_return
+                      </span>
+                    </span>
+                    <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
+                      Refund Requested
+                    </h3>
+                    <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
+                      24 Oct, 2023 10:30
+                    </time>
+                    <p className="text-sm font-normal text-slate-500">
+                      By {booking.customer?.firstName} (Customer) - Reason:
+                      Medical
+                    </p>
+                  </li>
+                </ol>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm mt-6">
+              <div className="p-6">
+                <h3 className="text-sm font-semibold text-slate-900 mb-4">
+                  Quick Actions
+                </h3>
+                <div className="flex flex-col gap-3">
+                  <button className="w-full flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                    <span className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-slate-400">
+                        mail
+                      </span>
+                      Resend Notification
+                    </span>
+                    <span
+                      className="material-symbols-outlined text-slate-400"
+                      style={{ fontSize: "16px" }}
                     >
-                      Message Content
-                    </label>
-                    <div className="mt-2">
-                      <textarea
-                        className="block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
-                        id="notification-message"
-                        name="notification-message"
-                        placeholder="e.g. Your refund has been processed successfully. Please allow 5-7 business days for the amount to reflect in your account."
-                        rows={3}
-                      ></textarea>
-                    </div>
-                  </div>
+                      chevron_right
+                    </span>
+                  </button>
+                  <button className="w-full flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                    <span className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-slate-400">
+                        receipt_long
+                      </span>
+                      Download Invoice
+                    </span>
+                    <span
+                      className="material-symbols-outlined text-slate-400"
+                      style={{ fontSize: "16px" }}
+                    >
+                      chevron_right
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200 rounded-b-xl">
-              <button
-                className="rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 transition-all"
-                type="button"
-                onClick={() => router.back()}
-              >
-                Cancel
-              </button>
-              <button
-                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-all"
-                type="submit"
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  check_circle
-                </span>
-                Confirm Action
-              </button>
-            </div>
-          </form>
-        </div>
       </div>
     </div>
   );
