@@ -321,7 +321,12 @@ export default function BookingDetailsPage({
                       Traveller Full Name
                     </label>
                     <p className="text-sm font-bold text-slate-900 uppercase">
-                      {booking.travellerFirstName} {booking.travellerLastName}
+                      {(booking.travellers?.[0]
+                        ? `${booking.travellers[0].firstName} ${booking.travellers[0].lastName}`
+                        : booking.customer
+                        ? `${booking.customer.firstName} ${booking.customer.lastName}`
+                        : "N/A"
+                      ).toUpperCase()}
                     </p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-6 gap-x-4">
