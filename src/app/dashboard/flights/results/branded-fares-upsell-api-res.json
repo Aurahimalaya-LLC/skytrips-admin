@@ -1,0 +1,3061 @@
+{
+    "data": [
+        {
+            "type": "flight-offer",
+            "id": "1",
+            "source": "GDS",
+            "instantTicketingRequired": false,
+            "paymentCardRequired": false,
+            "lastTicketingDate": "2026-01-22",
+            "itineraries": [
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "KTM",
+                                "terminal": "I",
+                                "at": "2026-01-22T22:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "at": "2026-01-23T05:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "115",
+                            "aircraft": {
+                                "code": "333"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "3",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-01-23T20:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "SYD",
+                                "at": "2026-01-24T07:55:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "251",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H25M",
+                            "id": "4",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                },
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "SYD",
+                                "terminal": "1",
+                                "at": "2026-02-19T22:15:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "at": "2026-02-20T03:50:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "140",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H35M",
+                            "id": "25",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-02-20T19:00:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KTM",
+                                "at": "2026-02-20T21:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "114",
+                            "aircraft": {
+                                "code": "7M8"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "26",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                }
+            ],
+            "price": {
+                "currency": "AUD",
+                "total": "2188.00",
+                "base": "1725.00",
+                "fees": [
+                    {
+                        "amount": "0.00",
+                        "type": "TICKETING"
+                    }
+                ],
+                "grandTotal": "2188.00"
+            },
+            "pricingOptions": {
+                "fareType": [
+                    "PUBLISHED"
+                ],
+                "includedCheckedBagsOnly": true,
+                "refundableFare": false,
+                "noRestrictionFare": false,
+                "noPenaltyFare": false
+            },
+            "validatingAirlineCodes": [
+                "MH"
+            ],
+            "travelerPricings": [
+                {
+                    "travelerId": "1",
+                    "fareOption": "STANDARD",
+                    "travelerType": "ADULT",
+                    "price": {
+                        "currency": "AUD",
+                        "total": "2188.00",
+                        "base": "1725.00",
+                        "taxes": [
+                            {
+                                "amount": "8.34",
+                                "code": "WG"
+                            },
+                            {
+                                "amount": "0.80",
+                                "code": "H8"
+                            },
+                            {
+                                "amount": "66.16",
+                                "code": "WY"
+                            },
+                            {
+                                "amount": "27.50",
+                                "code": "NP"
+                            },
+                            {
+                                "amount": "159.40",
+                                "code": "T6"
+                            },
+                            {
+                                "amount": "10.40",
+                                "code": "NQ"
+                            },
+                            {
+                                "amount": "70.00",
+                                "code": "AU"
+                            },
+                            {
+                                "amount": "74.60",
+                                "code": "YQ"
+                            },
+                            {
+                                "amount": "14.80",
+                                "code": "G1"
+                            },
+                            {
+                                "amount": "31.00",
+                                "code": "MY"
+                            }
+                        ]
+                    },
+                    "fareDetailsBySegment": [
+                        {
+                            "segmentId": "3",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C4",
+                                    "description": "UPTO55LB 25KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "4",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C4",
+                                    "description": "UPTO55LB 25KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "25",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "NBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "N",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C4",
+                                    "description": "UPTO55LB 25KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "26",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "NBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "N",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C4",
+                                    "description": "UPTO55LB 25KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "flight-offer",
+            "id": "2",
+            "source": "GDS",
+            "instantTicketingRequired": false,
+            "paymentCardRequired": false,
+            "lastTicketingDate": "2026-01-22",
+            "itineraries": [
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "KTM",
+                                "terminal": "I",
+                                "at": "2026-01-22T22:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "at": "2026-01-23T05:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "115",
+                            "aircraft": {
+                                "code": "333"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "3",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-01-23T20:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "SYD",
+                                "at": "2026-01-24T07:55:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "251",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H25M",
+                            "id": "4",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                },
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "SYD",
+                                "terminal": "1",
+                                "at": "2026-02-19T22:15:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "at": "2026-02-20T03:50:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "140",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H35M",
+                            "id": "25",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-02-20T19:00:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KTM",
+                                "at": "2026-02-20T21:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "114",
+                            "aircraft": {
+                                "code": "7M8"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "26",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                }
+            ],
+            "price": {
+                "currency": "AUD",
+                "total": "2221.00",
+                "base": "1758.00",
+                "fees": [
+                    {
+                        "amount": "0.00",
+                        "type": "TICKETING"
+                    }
+                ],
+                "grandTotal": "2221.00"
+            },
+            "pricingOptions": {
+                "fareType": [
+                    "PUBLISHED"
+                ],
+                "includedCheckedBagsOnly": true,
+                "refundableFare": false,
+                "noRestrictionFare": false,
+                "noPenaltyFare": false
+            },
+            "validatingAirlineCodes": [
+                "MH"
+            ],
+            "travelerPricings": [
+                {
+                    "travelerId": "1",
+                    "fareOption": "STANDARD",
+                    "travelerType": "ADULT",
+                    "price": {
+                        "currency": "AUD",
+                        "total": "2221.00",
+                        "base": "1758.00",
+                        "taxes": [
+                            {
+                                "amount": "8.34",
+                                "code": "WG"
+                            },
+                            {
+                                "amount": "0.80",
+                                "code": "H8"
+                            },
+                            {
+                                "amount": "66.16",
+                                "code": "WY"
+                            },
+                            {
+                                "amount": "27.50",
+                                "code": "NP"
+                            },
+                            {
+                                "amount": "159.40",
+                                "code": "T6"
+                            },
+                            {
+                                "amount": "10.40",
+                                "code": "NQ"
+                            },
+                            {
+                                "amount": "70.00",
+                                "code": "AU"
+                            },
+                            {
+                                "amount": "74.60",
+                                "code": "YQ"
+                            },
+                            {
+                                "amount": "14.80",
+                                "code": "G1"
+                            },
+                            {
+                                "amount": "31.00",
+                                "code": "MY"
+                            }
+                        ]
+                    },
+                    "fareDetailsBySegment": [
+                        {
+                            "segmentId": "3",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C4",
+                                    "description": "UPTO55LB 25KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "4",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C4",
+                                    "description": "UPTO55LB 25KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "25",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "NFL1YNP",
+                            "brandedFare": "FLEX",
+                            "class": "N",
+                            "includedCheckedBags": {
+                                "weight": 35,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C7",
+                                    "description": "UPTO35KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZGS",
+                                    "description": "GO SHOW",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "26",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "NFL1YNP",
+                            "brandedFare": "FLEX",
+                            "class": "N",
+                            "includedCheckedBags": {
+                                "weight": 35,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C7",
+                                    "description": "UPTO35KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZGS",
+                                    "description": "GO SHOW",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "flight-offer",
+            "id": "3",
+            "source": "GDS",
+            "instantTicketingRequired": false,
+            "paymentCardRequired": false,
+            "lastTicketingDate": "2026-01-22",
+            "itineraries": [
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "KTM",
+                                "terminal": "I",
+                                "at": "2026-01-22T22:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "at": "2026-01-23T05:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "115",
+                            "aircraft": {
+                                "code": "333"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "3",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-01-23T20:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "SYD",
+                                "at": "2026-01-24T07:55:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "251",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H25M",
+                            "id": "4",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                },
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "SYD",
+                                "terminal": "1",
+                                "at": "2026-02-19T22:15:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "at": "2026-02-20T03:50:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "140",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H35M",
+                            "id": "25",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-02-20T19:00:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KTM",
+                                "at": "2026-02-20T21:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "114",
+                            "aircraft": {
+                                "code": "7M8"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "26",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                }
+            ],
+            "price": {
+                "currency": "AUD",
+                "total": "2225.30",
+                "base": "1758.00",
+                "fees": [
+                    {
+                        "amount": "0.00",
+                        "type": "TICKETING"
+                    }
+                ],
+                "grandTotal": "2225.30"
+            },
+            "pricingOptions": {
+                "fareType": [
+                    "PUBLISHED"
+                ],
+                "includedCheckedBagsOnly": true,
+                "refundableFare": false,
+                "noRestrictionFare": false,
+                "noPenaltyFare": false
+            },
+            "validatingAirlineCodes": [
+                "MH"
+            ],
+            "travelerPricings": [
+                {
+                    "travelerId": "1",
+                    "fareOption": "STANDARD",
+                    "travelerType": "ADULT",
+                    "price": {
+                        "currency": "AUD",
+                        "total": "2225.30",
+                        "base": "1758.00",
+                        "taxes": [
+                            {
+                                "amount": "8.34",
+                                "code": "WG"
+                            },
+                            {
+                                "amount": "0.80",
+                                "code": "H8"
+                            },
+                            {
+                                "amount": "66.16",
+                                "code": "WY"
+                            },
+                            {
+                                "amount": "27.50",
+                                "code": "NP"
+                            },
+                            {
+                                "amount": "163.70",
+                                "code": "T6"
+                            },
+                            {
+                                "amount": "10.40",
+                                "code": "NQ"
+                            },
+                            {
+                                "amount": "70.00",
+                                "code": "AU"
+                            },
+                            {
+                                "amount": "74.60",
+                                "code": "YQ"
+                            },
+                            {
+                                "amount": "14.80",
+                                "code": "G1"
+                            },
+                            {
+                                "amount": "31.00",
+                                "code": "MY"
+                            }
+                        ]
+                    },
+                    "fareDetailsBySegment": [
+                        {
+                            "segmentId": "3",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HFL1YNP",
+                            "brandedFare": "FLEX",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 35,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C7",
+                                    "description": "UPTO35KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZGS",
+                                    "description": "GO SHOW",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "4",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HFL1YNP",
+                            "brandedFare": "FLEX",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 35,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C7",
+                                    "description": "UPTO35KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZGS",
+                                    "description": "GO SHOW",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "25",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "NBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "N",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C4",
+                                    "description": "UPTO55LB 25KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "26",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "NBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "N",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C4",
+                                    "description": "UPTO55LB 25KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "flight-offer",
+            "id": "4",
+            "source": "GDS",
+            "instantTicketingRequired": false,
+            "paymentCardRequired": false,
+            "lastTicketingDate": "2026-01-22",
+            "itineraries": [
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "KTM",
+                                "terminal": "I",
+                                "at": "2026-01-22T22:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "at": "2026-01-23T05:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "115",
+                            "aircraft": {
+                                "code": "333"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "3",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-01-23T20:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "SYD",
+                                "at": "2026-01-24T07:55:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "251",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H25M",
+                            "id": "4",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                },
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "SYD",
+                                "terminal": "1",
+                                "at": "2026-02-19T22:15:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "at": "2026-02-20T03:50:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "140",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H35M",
+                            "id": "25",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-02-20T19:00:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KTM",
+                                "at": "2026-02-20T21:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "114",
+                            "aircraft": {
+                                "code": "7M8"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "26",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                }
+            ],
+            "price": {
+                "currency": "AUD",
+                "total": "2257.30",
+                "base": "1790.00",
+                "fees": [
+                    {
+                        "amount": "0.00",
+                        "type": "TICKETING"
+                    }
+                ],
+                "grandTotal": "2257.30"
+            },
+            "pricingOptions": {
+                "fareType": [
+                    "PUBLISHED"
+                ],
+                "includedCheckedBagsOnly": true,
+                "refundableFare": false,
+                "noRestrictionFare": false,
+                "noPenaltyFare": false
+            },
+            "validatingAirlineCodes": [
+                "MH"
+            ],
+            "travelerPricings": [
+                {
+                    "travelerId": "1",
+                    "fareOption": "STANDARD",
+                    "travelerType": "ADULT",
+                    "price": {
+                        "currency": "AUD",
+                        "total": "2257.30",
+                        "base": "1790.00",
+                        "taxes": [
+                            {
+                                "amount": "8.34",
+                                "code": "WG"
+                            },
+                            {
+                                "amount": "0.80",
+                                "code": "H8"
+                            },
+                            {
+                                "amount": "66.16",
+                                "code": "WY"
+                            },
+                            {
+                                "amount": "27.50",
+                                "code": "NP"
+                            },
+                            {
+                                "amount": "163.70",
+                                "code": "T6"
+                            },
+                            {
+                                "amount": "10.40",
+                                "code": "NQ"
+                            },
+                            {
+                                "amount": "70.00",
+                                "code": "AU"
+                            },
+                            {
+                                "amount": "74.60",
+                                "code": "YQ"
+                            },
+                            {
+                                "amount": "14.80",
+                                "code": "G1"
+                            },
+                            {
+                                "amount": "31.00",
+                                "code": "MY"
+                            }
+                        ]
+                    },
+                    "fareDetailsBySegment": [
+                        {
+                            "segmentId": "3",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HFL1YNP",
+                            "brandedFare": "FLEX",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 35,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C7",
+                                    "description": "UPTO35KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZGS",
+                                    "description": "GO SHOW",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "4",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HFL1YNP",
+                            "brandedFare": "FLEX",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 35,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C7",
+                                    "description": "UPTO35KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZGS",
+                                    "description": "GO SHOW",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "25",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "NFL1YNP",
+                            "brandedFare": "FLEX",
+                            "class": "N",
+                            "includedCheckedBags": {
+                                "weight": 35,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C7",
+                                    "description": "UPTO35KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZGS",
+                                    "description": "GO SHOW",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "26",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "NFL1YNP",
+                            "brandedFare": "FLEX",
+                            "class": "N",
+                            "includedCheckedBags": {
+                                "weight": 35,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C7",
+                                    "description": "UPTO35KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZGS",
+                                    "description": "GO SHOW",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "flight-offer",
+            "id": "6",
+            "source": "GDS",
+            "instantTicketingRequired": false,
+            "paymentCardRequired": false,
+            "lastTicketingDate": "2026-01-22",
+            "itineraries": [
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "KTM",
+                                "terminal": "I",
+                                "at": "2026-01-22T22:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "at": "2026-01-23T05:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "115",
+                            "aircraft": {
+                                "code": "333"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "3",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-01-23T20:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "SYD",
+                                "at": "2026-01-24T07:55:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "251",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H25M",
+                            "id": "4",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                },
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "SYD",
+                                "terminal": "1",
+                                "at": "2026-02-19T22:15:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "at": "2026-02-20T03:50:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "140",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H35M",
+                            "id": "25",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-02-20T19:00:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KTM",
+                                "at": "2026-02-20T21:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "114",
+                            "aircraft": {
+                                "code": "7M8"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "26",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                }
+            ],
+            "price": {
+                "currency": "AUD",
+                "total": "3235.40",
+                "base": "2717.00",
+                "fees": [
+                    {
+                        "amount": "0.00",
+                        "type": "TICKETING"
+                    }
+                ],
+                "grandTotal": "3235.40"
+            },
+            "pricingOptions": {
+                "fareType": [
+                    "PUBLISHED"
+                ],
+                "includedCheckedBagsOnly": true,
+                "refundableFare": false,
+                "noRestrictionFare": false,
+                "noPenaltyFare": false
+            },
+            "validatingAirlineCodes": [
+                "MH"
+            ],
+            "travelerPricings": [
+                {
+                    "travelerId": "1",
+                    "fareOption": "STANDARD",
+                    "travelerType": "ADULT",
+                    "price": {
+                        "currency": "AUD",
+                        "total": "3235.40",
+                        "base": "2717.00",
+                        "taxes": [
+                            {
+                                "amount": "8.34",
+                                "code": "WG"
+                            },
+                            {
+                                "amount": "0.80",
+                                "code": "H8"
+                            },
+                            {
+                                "amount": "66.16",
+                                "code": "WY"
+                            },
+                            {
+                                "amount": "27.50",
+                                "code": "NP"
+                            },
+                            {
+                                "amount": "159.40",
+                                "code": "T6"
+                            },
+                            {
+                                "amount": "10.40",
+                                "code": "NQ"
+                            },
+                            {
+                                "amount": "70.00",
+                                "code": "AU"
+                            },
+                            {
+                                "amount": "82.10",
+                                "code": "YQ"
+                            },
+                            {
+                                "amount": "62.70",
+                                "code": "G1"
+                            },
+                            {
+                                "amount": "31.00",
+                                "code": "MY"
+                            }
+                        ]
+                    },
+                    "fareDetailsBySegment": [
+                        {
+                            "segmentId": "3",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C4",
+                                    "description": "UPTO55LB 25KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "4",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C4",
+                                    "description": "UPTO55LB 25KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "25",
+                            "cabin": "BUSINESS",
+                            "fareBasis": "ZBS1YNP",
+                            "brandedFare": "BUSSBASIC",
+                            "class": "Z",
+                            "includedCheckedBags": {
+                                "weight": 40,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C8",
+                                    "description": "UPTO88LB40KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "26",
+                            "cabin": "BUSINESS",
+                            "fareBasis": "ZBS1YNP",
+                            "brandedFare": "BUSSBASIC",
+                            "class": "Z",
+                            "includedCheckedBags": {
+                                "weight": 40,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C8",
+                                    "description": "UPTO88LB40KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "flight-offer",
+            "id": "7",
+            "source": "GDS",
+            "instantTicketingRequired": false,
+            "paymentCardRequired": false,
+            "lastTicketingDate": "2026-01-22",
+            "itineraries": [
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "KTM",
+                                "terminal": "I",
+                                "at": "2026-01-22T22:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "at": "2026-01-23T05:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "115",
+                            "aircraft": {
+                                "code": "333"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "3",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-01-23T20:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "SYD",
+                                "at": "2026-01-24T07:55:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "251",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H25M",
+                            "id": "4",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                },
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "SYD",
+                                "terminal": "1",
+                                "at": "2026-02-19T22:15:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "at": "2026-02-20T03:50:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "140",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H35M",
+                            "id": "25",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-02-20T19:00:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KTM",
+                                "at": "2026-02-20T21:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "114",
+                            "aircraft": {
+                                "code": "7M8"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "26",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                }
+            ],
+            "price": {
+                "currency": "AUD",
+                "total": "3272.70",
+                "base": "2750.00",
+                "fees": [
+                    {
+                        "amount": "0.00",
+                        "type": "TICKETING"
+                    }
+                ],
+                "grandTotal": "3272.70"
+            },
+            "pricingOptions": {
+                "fareType": [
+                    "PUBLISHED"
+                ],
+                "includedCheckedBagsOnly": true,
+                "refundableFare": false,
+                "noRestrictionFare": false,
+                "noPenaltyFare": false
+            },
+            "validatingAirlineCodes": [
+                "MH"
+            ],
+            "travelerPricings": [
+                {
+                    "travelerId": "1",
+                    "fareOption": "STANDARD",
+                    "travelerType": "ADULT",
+                    "price": {
+                        "currency": "AUD",
+                        "total": "3272.70",
+                        "base": "2750.00",
+                        "taxes": [
+                            {
+                                "amount": "8.34",
+                                "code": "WG"
+                            },
+                            {
+                                "amount": "0.80",
+                                "code": "H8"
+                            },
+                            {
+                                "amount": "66.16",
+                                "code": "WY"
+                            },
+                            {
+                                "amount": "27.50",
+                                "code": "NP"
+                            },
+                            {
+                                "amount": "163.70",
+                                "code": "T6"
+                            },
+                            {
+                                "amount": "10.40",
+                                "code": "NQ"
+                            },
+                            {
+                                "amount": "70.00",
+                                "code": "AU"
+                            },
+                            {
+                                "amount": "82.10",
+                                "code": "YQ"
+                            },
+                            {
+                                "amount": "62.70",
+                                "code": "G1"
+                            },
+                            {
+                                "amount": "31.00",
+                                "code": "MY"
+                            }
+                        ]
+                    },
+                    "fareDetailsBySegment": [
+                        {
+                            "segmentId": "3",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HFL1YNP",
+                            "brandedFare": "FLEX",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 35,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C7",
+                                    "description": "UPTO35KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZGS",
+                                    "description": "GO SHOW",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "4",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HFL1YNP",
+                            "brandedFare": "FLEX",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 35,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C7",
+                                    "description": "UPTO35KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": false,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZGS",
+                                    "description": "GO SHOW",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "25",
+                            "cabin": "BUSINESS",
+                            "fareBasis": "ZBS1YNP",
+                            "brandedFare": "BUSSBASIC",
+                            "class": "Z",
+                            "includedCheckedBags": {
+                                "weight": 40,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C8",
+                                    "description": "UPTO88LB40KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        },
+                        {
+                            "segmentId": "26",
+                            "cabin": "BUSINESS",
+                            "fareBasis": "ZBS1YNP",
+                            "brandedFare": "BUSSBASIC",
+                            "class": "Z",
+                            "includedCheckedBags": {
+                                "weight": 40,
+                                "weightUnit": "KG"
+                            },
+                            "amenities": [
+                                {
+                                    "code": "0AT",
+                                    "description": "SNACK",
+                                    "isChargeable": false,
+                                    "amenityType": "MEAL"
+                                },
+                                {
+                                    "code": "0B5",
+                                    "description": "PRE RESERVED SEAT ASSIGNMENT",
+                                    "isChargeable": false,
+                                    "amenityType": "PRE_RESERVED_SEAT"
+                                },
+                                {
+                                    "code": "0C8",
+                                    "description": "UPTO88LB40KG BAGGAGE",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "ZCH",
+                                    "description": "CHILD DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "ZIN",
+                                    "description": "INFANT DISCOUNT",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "0M3",
+                                    "description": "CARRY7KG 15LB UPTO45LI 115LCM",
+                                    "isChargeable": false,
+                                    "amenityType": "BAGGAGE"
+                                },
+                                {
+                                    "code": "029",
+                                    "description": "FAST TRACK",
+                                    "isChargeable": false,
+                                    "amenityType": "TRAVEL_SERVICES"
+                                },
+                                {
+                                    "code": "06I",
+                                    "description": "CHANGE BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06J",
+                                    "description": "CHANGE AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06K",
+                                    "description": "REFUND BEFORE DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                },
+                                {
+                                    "code": "06L",
+                                    "description": "REFUND AFTER DEPARTURE",
+                                    "isChargeable": true,
+                                    "amenityType": "BRANDED_FARES"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "dictionaries": {
+        "locations": {
+            "KUL": {
+                "cityCode": "KUL",
+                "countryCode": "MY"
+            },
+            "KTM": {
+                "cityCode": "KTM",
+                "countryCode": "NP"
+            },
+            "SYD": {
+                "cityCode": "SYD",
+                "countryCode": "AU"
+            }
+        }
+    },
+    "meta": {
+        "limit": 10,
+        "page": 1,
+        "total": 6
+    }
+}

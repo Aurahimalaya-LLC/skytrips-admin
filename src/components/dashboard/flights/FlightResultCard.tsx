@@ -2,19 +2,271 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FlightOffer } from "@/types/flight-search";
+import { FlightOffer, FareBrand } from "@/types/flight-search";
 import FlightDetailsModal from "./FlightDetailsModal";
 import FareBrandsCarousel from "./FareBrandsCarousel";
 
-interface FlightResultCardProps {
-  offer: FlightOffer;
+interface RawAmenity {
+  description?: string;
+  isChargeable?: boolean;
 }
 
-export default function FlightResultCard({ offer }: FlightResultCardProps) {
+interface RawFareDetailsBySegment {
+  brandedFare?: string;
+  brandedFareLabel?: string;
+  cabin?: string;
+  includedCheckedBags?: {
+    quantity?: number;
+    weight?: number;
+    weightUnit?: string;
+  };
+  includedCabinBags?: {
+    quantity?: number;
+  };
+  amenities?: RawAmenity[];
+}
+
+interface RawTravelerPricing {
+  price?: {
+    currency?: string;
+    total?: string | number;
+  };
+  fareDetailsBySegment?: RawFareDetailsBySegment[];
+}
+
+interface RawFlightOfferLike {
+  id?: string | number;
+  price?: {
+    grandTotal?: string | number;
+    total?: string | number;
+    currency?: string;
+  };
+  travelerPricings?: RawTravelerPricing[];
+}
+
+interface FlightResultCardProps {
+  offer: FlightOffer;
+  getRawOffer?: (id: string) => RawFlightOfferLike | undefined;
+}
+
+const buildFareBrandFromRaw = (fo: RawFlightOfferLike, index: number): FareBrand | null => {
+  const travelerPricing = Array.isArray(fo.travelerPricings) ? fo.travelerPricings[0] : undefined;
+  const fareDetails = Array.isArray(travelerPricing?.fareDetailsBySegment)
+    ? travelerPricing?.fareDetailsBySegment[0]
+    : undefined;
+  const totalRaw = fo.price?.grandTotal ?? fo.price?.total ?? travelerPricing?.price?.total;
+  const total = Number(totalRaw || 0);
+  if (!total || Number.isNaN(total)) return null;
+  const currencyCode = fo.price?.currency || travelerPricing?.price?.currency || "USD";
+  const amenities = Array.isArray(fareDetails?.amenities) ? fareDetails.amenities : [];
+
+  const weight = typeof fareDetails?.includedCheckedBags?.weight === "number"
+    ? fareDetails.includedCheckedBags.weight
+    : undefined;
+  const weightUnit = fareDetails?.includedCheckedBags?.weightUnit || "KG";
+  const hasChecked = typeof weight === "number" && weight > 0;
+
+  const rawCabinQty = fareDetails?.includedCabinBags?.quantity;
+  let cabinQty: number | undefined;
+  let hasExplicitNoCabin = false;
+
+  if (typeof rawCabinQty === "number") {
+    if (rawCabinQty <= 0) {
+      hasExplicitNoCabin = true;
+    } else {
+      cabinQty = rawCabinQty;
+    }
+  } else {
+    cabinQty = 1;
+  }
+
+  const features: { included: boolean; text: string }[] = [];
+
+  if (hasChecked) {
+    features.push({
+      included: true,
+      text: `${weight} ${weightUnit} Checked Baggage`,
+    });
+  } else {
+    features.push({ included: false, text: "No Checked Baggage" });
+  }
+
+  if (hasExplicitNoCabin) {
+    features.push({ included: false, text: "No Cabin Bag" });
+  } else {
+    const qty = cabinQty && cabinQty > 0 ? cabinQty : 1;
+    features.push({
+      included: true,
+      text: `${qty} Cabin Bag${qty > 1 ? "s" : ""}`,
+    });
+  }
+
+  let hasFreeChange = false;
+  let hasPaidChange = false;
+  let hasFreeRefund = false;
+  let hasPaidRefund = false;
+
+  amenities.forEach((a) => {
+    if (!a || typeof a.description !== "string") return;
+    const desc = a.description.toLowerCase();
+    const chargeable = a.isChargeable === true;
+
+    if (desc.includes("change before") || desc.includes("change after")) {
+      if (chargeable) hasPaidChange = true;
+      else hasFreeChange = true;
+    }
+    if (desc.includes("refund before") || desc.includes("refund after")) {
+      if (chargeable) hasPaidRefund = true;
+      else hasFreeRefund = true;
+    }
+  });
+
+  if (hasFreeChange || hasPaidChange) {
+    if (hasFreeChange && !hasPaidChange) {
+      features.push({ included: true, text: "Free Date Changes" });
+    } else {
+      features.push({ included: true, text: "Date Changes (fee may apply)" });
+    }
+  } else {
+    features.push({ included: false, text: "No Date Changes" });
+  }
+
+  if (hasFreeRefund || hasPaidRefund) {
+    if (hasFreeRefund && !hasPaidRefund) {
+      features.push({ included: true, text: "Refundable" });
+    } else {
+      features.push({ included: true, text: "Refund fee applies" });
+    }
+  } else {
+    features.push({ included: false, text: "Non-refundable" });
+  }
+
+  if (fareDetails?.cabin) {
+    features.push({
+      included: true,
+      text: `${fareDetails.cabin.charAt(0)}${fareDetails.cabin.slice(1).toLowerCase()} Cabin`,
+    });
+  }
+
+  const name =
+    fareDetails?.brandedFareLabel ||
+    fareDetails?.brandedFare ||
+    `Fare ${index + 1}`;
+
+  return {
+    id: String(fo.id ?? index),
+    name,
+    price: total,
+    currency: currencyCode,
+    features,
+  };
+};
+
+export default function FlightResultCard({ offer, getRawOffer }: FlightResultCardProps) {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showFares, setShowFares] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+   const [fareBrands, setFareBrands] = useState<FareBrand[] | null>(
+    Array.isArray(offer.fareBrands) ? offer.fareBrands : null
+  );
+  const [faresLoading, setFaresLoading] = useState(false);
+  const [faresError, setFaresError] = useState<string | null>(null);
+
+  const loadFareBrands = async () => {
+    if (!getRawOffer) return;
+    const raw = getRawOffer(offer.id);
+    if (!raw) return;
+
+    setFaresLoading(true);
+    setFaresError(null);
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://dev-api.skytrips.com.au/";
+      const clientRef = process.env.NEXT_PUBLIC_SKYTRIPS_CLIENT_REF || "1223";
+      const url = new URL("flight-branded-fares-upsell", baseUrl);
+      url.searchParams.set("page", "1");
+      url.searchParams.set("limit", "10");
+
+      const res = await fetch(url.toString(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ama-client-ref": clientRef,
+          accept: "application/json",
+        },
+        body: JSON.stringify(raw),
+      });
+
+      if (!res.ok) {
+        setFaresError("Failed to load branded fares");
+        setFareBrands(null);
+        return;
+      }
+
+      const json = await res.json();
+      const items: RawFlightOfferLike[] = Array.isArray(json?.data)
+        ? json.data
+        : Array.isArray(json)
+        ? json
+        : [];
+
+      const brands: FareBrand[] = [];
+      const parentBrand = buildFareBrandFromRaw(raw, 0);
+
+      if (items.length > 0) {
+        const firstFromApi = buildFareBrandFromRaw(items[0], 0);
+        const isDuplicate =
+          parentBrand &&
+          firstFromApi &&
+          firstFromApi.price === parentBrand.price &&
+          firstFromApi.name === parentBrand.name;
+
+        if (isDuplicate) {
+          if (firstFromApi) {
+            brands.push(firstFromApi);
+          }
+          for (let i = 1; i < items.length; i += 1) {
+            const brand = buildFareBrandFromRaw(items[i], brands.length);
+            if (brand) {
+              brands.push(brand);
+            }
+          }
+        } else {
+          if (parentBrand) {
+            brands.push(parentBrand);
+          }
+          items.forEach((item: RawFlightOfferLike) => {
+            const brand = buildFareBrandFromRaw(item, brands.length);
+            if (brand) {
+              brands.push(brand);
+            }
+          });
+        }
+      } else if (parentBrand) {
+        brands.push(parentBrand);
+      }
+
+      if (brands.length > 1) {
+        for (let i = 0; i < brands.length; i += 1) {
+          brands[i] = { ...brands[i], recommended: i === 1 };
+        }
+      }
+
+      setFareBrands(brands);
+    } catch {
+      setFaresError("Failed to load branded fares");
+    } finally {
+      setFaresLoading(false);
+    }
+  };
+
+  const handleToggleFares = () => {
+    const next = !showFares;
+    setShowFares(next);
+    if (next && !fareBrands && !faresLoading) {
+      loadFareBrands();
+    }
+  };
 
   const handleSelectFare = (brandId: string) => {
     setIsNavigating(true);
@@ -82,13 +334,8 @@ export default function FlightResultCard({ offer }: FlightResultCardProps) {
 
           {/* Price & Action */}
           <div className="flex flex-col items-end gap-3 w-full md:w-auto min-w-[140px]">
-            {/* <div className="text-right">
-              <p className="text-3xl font-black text-slate-900">${offer.price.toFixed(2)}</p>
-              <p className="text-xs text-slate-500 font-bold uppercase">Total Price</p>
-            </div> */}
-            
             <button 
-              onClick={() => setShowFares(!showFares)}
+              onClick={handleToggleFares}
               className={`w-full py-2.5 px-4 font-bold rounded-lg shadow-lg transition-all ${
                   showFares 
                   ? "bg-slate-100 text-slate-600 hover:bg-slate-200 shadow-none" 
@@ -109,15 +356,48 @@ export default function FlightResultCard({ offer }: FlightResultCardProps) {
           </div>
         </div>
 
-        {/* Integrated Fare Brands Carousel */}
         {showFares && (
-            <div id={`fares-${offer.id}`} className={isNavigating ? "opacity-50 pointer-events-none transition-opacity" : ""}>
-                <FareBrandsCarousel 
-                    basePrice={offer.price} 
-                    currency={offer.currency} 
-                    onSelect={handleSelectFare} 
-                />
+          <div
+            id={`fares-${offer.id}`}
+            className={`mt-5 rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-4 md:px-6 md:py-5 transition-all ${
+              isNavigating ? "opacity-50 pointer-events-none" : ""
+            }`}
+          >
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Total fare for selected flight
+                </p>
+                <p className="text-2xl md:text-3xl font-black text-slate-900">
+                  {offer.currency} {offer.price.toFixed(2)}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] md:text-xs text-slate-500">
+                <span className="material-symbols-outlined text-primary text-base md:text-lg">
+                  info
+                </span>
+                <span className="leading-snug">
+                  Choose a fare brand below to see baggage and flexibility options.
+                </span>
+              </div>
             </div>
+
+            {faresError && (
+              <div className="mb-3 text-xs font-medium text-red-600">
+                {faresError}
+              </div>
+            )}
+
+            {faresLoading && (
+              <div className="h-24 flex items-center justify-center text-xs text-slate-500">
+                Loading branded fares...
+              </div>
+            )}
+
+            {!faresLoading && !faresError && Array.isArray(fareBrands) && fareBrands.length > 0 && (
+              <FareBrandsCarousel brands={fareBrands} onSelect={handleSelectFare} />
+            )}
+          </div>
         )}
       </div>
 
