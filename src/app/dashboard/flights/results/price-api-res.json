@@ -1,0 +1,308 @@
+{
+    "data": [
+        {
+            "type": "flight-offer",
+            "id": "1",
+            "source": "GDS",
+            "instantTicketingRequired": false,
+            "nonHomogeneous": false,
+            "paymentCardRequired": false,
+            "lastTicketingDate": "2026-01-22",
+            "itineraries": [
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "KTM",
+                                "terminal": "I",
+                                "at": "2026-01-22T22:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-01-23T05:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "115",
+                            "aircraft": {
+                                "code": "333"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "3",
+                            "numberOfStops": 0
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-01-23T20:30:00"
+                            },
+                            "arrival": {
+                                "iataCode": "SYD",
+                                "terminal": "1",
+                                "at": "2026-01-24T07:55:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "251",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H25M",
+                            "id": "4",
+                            "numberOfStops": 0
+                        }
+                    ]
+                },
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "SYD",
+                                "terminal": "1",
+                                "at": "2026-02-19T12:10:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-02-19T17:45:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "122",
+                            "aircraft": {
+                                "code": "339"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT8H35M",
+                            "id": "27",
+                            "numberOfStops": 0
+                        },
+                        {
+                            "departure": {
+                                "iataCode": "KUL",
+                                "terminal": "1",
+                                "at": "2026-02-19T19:00:00"
+                            },
+                            "arrival": {
+                                "iataCode": "KTM",
+                                "terminal": "I",
+                                "at": "2026-02-19T21:30:00"
+                            },
+                            "carrierCode": "MH",
+                            "number": "114",
+                            "aircraft": {
+                                "code": "7M8"
+                            },
+                            "operating": {
+                                "carrierCode": "MH"
+                            },
+                            "duration": "PT4H45M",
+                            "id": "28",
+                            "numberOfStops": 0
+                        }
+                    ]
+                }
+            ],
+            "price": {
+                "currency": "AUD",
+                "total": "2180.20",
+                "base": "1725.00",
+                "fees": [
+                    {
+                        "amount": "0.00",
+                        "type": "SUPPLIER"
+                    },
+                    {
+                        "amount": "0.00",
+                        "type": "TICKETING"
+                    },
+                    {
+                        "amount": "0.00",
+                        "type": "FORM_OF_PAYMENT"
+                    }
+                ],
+                "grandTotal": "2180.20",
+                "billingCurrency": "AUD"
+            },
+            "pricingOptions": {
+                "fareType": [
+                    "PUBLISHED"
+                ],
+                "includedCheckedBagsOnly": true
+            },
+            "validatingAirlineCodes": [
+                "MH"
+            ],
+            "travelerPricings": [
+                {
+                    "travelerId": "1",
+                    "fareOption": "STANDARD",
+                    "travelerType": "ADULT",
+                    "price": {
+                        "currency": "AUD",
+                        "total": "2180.20",
+                        "base": "1725.00",
+                        "taxes": [
+                            {
+                                "amount": "8.34",
+                                "code": "WG"
+                            },
+                            {
+                                "amount": "0.40",
+                                "code": "H8"
+                            },
+                            {
+                                "amount": "66.16",
+                                "code": "WY"
+                            },
+                            {
+                                "amount": "27.50",
+                                "code": "NP"
+                            },
+                            {
+                                "amount": "159.40",
+                                "code": "T6"
+                            },
+                            {
+                                "amount": "10.40",
+                                "code": "NQ"
+                            },
+                            {
+                                "amount": "70.00",
+                                "code": "AU"
+                            },
+                            {
+                                "amount": "74.60",
+                                "code": "YQ"
+                            },
+                            {
+                                "amount": "7.40",
+                                "code": "G1"
+                            },
+                            {
+                                "amount": "31.00",
+                                "code": "MY"
+                            }
+                        ]
+                    },
+                    "fareDetailsBySegment": [
+                        {
+                            "segmentId": "3",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            }
+                        },
+                        {
+                            "segmentId": "4",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "HBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "H",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            }
+                        },
+                        {
+                            "segmentId": "27",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "NBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "N",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            }
+                        },
+                        {
+                            "segmentId": "28",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "NBX1YNP",
+                            "brandedFare": "BASIC",
+                            "class": "N",
+                            "includedCheckedBags": {
+                                "weight": 25,
+                                "weightUnit": "KG"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "fareRules": {
+                "currency": "AUD",
+                "rules": [
+                    {
+                        "category": "REVALIDATION",
+                        "notApplicable": true
+                    },
+                    {
+                        "category": "EXCHANGE",
+                        "circumstances": "BEFORE_DEPARTURE",
+                        "notApplicable": false,
+                        "maxPenaltyAmount": "31.00"
+                    },
+                    {
+                        "category": "EXCHANGE",
+                        "circumstances": "BEFORE_DEPARTURE_NO_SHOW",
+                        "notApplicable": false,
+                        "maxPenaltyAmount": "145.00"
+                    },
+                    {
+                        "category": "EXCHANGE",
+                        "circumstances": "AFTER_DEPARTURE",
+                        "notApplicable": false,
+                        "maxPenaltyAmount": "31.00"
+                    },
+                    {
+                        "category": "EXCHANGE",
+                        "circumstances": "AFTER_DEPARTURE_NO_SHOW",
+                        "notApplicable": false,
+                        "maxPenaltyAmount": "145.00"
+                    },
+                    {
+                        "category": "REFUND",
+                        "circumstances": "BEFORE_DEPARTURE",
+                        "notApplicable": false,
+                        "maxPenaltyAmount": "114.00"
+                    },
+                    {
+                        "category": "REFUND",
+                        "circumstances": "BEFORE_DEPARTURE_NO_SHOW",
+                        "notApplicable": false,
+                        "maxPenaltyAmount": "228.00"
+                    },
+                    {
+                        "category": "REFUND",
+                        "circumstances": "AFTER_DEPARTURE",
+                        "notApplicable": false,
+                        "maxPenaltyAmount": "228.00"
+                    },
+                    {
+                        "category": "REFUND",
+                        "circumstances": "AFTER_DEPARTURE_NO_SHOW",
+                        "notApplicable": false,
+                        "maxPenaltyAmount": "228.00"
+                    }
+                ]
+            }
+        }
+    ],
+    "bags": {},
+    "meta": {
+        "limit": 10,
+        "page": 1,
+        "total": 1
+    }
+}

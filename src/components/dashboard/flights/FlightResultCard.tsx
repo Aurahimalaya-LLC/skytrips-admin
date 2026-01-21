@@ -30,6 +30,7 @@ interface RawTravelerPricing {
   price?: {
     currency?: string;
     total?: string | number;
+    base?: string | number;
   };
   fareDetailsBySegment?: RawFareDetailsBySegment[];
 }
@@ -37,6 +38,8 @@ interface RawTravelerPricing {
 interface RawFlightOfferLike {
   id?: string | number;
   price?: {
+    billingCurrency?: string;
+    base?: string | number;
     grandTotal?: string | number;
     total?: string | number;
     currency?: string;
@@ -268,13 +271,117 @@ export default function FlightResultCard({ offer, getRawOffer }: FlightResultCar
     }
   };
 
+  const triggerBackgroundPriceCheck = (brandId: string) => {
+    try {
+      if (!getRawOffer) return;
+      const raw = getRawOffer(offer.id);
+      if (!raw) return;
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://dev-api.skytrips.com.au/";
+      const clientRef = process.env.NEXT_PUBLIC_SKYTRIPS_CLIENT_REF || "1223";
+      const url = new URL("flight-price", baseUrl);
+      url.searchParams.set("page", "1");
+      url.searchParams.set("limit", "10");
+
+      const payload = { ...raw, selectedFareBrandId: brandId };
+
+      void fetch(url.toString(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ama-client-ref": clientRef,
+          accept: "*/*",
+        },
+        body: JSON.stringify(payload),
+      }).catch((error) => {
+        console.error("Price check request failed", error);
+      });
+    } catch (error) {
+      console.error("Price check trigger error", error);
+    }
+  };
+
   const handleSelectFare = (brandId: string) => {
+    triggerBackgroundPriceCheck(brandId);
+
+    const selectedBrand = Array.isArray(fareBrands)
+      ? fareBrands.find((b) => b.id === brandId)
+      : undefined;
+
     setIsNavigating(true);
-    // In a real app, you would save selection to context/redux here
+
+    let computedNetFare = "";
+    let computedTaxes = "";
+    let computedTotal = "";
+    try {
+      if (getRawOffer) {
+        const raw = getRawOffer(offer.id);
+        const baseRaw = raw?.price?.base as string | number | undefined;
+        const totalRaw = raw?.price?.grandTotal ?? raw?.price?.total as string | number | undefined;
+        const base = typeof baseRaw === "string" ? parseFloat(baseRaw) : Number(baseRaw || 0);
+        const total = typeof totalRaw === "string" ? parseFloat(totalRaw) : Number(totalRaw || 0);
+        let taxes = Number.isFinite(base) && Number.isFinite(total) ? total - base : 0;
+        if (!Number.isFinite(base) || base === 0) {
+          const fallbackBase = Array.isArray(raw?.travelerPricings)
+            ? raw!.travelerPricings.reduce((sum, tp) => {
+                const b = tp?.price?.base as string | number | undefined;
+                const v = typeof b === "string" ? parseFloat(b) : Number(b || 0);
+                return sum + (Number.isFinite(v) ? v : 0);
+              }, 0)
+            : 0;
+          if (Number.isFinite(fallbackBase)) {
+            computedNetFare = String(fallbackBase.toFixed(2));
+            taxes = Number.isFinite(total) ? total - fallbackBase : taxes;
+          }
+        } else {
+          computedNetFare = String(base.toFixed(2));
+        }
+        if (Number.isFinite(taxes)) computedTaxes = String(Math.max(taxes, 0).toFixed(2));
+        if (Number.isFinite(total)) computedTotal = String(total.toFixed(2));
+      }
+    } catch {}
+
+    // Read passenger counts from current search params
+    const currentParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
+    const adults = currentParams.get("adults") || "1";
+    const children = currentParams.get("children") || "0";
+    const infants = currentParams.get("infants") || "0";
+
+    let currencyCode = offer.currency;
+    try {
+      if (getRawOffer) {
+        const raw = getRawOffer(offer.id);
+        currencyCode = raw?.price?.billingCurrency || raw?.price?.currency || currencyCode;
+      }
+    } catch {}
+
     const params = new URLSearchParams({
       flightId: offer.id,
       fareBrand: brandId,
+      airlineName: offer.airline.name,
+      airlineCode: offer.airline.code,
+      flightNumber: offer.flightNumber,
+      aircraft: offer.aircraft || "",
+      depCity: offer.departure.city,
+      depCode: offer.departure.code,
+      depTime: offer.departure.time,
+      depDate: offer.departure.date || "",
+      arrCity: offer.arrival.city,
+      arrCode: offer.arrival.code,
+      arrTime: offer.arrival.time,
+      arrDate: offer.arrival.date || "",
+      duration: offer.duration,
+      stops: String(offer.stops?.count ?? 0),
+      price: String(selectedBrand?.price ?? offer.price),
+      currency: currencyCode || selectedBrand?.currency || offer.currency,
+      adults,
+      children,
+      infants,
+      netFare: computedNetFare,
+      taxes: computedTaxes,
+      total: computedTotal,
     });
+
     router.push(`/dashboard/flights/book?${params.toString()}`);
   };
 
