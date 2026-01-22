@@ -3,23 +3,23 @@
 @theme inline {
   --font-display: "Inter", sans-serif;
   --font-sans: "Inter", sans-serif;
-  
+
   /* Semantic Color Mappings */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
+
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  
+
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  
+
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  
+
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
 
@@ -28,21 +28,21 @@
 
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
-  
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-  
+
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  
+
   --color-sidebar: var(--sidebar-background);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-border: var(--sidebar-border);
-  
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  
+
   --radius-default: 0.5rem;
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
@@ -53,25 +53,25 @@
   /* Base Colors - Light */
   --background: #ffffff;
   --foreground: #0f172a; /* slate-900 */
-  
+
   --card: #ffffff;
   --card-foreground: #0f172a;
-  
+
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  
+
   --primary: #3b82f6; /* blue-500 */
   --primary-foreground: #ffffff;
-  
+
   --secondary: #f1f5f9; /* slate-100 */
   --secondary-foreground: #0f172a;
-  
+
   --muted: #f1f5f9;
   --muted-foreground: #64748b; /* slate-500 */
-  
+
   --accent: #f1f5f9;
   --accent-foreground: #0f172a;
-  
+
   --destructive: #dc2626; /* red-600 */
   --destructive-foreground: #ffffff;
 
@@ -80,11 +80,11 @@
 
   --warning: #d97706; /* amber-600 */
   --warning-foreground: #ffffff;
-  
+
   --border: #e2e8f0; /* slate-200 */
   --input: #e2e8f0;
   --ring: #3b82f6;
-  
+
   /* Sidebar - Light */
   --sidebar-background: #ffffff;
   --sidebar-foreground: #64748b; /* slate-500 */
@@ -95,25 +95,25 @@
   /* Base Colors - Dark */
   --background: #0f172a; /* slate-900 */
   --foreground: #f8fafc; /* slate-50 */
-  
+
   --card: #1e293b; /* slate-800 */
   --card-foreground: #f8fafc;
-  
+
   --popover: #1e293b;
   --popover-foreground: #f8fafc;
-  
+
   --primary: #3b82f6;
   --primary-foreground: #ffffff;
-  
+
   --secondary: #1e293b;
   --secondary-foreground: #f8fafc;
-  
+
   --muted: #1e293b;
   --muted-foreground: #94a3b8; /* slate-400 */
-  
+
   --accent: #1e293b;
   --accent-foreground: #f8fafc;
-  
+
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
@@ -122,11 +122,11 @@
 
   --warning: #f59e0b;
   --warning-foreground: #ffffff;
-  
+
   --border: #1e293b;
   --input: #1e293b;
   --ring: #1d4ed8; /* blue-700 */
-  
+
   /* Sidebar - Dark */
   --sidebar-background: #0f172a;
   --sidebar-foreground: #94a3b8;
@@ -137,7 +137,9 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .material-symbols-outlined {
@@ -155,11 +157,19 @@ body {
   -webkit-font-feature-settings: "liga";
   font-feature-settings: "liga";
   -webkit-font-smoothing: antialiased;
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
 }
 
 .active-icon {
-  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-variation-settings:
+    "FILL" 1,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
 }
 
 /* Custom scrollbar for better aesthetics */
@@ -186,15 +196,4 @@ body {
 
 .material-symbols-outlined.fill-1 {
   font-variation-settings: "FILL" 1;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator {
-  display: none !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-input[type="date"] {
-  -webkit-appearance: none;
-  appearance: none;
 }
