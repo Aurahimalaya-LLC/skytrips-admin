@@ -10,6 +10,7 @@ export interface Booking {
   IssueDay: string;
   issueYear: string;
   buyingPrice: string;
+  costprice?: string;
   sellingPrice?: string;
   prices?: Record<string, string | number>;
   email?: string;

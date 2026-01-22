@@ -466,10 +466,8 @@
     --color-indigo-600: #4f39f6;
     --color-indigo-700: #432dd7;
     --color-purple-50: #faf5ff;
-    --color-purple-100: #f3e8ff;
     --color-purple-400: #c07eff;
     --color-purple-600: #9810fa;
-    --color-purple-800: #6e11b0;
     --color-purple-900: #59168b;
     --color-slate-50: #f8fafc;
     --color-slate-100: #f1f5f9;
@@ -494,7 +492,6 @@
     --color-black: #000;
     --color-white: #fff;
     --spacing: .25rem;
-    --container-xs: 20rem;
     --container-sm: 24rem;
     --container-md: 28rem;
     --container-lg: 32rem;
@@ -627,10 +624,8 @@
       --color-indigo-600: lab(38.4009% 52.6132 -92.3857);
       --color-indigo-700: lab(32.4486% 49.2217 -84.6695);
       --color-purple-50: lab(97.1626% 2.99937 -4.13398);
-      --color-purple-100: lab(93.3333% 6.9744 -9.83434);
       --color-purple-400: lab(63.6946% 47.6127 -59.2066);
       --color-purple-600: lab(43.0295% 75.21 -86.5669);
-      --color-purple-800: lab(30.6017% 56.7637 -64.4751);
       --color-purple-900: lab(24.9401% 45.2703 -51.2728);
       --color-slate-50: lab(98.1434% -.369549 -1.05968);
       --color-slate-100: lab(96.286% -.852466 -2.46847);
@@ -1780,10 +1775,6 @@
     max-width: var(--container-sm);
   }
 
-  .max-w-xs {
-    max-width: var(--container-xs);
-  }
-
   .min-w-0 {
     min-width: calc(var(--spacing) * 0);
   }
@@ -2806,10 +2797,6 @@
     background-color: var(--color-purple-50);
   }
 
-  .bg-purple-100 {
-    background-color: var(--color-purple-100);
-  }
-
   .bg-red-50 {
     background-color: var(--color-red-50);
   }
@@ -3739,10 +3726,6 @@
 
   .text-purple-600 {
     color: var(--color-purple-600);
-  }
-
-  .text-purple-800 {
-    color: var(--color-purple-800);
   }
 
   .text-red-400 {
