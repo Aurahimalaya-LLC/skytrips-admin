@@ -41,7 +41,7 @@ export default function FinancialSummaryPage() {
         record.financial_breakdown.skytrips_fee?.toString() || "10.00",
       );
       setAdjustment(
-        record.financial_breakdown.manual_adjustment?.toString() || "0.00",
+        Math.abs(record.financial_breakdown.manual_adjustment || 0).toString(),
       );
     }
   }, [record]);
@@ -105,8 +105,9 @@ export default function FinancialSummaryPage() {
   const skytripsFeeVal = parseFloat(skytripsFee) || 0;
   const adjustmentVal = parseFloat(adjustment) || 0;
 
-  const totalDeductions = penaltyVal + agencyFeeVal + skytripsFeeVal;
-  const netRefund = sellingPrice - totalDeductions + adjustmentVal;
+  const totalDeductions =
+    penaltyVal + agencyFeeVal + skytripsFeeVal + adjustmentVal;
+  const netRefund = sellingPrice - totalDeductions;
 
   const handleSaveAndProceed = async () => {
     try {
@@ -115,7 +116,7 @@ export default function FinancialSummaryPage() {
         airline_penalty: penaltyVal,
         agency_fees: agencyFeeVal,
         skytrips_fee: skytripsFeeVal,
-        manual_adjustment: adjustmentVal,
+        manual_adjustment: -adjustmentVal, // Save as negative for deduction
         total_refund_amount: netRefund,
         adjustment_reason: adjustmentReason,
       };
@@ -573,7 +574,7 @@ export default function FinancialSummaryPage() {
                             Adjust Amount
                           </label>
                           <p className="text-[11px] text-slate-400 mt-0.5">
-                            Manual adjustment/extra fee.
+                            Manual adjustment.
                           </p>
                         </div>
                         <span
@@ -585,10 +586,10 @@ export default function FinancialSummaryPage() {
                       </div>
                       <div className="relative rounded-md shadow-sm mt-1">
                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                          <span className="text-slate-500 font-medium">$</span>
+                          <span className="text-red-500 font-medium">- $</span>
                         </div>
                         <input
-                          className="block w-full rounded-lg border-slate-300 bg-slate-50 pl-9 pr-3 py-2 text-sm font-bold text-slate-700 focus:border-blue-500 focus:ring-blue-500"
+                          className="block w-full rounded-lg border-slate-300 bg-slate-50 pl-9 pr-3 py-2 text-sm font-bold text-red-600 focus:border-red-500 focus:ring-red-500"
                           id="adjust_amount"
                           name="adjust_amount"
                           placeholder="0.00"
@@ -659,9 +660,11 @@ export default function FinancialSummaryPage() {
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-slate-600">Adjustments</span>
-                        <span className="font-medium text-slate-900">
-                          ${adjustmentVal.toFixed(2)}
+                        <span className="text-slate-600">
+                          Less: Adjustments
+                        </span>
+                        <span className="font-medium text-red-600">
+                          - ${adjustmentVal.toFixed(2)}
                         </span>
                       </div>
                     </div>

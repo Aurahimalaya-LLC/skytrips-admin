@@ -5797,16 +5797,6 @@ body {
   font-variation-settings: "FILL" 1;
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  display: none !important;
-}
-
-input[type="date"] {
-  appearance: none;
-}
-
 @property --tw-translate-x {
   syntax: "*";
   inherits: false;
