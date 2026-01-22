@@ -79,8 +79,8 @@ interface FormData {
   paymentMethod: string; // New field
   transactionId: string; // New field
   dateofpayment: string; // New field
-  costPrice: number;
-  sellingPrice: number;
+  costPrice: number | string;
+  sellingPrice: number | string;
   customerType: string;
   contactType: string;
   notes: string; // New field
@@ -536,7 +536,7 @@ export default function EditBookingPage({
 
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "number" ? parseFloat(value) || 0 : value,
+      [name]: value,
     }));
   };
 
