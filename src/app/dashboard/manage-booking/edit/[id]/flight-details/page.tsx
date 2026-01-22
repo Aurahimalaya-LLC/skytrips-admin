@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Booking, ManageBooking } from "@/types";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import SendEmailModal from "@/components/booking-management/SendEmailModal";
 
 export default function FlightDetailsPage() {
   const params = useParams();
@@ -14,6 +15,7 @@ export default function FlightDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [record, setRecord] = useState<ManageBooking | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [requester, setRequester] = useState<{
     name: string;
     email: string;
@@ -97,10 +99,45 @@ export default function FlightDetailsPage() {
   const selectedTravellers = travellers.filter((t: any) =>
     selectedTravellerIds.includes(t.id),
   );
-  
+
   // If no specific travellers are selected in the record, fall back to showing all travellers
   // or handle as per business logic. For now, let's show selected ones if any, else all.
-  const displayTravellers = selectedTravellers.length > 0 ? selectedTravellers : travellers;
+  const displayTravellers =
+    selectedTravellers.length > 0 ? selectedTravellers : travellers;
+
+  const itinerary = booking.itineraries?.[0];
+  const segments = itinerary?.segments || [];
+  const firstSegment = segments[0];
+  const lastSegment = segments[segments.length - 1];
+
+  const formatDateTime = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  const departureInfo = firstSegment?.departure?.at
+    ? formatDateTime(firstSegment.departure.at)
+    : "10:00 AM";
+
+  const arrivalInfo = lastSegment?.arrival?.at
+    ? formatDateTime(lastSegment.arrival.at)
+    : "02:00 PM";
+
+  const durationInfo = itinerary?.duration
+    ? itinerary.duration.replace("PT", "").toLowerCase()
+    : "N/A";
+
+  const flightStatus =
+    segments.length > 1 ? `${segments.length - 1} Stop(s)` : "Direct";
 
   // Calculate pricing logic safely
   const sellingPrice = parseFloat(booking.sellingPrice || "0");
@@ -108,6 +145,48 @@ export default function FlightDetailsPage() {
   const profit = sellingPrice - costPrice;
   const profitPercent =
     costPrice > 0 ? ((profit / costPrice) * 100).toFixed(1) : "0";
+
+  const handleSendEmail = async (data: {
+    subject: string;
+    message: string;
+    template: string;
+  }) => {
+    try {
+      // 1. Send the email
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: booking.email,
+          subject: data.subject,
+          message: data.message,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to send email");
+      }
+
+      // 2. Update refund status to Processing
+      const { error } = await supabase
+        .from("manage_booking")
+        .update({ refund_status: "Processing" })
+        .eq("uid", id);
+
+      if (error) {
+        console.error("Error updating status:", error);
+        // We don't throw here to avoid blocking the UI since email was sent
+      }
+      
+      // Update local state if needed or show success message
+      alert("Email sent successfully and status updated to Processing.");
+      setIsEmailModalOpen(false);
+      
+    } catch (err) {
+      console.error("Error sending email:", err);
+      throw err;
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto w-full font-display flex flex-col gap-6">
@@ -119,10 +198,7 @@ export default function FlightDetailsPage() {
           <span className="material-symbols-outlined text-[14px]">
             chevron_right
           </span>
-          <Link
-            href="/dashboard/manage-booking"
-            className="hover:text-primary"
-          >
+          <Link href="/dashboard/manage-booking" className="hover:text-primary">
             Manage Booking
           </Link>
           <span className="material-symbols-outlined text-[14px]">
@@ -142,11 +218,14 @@ export default function FlightDetailsPage() {
             </p>
           </div>
           <div className="flex gap-3">
-            <button className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+            <button
+              onClick={() => setIsEmailModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            >
               <span className="material-symbols-outlined text-[18px]">
-                print
+                send
               </span>
-              Print
+              Send Email
             </button>
             <Link
               href={`/dashboard/manage-booking/edit/${id}/financial-summary`}
@@ -235,24 +314,24 @@ export default function FlightDetailsPage() {
                   <div className="flex items-center gap-4 w-full sm:w-auto">
                     <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-slate-500 shadow-sm">
                       <span className="font-bold text-xs">
-                        {booking.origin}
+                        {firstSegment?.departure?.iataCode || booking.origin}
                       </span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-lg font-bold text-slate-900">
-                        {booking.origin}
+                        {firstSegment?.departure?.iataCode || booking.origin}
                       </span>
                       <span className="text-xs text-slate-500">
                         Departure Airport
                       </span>
                       <span className="text-xs font-medium text-slate-700 mt-0.5">
-                        10:00 AM
+                        {departureInfo}
                       </span>
                     </div>
                   </div>
                   <div className="flex flex-col items-center flex-1 px-4 min-w-[100px] w-full sm:w-auto">
                     <span className="text-xs text-slate-400 mb-1">
-                      Duration
+                      {durationInfo !== "N/A" ? durationInfo : "Duration"}
                     </span>
                     <div className="w-full h-px bg-slate-300 relative flex items-center justify-center">
                       <span className="absolute h-2 w-2 rounded-full bg-slate-300 left-0"></span>
@@ -268,24 +347,24 @@ export default function FlightDetailsPage() {
                       <span className="absolute h-2 w-2 rounded-full bg-slate-300 right-0"></span>
                     </div>
                     <span className="text-xs text-slate-400 mt-1">
-                      Direct
+                      {flightStatus}
                     </span>
                   </div>
                   <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
                     <div className="flex flex-col text-right">
                       <span className="text-lg font-bold text-slate-900">
-                        {booking.destination}
+                        {lastSegment?.arrival?.iataCode || booking.destination}
                       </span>
                       <span className="text-xs text-slate-500">
                         Arrival Airport
                       </span>
                       <span className="text-xs font-medium text-slate-700 mt-0.5">
-                        10:05 PM
+                        {arrivalInfo}
                       </span>
                     </div>
                     <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-slate-500 shadow-sm">
                       <span className="font-bold text-xs">
-                        {booking.destination}
+                        {lastSegment?.arrival?.iataCode || booking.destination}
                       </span>
                     </div>
                   </div>
@@ -312,7 +391,7 @@ export default function FlightDetailsPage() {
                       Ticket No.
                     </div>
                     <div className="text-sm font-semibold text-slate-900">
-                       {booking.travellers?.[0]?.eticketNumber || "N/A"}
+                      {booking.travellers?.[0]?.eticketNumber || "N/A"}
                     </div>
                   </div>
                   <div>
@@ -320,7 +399,8 @@ export default function FlightDetailsPage() {
                       Issued Date
                     </div>
                     <div className="text-sm font-semibold text-slate-900">
-                      {booking.IssueDay} {booking.issueMonth}, {booking.issueYear}
+                      {booking.IssueDay} {booking.issueMonth},{" "}
+                      {booking.issueYear}
                     </div>
                   </div>
                   <div className="col-span-2">
@@ -390,8 +470,8 @@ export default function FlightDetailsPage() {
                     Current Status
                   </time>
                   <p className="mb-2 text-sm font-normal text-slate-500">
-                    Refund request has been sent to the partner agency.
-                    Awaiting their confirmation on waiver policy.
+                    Refund request has been sent to the partner agency. Awaiting
+                    their confirmation on waiver policy.
                   </p>
                 </li>
                 <li className="mb-8 ml-6">
@@ -445,7 +525,7 @@ export default function FlightDetailsPage() {
                     Refund Requested
                   </h3>
                   <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
-                     {new Date(record.created_at).toLocaleString()}
+                    {new Date(record.created_at).toLocaleString()}
                   </time>
                   <p className="text-sm font-normal text-slate-500">
                     By {requester?.name || "Customer"} - Reason: {record.reason}
@@ -494,6 +574,23 @@ export default function FlightDetailsPage() {
           </div>
         </div>
       </div>
+      {booking && (
+        <SendEmailModal
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          recipient={{
+            name: booking.customer
+              ? `${booking.customer.firstName} ${booking.customer.lastName}`
+              : `${booking.travellers?.[0]?.firstName || ""} ${booking.travellers?.[0]?.lastName || ""}`,
+            email: booking.email || "",
+            phone: booking.phone,
+            organization: (booking as any).companyName || "Individual",
+            pnr: booking.PNR,
+          }}
+          initialTemplateId="refund_in_progress"
+          onSend={handleSendEmail}
+        />
+      )}
     </div>
   );
 }

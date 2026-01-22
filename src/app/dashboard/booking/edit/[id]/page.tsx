@@ -807,6 +807,7 @@ export default function EditBookingPage({
         transactionId: formData.transactionId,
         dateofpayment: toDateOrNull(formData.dateofpayment),
         buyingPrice: formData.costPrice,
+        costprice: formData.costPrice,
         sellingPrice: formData.sellingPrice,
         customerType: formData.customerType,
         contactType: formData.contactType,

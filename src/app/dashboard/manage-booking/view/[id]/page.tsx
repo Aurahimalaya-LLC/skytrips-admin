@@ -134,12 +134,14 @@ export default function ManageBookingViewPage() {
             </div>
             <span
               className={`inline-flex items-center rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset ${
-                record.status === "Completed"
+                record.status === "REFUNDED" 
                   ? "bg-green-50 text-green-700 ring-green-600/20"
-                  : "bg-yellow-50 text-yellow-700 ring-yellow-600/20"
+                  : record.status === "SEND"
+                    ? "bg-blue-50 text-blue-700 ring-blue-600/20"
+                    : "bg-yellow-50 text-yellow-700 ring-yellow-600/20"
               }`}
             >
-              {record.status || "Pending"}
+              {record.status || "PENDING"}
             </span>
           </div>
         </div>
@@ -176,8 +178,7 @@ export default function ManageBookingViewPage() {
                   Ticket No.
                 </label>
                 <p className="mt-1 text-base font-medium text-slate-900 font-mono">
-                  {booking.travellers?.[0]?.eticketNumber ||
-                    "N/A"}
+                  {booking.travellers?.[0]?.eticketNumber || "N/A"}
                 </p>
               </div>
               <div>
@@ -185,7 +186,10 @@ export default function ManageBookingViewPage() {
                   Passenger Name
                 </label>
                 <p className="mt-1 text-base font-medium text-slate-900">
-                  {booking.customer?.firstName || booking.travellers?.[0]?.firstName} {booking.customer?.lastName || booking.travellers?.[0]?.lastName}
+                  {booking.customer?.firstName ||
+                    booking.travellers?.[0]?.firstName}{" "}
+                  {booking.customer?.lastName ||
+                    booking.travellers?.[0]?.lastName}
                 </p>
               </div>
               <div>
@@ -240,135 +244,134 @@ export default function ManageBookingViewPage() {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-200 px-6 py-4">
-                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-slate-400">
-                    history
+          <div className="border-b border-slate-200 px-6 py-4">
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <span className="material-symbols-outlined text-slate-400">
+                history
+              </span>
+              Communication Log
+            </h3>
+          </div>
+          <div className="p-6">
+            <ol className="relative border-l border-slate-200 ml-2">
+              <li className="mb-8 ml-6">
+                <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-orange-100 ring-4 ring-white">
+                  <span
+                    className="material-symbols-outlined text-orange-600"
+                    style={{ fontSize: "14px" }}
+                  >
+                    hourglass_empty
                   </span>
-                  Communication Log
+                </span>
+                <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
+                  Waiting for Agency Response
                 </h3>
-              </div>
-              <div className="p-6">
-                <ol className="relative border-l border-slate-200 ml-2">
-                  <li className="mb-8 ml-6">
-                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-orange-100 ring-4 ring-white">
-                      <span
-                        className="material-symbols-outlined text-orange-600"
-                        style={{ fontSize: "14px" }}
-                      >
-                        hourglass_empty
-                      </span>
-                    </span>
-                    <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
-                      Waiting for Agency Response
-                    </h3>
-                    <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
-                      Current Status
-                    </time>
-                    <p className="mb-2 text-sm font-normal text-slate-500">
-                      Refund request has been sent to the partner agency.
-                      Awaiting their confirmation on waiver policy.
-                    </p>
-                  </li>
-                  <li className="mb-8 ml-6">
-                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 ring-4 ring-white">
-                      <span
-                        className="material-symbols-outlined text-blue-600"
-                        style={{ fontSize: "14px" }}
-                      >
-                        send
-                      </span>
-                    </span>
-                    <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
-                      Request Sent to Agency
-                    </h3>
-                    <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
-                      24 Oct, 2023 11:45
-                    </time>
-                    <div className="p-3 text-xs italic font-normal text-slate-500 border border-slate-200 rounded-lg bg-slate-50">
-                      Ref: AGY-REQ-2209. Forwarded via agency portal.
-                    </div>
-                  </li>
-                  <li className="mb-8 ml-6">
-                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 ring-4 ring-white">
-                      <span
-                        className="material-symbols-outlined text-slate-600"
-                        style={{ fontSize: "14px" }}
-                      >
-                        mail
-                      </span>
-                    </span>
-                    <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
-                      Customer Notified
-                    </h3>
-                    <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
-                      24 Oct, 2023 10:45
-                    </time>
-                    <p className="text-sm font-normal text-slate-500">
-                      Receipt of refund request acknowledged via email.
-                    </p>
-                  </li>
-                  <li className="ml-6">
-                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 ring-4 ring-white">
-                      <span
-                        className="material-symbols-outlined text-slate-600"
-                        style={{ fontSize: "14px" }}
-                      >
-                        assignment_return
-                      </span>
-                    </span>
-                    <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
-                      Refund Requested
-                    </h3>
-                    <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
-                      24 Oct, 2023 10:30
-                    </time>
-                    <p className="text-sm font-normal text-slate-500">
-                      By {booking.customer?.firstName} (Customer) - Reason:
-                      Medical
-                    </p>
-                  </li>
-                </ol>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm mt-6">
-              <div className="p-6">
-                <h3 className="text-sm font-semibold text-slate-900 mb-4">
-                  Quick Actions
+                <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
+                  Current Status
+                </time>
+                <p className="mb-2 text-sm font-normal text-slate-500">
+                  Refund request has been sent to the partner agency. Awaiting
+                  their confirmation on waiver policy.
+                </p>
+              </li>
+              <li className="mb-8 ml-6">
+                <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 ring-4 ring-white">
+                  <span
+                    className="material-symbols-outlined text-blue-600"
+                    style={{ fontSize: "14px" }}
+                  >
+                    send
+                  </span>
+                </span>
+                <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
+                  Request Sent to Agency
                 </h3>
-                <div className="flex flex-col gap-3">
-                  <button className="w-full flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-                    <span className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-slate-400">
-                        mail
-                      </span>
-                      Resend Notification
-                    </span>
-                    <span
-                      className="material-symbols-outlined text-slate-400"
-                      style={{ fontSize: "16px" }}
-                    >
-                      chevron_right
-                    </span>
-                  </button>
-                  <button className="w-full flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-                    <span className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-slate-400">
-                        receipt_long
-                      </span>
-                      Download Invoice
-                    </span>
-                    <span
-                      className="material-symbols-outlined text-slate-400"
-                      style={{ fontSize: "16px" }}
-                    >
-                      chevron_right
-                    </span>
-                  </button>
+                <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
+                  24 Oct, 2023 11:45
+                </time>
+                <div className="p-3 text-xs italic font-normal text-slate-500 border border-slate-200 rounded-lg bg-slate-50">
+                  Ref: AGY-REQ-2209. Forwarded via agency portal.
                 </div>
-              </div>
+              </li>
+              <li className="mb-8 ml-6">
+                <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 ring-4 ring-white">
+                  <span
+                    className="material-symbols-outlined text-slate-600"
+                    style={{ fontSize: "14px" }}
+                  >
+                    mail
+                  </span>
+                </span>
+                <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
+                  Customer Notified
+                </h3>
+                <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
+                  24 Oct, 2023 10:45
+                </time>
+                <p className="text-sm font-normal text-slate-500">
+                  Receipt of refund request acknowledged via email.
+                </p>
+              </li>
+              <li className="ml-6">
+                <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 ring-4 ring-white">
+                  <span
+                    className="material-symbols-outlined text-slate-600"
+                    style={{ fontSize: "14px" }}
+                  >
+                    assignment_return
+                  </span>
+                </span>
+                <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
+                  Refund Requested
+                </h3>
+                <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
+                  24 Oct, 2023 10:30
+                </time>
+                <p className="text-sm font-normal text-slate-500">
+                  By {booking.customer?.firstName} (Customer) - Reason: Medical
+                </p>
+              </li>
+            </ol>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm mt-6">
+          <div className="p-6">
+            <h3 className="text-sm font-semibold text-slate-900 mb-4">
+              Quick Actions
+            </h3>
+            <div className="flex flex-col gap-3">
+              <button className="w-full flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                <span className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-slate-400">
+                    mail
+                  </span>
+                  Resend Notification
+                </span>
+                <span
+                  className="material-symbols-outlined text-slate-400"
+                  style={{ fontSize: "16px" }}
+                >
+                  chevron_right
+                </span>
+              </button>
+              <button className="w-full flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                <span className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-slate-400">
+                    receipt_long
+                  </span>
+                  Download Invoice
+                </span>
+                <span
+                  className="material-symbols-outlined text-slate-400"
+                  style={{ fontSize: "16px" }}
+                >
+                  chevron_right
+                </span>
+              </button>
             </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase-server";
 
@@ -10,7 +9,7 @@ export async function POST(req: Request) {
     if (!uid || !booking || !user_id) {
       return NextResponse.json(
         { error: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -18,7 +17,7 @@ export async function POST(req: Request) {
     if (!supabase) {
       return NextResponse.json(
         { error: "Supabase server configuration missing" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -31,17 +30,15 @@ export async function POST(req: Request) {
       status: "Pending",
       booking_details: booking, // JSONB column
       amount: booking.sellingPrice || booking.buyingPrice || 0,
-      reason: "Requested via Admin Dashboard",
-      selected_travellers: selected_travellers || [] // Storing selected travellers IDs
+      reason: body.reason || "",
+      selected_travellers: selected_travellers || [], // Storing selected travellers IDs
     };
 
-    const { error } = await supabase
-      .from("manage_booking")
-      .insert([payload]);
+    const { error } = await supabase.from("manage_booking").insert([payload]);
 
     if (error) {
-        console.error("Insert manage_booking error:", error);
-        throw error;
+      console.error("Insert manage_booking error:", error);
+      throw error;
     }
 
     return NextResponse.json({ success: true });
@@ -49,7 +46,7 @@ export async function POST(req: Request) {
     console.error("Manage booking creation error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to create manage booking record" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

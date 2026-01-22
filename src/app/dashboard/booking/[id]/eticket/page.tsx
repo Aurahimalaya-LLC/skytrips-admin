@@ -283,6 +283,7 @@ export default function ETicketPage({
             email: booking.email || "",
             phone: booking.phone,
             organization: (booking as any).companyName || "Individual",
+            pnr: booking.PNR,
           }}
           onSend={handleSendEmail}
         />

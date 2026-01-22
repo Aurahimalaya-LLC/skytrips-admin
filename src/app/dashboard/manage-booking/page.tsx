@@ -75,6 +75,71 @@ export default function ManageBookingPage() {
     return `${uid.slice(0, 4)}••••••${uid.slice(-4)}`;
   };
 
+  const getEditPath = (row: ManageBooking) => {
+    // Always start at the reason page so user can see/edit it first, as requested.
+    // Navigation to subsequent steps (flight details, financial summary) will happen via the "Next" buttons on each page.
+    return `/dashboard/manage-booking/edit/${row.uid}`;
+  };
+
+  const getFlightDetails = (row: ManageBooking) => {
+    const details = row.booking_details as Booking;
+    if (!details) return maskUid(row.uid);
+
+    let origin = details.origin || "";
+    let dest = details.destination || "";
+    let depTime = "";
+    let arrTime = "";
+
+    // Helper to extract code from "City (CODE)"
+    const extractCode = (str: string) => {
+      const match = str.match(/\(([A-Z]{3})\)/);
+      return match ? match[1] : str;
+    };
+
+    // Helper to format time
+    const formatTime = (dateStr?: string) => {
+      if (!dateStr) return "";
+      try {
+        return new Date(dateStr).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      } catch {
+        return "";
+      }
+    };
+
+    if (details.itineraries && details.itineraries.length > 0) {
+      const segments = details.itineraries[0].segments;
+      if (segments.length > 0) {
+        const first = segments[0];
+        const last = segments[segments.length - 1];
+        origin = first.departure.iataCode || origin;
+        dest = last.arrival.iataCode || dest;
+        depTime = formatTime(first.departure.at);
+        arrTime = formatTime(last.arrival.at);
+      }
+    } else {
+      origin = extractCode(origin);
+      dest = extractCode(dest);
+      depTime = formatTime(details.departureDate);
+      arrTime = formatTime(details.arrivalDate);
+    }
+
+    return (
+      <div className="flex flex-col text-xs">
+        <span className="font-bold text-slate-700">
+          {origin} <span className="text-slate-400 mx-1">✈</span> {dest}
+        </span>
+        {(depTime || arrTime) && (
+          <span className="text-slate-500 mt-0.5">
+            {depTime} {arrTime ? `- ${arrTime}` : ""}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto w-full font-display">
       {/* Breadcrumbs */}
@@ -141,7 +206,6 @@ export default function ManageBookingPage() {
                 <th className="px-6 py-4">Booking ID</th>
                 <th className="px-6 py-4">Type</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Amount</th>
                 <th className="px-6 py-4">Travellers</th>
                 <th className="px-6 py-4">Details</th>
                 <th className="px-6 py-4">Created</th>
@@ -173,18 +237,15 @@ export default function ManageBookingPage() {
                   <td className="px-6 py-3">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        row.status === "Completed"
+                        row.status === "REFUNDED"
                           ? "bg-green-100 text-green-800"
-                          : row.status === "Pending"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-slate-100 text-slate-800"
+                          : row.status === "SEND"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-yellow-100 text-yellow-800"
                       }`}
                     >
-                      {row.status || "Pending"}
+                      {row.status || "PENDING"}
                     </span>
-                  </td>
-                  <td className="px-6 py-3 text-slate-700 font-medium">
-                    {row.amount ? `$${Number(row.amount).toFixed(2)}` : "-"}
                   </td>
                   <td className="px-6 py-3">
                     <div className="flex flex-col gap-1">
@@ -246,18 +307,7 @@ export default function ManageBookingPage() {
                       })()}
                     </div>
                   </td>
-                  <td
-                    className="px-6 py-3 text-slate-600 max-w-xs truncate"
-                    title={
-                      row.booking_details
-                        ? JSON.stringify(row.booking_details)
-                        : ""
-                    }
-                  >
-                    {row.booking_details
-                      ? `${(row.booking_details as any).origin || ""} ✈ ${(row.booking_details as any).destination || ""}`
-                      : maskUid(row.uid)}
-                  </td>
+                  <td className="px-6 py-3">{getFlightDetails(row)}</td>
                   <td className="px-6 py-3 text-slate-600">
                     {new Date(row.created_at).toLocaleString()}
                   </td>
@@ -277,16 +327,40 @@ export default function ManageBookingPage() {
                         </span>
                       </button>
                       <button
-                        className="text-blue-600 hover:text-blue-800 transition-colors p-1 rounded-full hover:bg-blue-50"
-                        title="Edit"
-                        onClick={() =>
-                          router.push(
-                            `/dashboard/manage-booking/edit/${row.uid}`,
-                          )
+                        className={`text-blue-600 transition-colors p-1 rounded-full ${
+                          row.refund_status === "Refunded" ||
+                          row.refund_status === "Completed"
+                            ? "opacity-50 cursor-not-allowed text-slate-400"
+                            : "hover:text-blue-800 hover:bg-blue-50"
+                        }`}
+                        title={
+                          row.refund_status === "Refunded" ||
+                          row.refund_status === "Completed"
+                            ? "Refund Completed"
+                            : "Resume/Edit"
                         }
+                        disabled={
+                          row.refund_status === "Refunded" ||
+                          row.refund_status === "Completed"
+                        }
+                        onClick={() => {
+                          if (
+                            row.refund_status !== "Refunded" &&
+                            row.refund_status !== "Completed"
+                          ) {
+                            router.push(getEditPath(row));
+                          }
+                        }}
                       >
                         <span className="material-symbols-outlined text-[20px]">
-                          edit
+                          {row.refund_status === "Refunded" ||
+                          row.refund_status === "Completed"
+                            ? "lock"
+                            : row.financial_breakdown ||
+                                row.refund_status === "Processing" ||
+                                row.reason
+                              ? "resume"
+                              : "edit"}
                         </span>
                       </button>
                       <button

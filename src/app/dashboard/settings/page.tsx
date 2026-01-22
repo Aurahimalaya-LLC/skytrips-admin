@@ -7,6 +7,8 @@ import CompanyManager from "@/components/CompanyManager";
 import PaymentMethodsManager from "@/components/settings/PaymentMethodsManager";
 import { MediaSelectorModal } from "@/components/media/MediaSelectorModal";
 import CurrencyTab from "@/components/dashboard/settings/CurrencyTab";
+import SendEmailModal from "@/components/booking-management/SendEmailModal";
+import { DEFAULT_EMAIL_TEMPLATES, EmailTemplate } from "@/lib/email-templates";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("company");
@@ -28,6 +30,14 @@ export default function SettingsPage() {
     logoUrl: "",
     faviconUrl: "",
   });
+
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(
+    DEFAULT_EMAIL_TEMPLATES,
+  );
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<
+    string | undefined
+  >(undefined);
 
   useEffect(() => {
     fetchSettings();
@@ -87,6 +97,30 @@ export default function SettingsPage() {
     }
   };
 
+  const handleTemplateSave = async (data: {
+    id: string;
+    name: string;
+    subject: string;
+    content: string;
+  }) => {
+    // Update local state
+    setEmailTemplates((prev) => {
+      const exists = prev.find((t) => t.id === data.id);
+      if (exists) {
+        return prev.map((t) =>
+          t.id === data.id
+            ? { ...t, subject: data.subject, content: data.content }
+            : t,
+        );
+      } else {
+        // Create new
+        return [...prev, { ...data }];
+      }
+    });
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
@@ -103,7 +137,13 @@ export default function SettingsPage() {
       {/* Tabs */}
       <div className="border-b border-border">
         <nav className="flex gap-8" aria-label="Tabs">
-          {["Company Settings", "General Settings", "Currency", "Payment Methods"].map((tab) => {
+          {[
+            "Company Settings",
+            "General Settings",
+            "Currency",
+            "Payment Methods",
+            "Email Templates",
+          ].map((tab) => {
             const tabId = tab.toLowerCase().split(" ")[0];
             const isActive = activeTab === tabId;
             return (
@@ -135,6 +175,11 @@ export default function SettingsPage() {
                   {tabId === "payment" && (
                     <span className="material-symbols-outlined text-[18px]">
                       credit_card
+                    </span>
+                  )}
+                  {tabId === "email" && (
+                    <span className="material-symbols-outlined text-[18px]">
+                      mail
                     </span>
                   )}
                   {tab}
@@ -264,16 +309,85 @@ export default function SettingsPage() {
       {/* Payment Methods Tab */}
       {activeTab === "payment" && (
         <div className="space-y-8 animate-in fade-in duration-300">
-           <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-             <PaymentMethodsManager />
-           </div>
+          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+            <PaymentMethodsManager />
+          </div>
+        </div>
+      )}
+
+      {/* Email Templates Tab */}
+      {activeTab === "email" && (
+        <div className="space-y-8 animate-in fade-in duration-300">
+          <div className="flex justify-between items-center pb-2 border-b border-border">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">
+                mail
+              </span>
+              <h2 className="text-lg font-bold text-foreground">
+                Email Templates
+              </h2>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {emailTemplates.map((template) => (
+              <div
+                key={template.id}
+                className="bg-card border border-border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow group"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-3 bg-primary/10 rounded-full text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                    <span className="material-symbols-outlined text-[24px]">
+                      drafts
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setEditingTemplateId(template.id);
+                      setIsEmailModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 text-xs font-bold text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors"
+                  >
+                    Edit Template
+                  </button>
+                </div>
+                <h3 className="text-base font-bold text-foreground mb-2">
+                  {template.name}
+                </h3>
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-4 h-10">
+                  {template.subject}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg font-mono">
+                  <span className="material-symbols-outlined text-[14px]">
+                    fingerprint
+                  </span>
+                  <span className="truncate">{template.id}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <SendEmailModal
+            isOpen={isEmailModalOpen}
+            onClose={() => setIsEmailModalOpen(false)}
+            recipient={{
+              name: "{NAME}",
+              email: "{EMAIL}",
+              organization: "{COMPANY}",
+              pnr: "{PNR}",
+            }}
+            mode="edit"
+            templates={emailTemplates}
+            initialTemplateId={editingTemplateId}
+            onSave={handleTemplateSave}
+          />
         </div>
       )}
 
       {/* Currency Tab */}
       {activeTab === "currency" && (
         <div className="space-y-8 animate-in fade-in duration-300">
-           <CurrencyTab />
+          <CurrencyTab />
         </div>
       )}
 

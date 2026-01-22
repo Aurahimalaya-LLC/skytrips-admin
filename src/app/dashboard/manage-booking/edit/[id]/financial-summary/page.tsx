@@ -15,11 +15,36 @@ export default function FinancialSummaryPage() {
   const [record, setRecord] = useState<ManageBooking | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
 
+  // Financial states
+  const [penalty, setPenalty] = useState("50.00");
+  const [agencyFee, setAgencyFee] = useState("30.00");
+  const [skytripsFee, setSkytripsFee] = useState("10.00");
+  const [adjustment, setAdjustment] = useState("0.00");
+  const [adjustmentReason, setAdjustmentReason] = useState("");
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     if (id) {
       fetchRecord(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (record?.financial_breakdown) {
+      setPenalty(
+        record.financial_breakdown.airline_penalty?.toString() || "50.00",
+      );
+      setAgencyFee(
+        record.financial_breakdown.agency_fees?.toString() || "30.00",
+      );
+      setSkytripsFee(
+        record.financial_breakdown.skytrips_fee?.toString() || "10.00",
+      );
+      setAdjustment(
+        record.financial_breakdown.manual_adjustment?.toString() || "0.00",
+      );
+    }
+  }, [record]);
 
   const fetchRecord = async (uid: string) => {
     try {
@@ -73,6 +98,55 @@ export default function FinancialSummaryPage() {
   const profit = sellingPrice - costPrice;
   const profitMargin =
     costPrice > 0 ? ((profit / costPrice) * 100).toFixed(2) : "0.00";
+
+  // Calculations
+  const penaltyVal = parseFloat(penalty) || 0;
+  const agencyFeeVal = parseFloat(agencyFee) || 0;
+  const skytripsFeeVal = parseFloat(skytripsFee) || 0;
+  const adjustmentVal = parseFloat(adjustment) || 0;
+
+  const totalDeductions = penaltyVal + agencyFeeVal + skytripsFeeVal;
+  const netRefund = sellingPrice - totalDeductions + adjustmentVal;
+
+  const handleSaveAndProceed = async () => {
+    try {
+      setSaving(true);
+      const financial_breakdown = {
+        airline_penalty: penaltyVal,
+        agency_fees: agencyFeeVal,
+        skytrips_fee: skytripsFeeVal,
+        manual_adjustment: adjustmentVal,
+        total_refund_amount: netRefund,
+        adjustment_reason: adjustmentReason,
+      };
+
+      const response = await fetch(`/api/manage-booking/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          financial_breakdown,
+          refund_status: "Processing",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update record");
+      }
+
+      router.push(
+        `/dashboard/manage-booking/edit/${id}/financial-summary/confirm`,
+      );
+    } catch (err) {
+      console.error("Error saving financial breakdown:", err);
+      alert("Failed to save details. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const selectedIds = (record as any).selected_travellers || [];
   const travellers = booking.travellers || [];
@@ -138,15 +212,20 @@ export default function FinancialSummaryPage() {
                 </span>
                 Back
               </button>
-              <Link
-                href={`/dashboard/manage-booking/edit/${id}/financial-summary/confirm`}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#137fec] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#106ac4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#137fec]"
+              <button
+                onClick={handleSaveAndProceed}
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#137fec] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#106ac4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#137fec] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span className="material-symbols-outlined text-[18px]">
-                  check
-                </span>
+                {saving ? (
+                  <span className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                ) : (
+                  <span className="material-symbols-outlined text-[18px]">
+                    check
+                  </span>
+                )}
                 Confirm & Process
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -402,8 +481,10 @@ export default function FinancialSummaryPage() {
                           id="penalty"
                           name="penalty"
                           placeholder="0.00"
-                          type="text"
-                          defaultValue="50.00"
+                          type="number"
+                          step="0.01"
+                          value={penalty}
+                          onChange={(e) => setPenalty(e.target.value)}
                         />
                       </div>
                     </div>
@@ -437,8 +518,10 @@ export default function FinancialSummaryPage() {
                           id="agency_fee"
                           name="agency_fee"
                           placeholder="0.00"
-                          type="text"
-                          defaultValue="30.00"
+                          type="number"
+                          step="0.01"
+                          value={agencyFee}
+                          onChange={(e) => setAgencyFee(e.target.value)}
                         />
                       </div>
                     </div>
@@ -472,8 +555,10 @@ export default function FinancialSummaryPage() {
                           id="skytrips_fee"
                           name="skytrips_fee"
                           placeholder="0.00"
-                          type="text"
-                          defaultValue="10.00"
+                          type="number"
+                          step="0.01"
+                          value={skytripsFee}
+                          onChange={(e) => setSkytripsFee(e.target.value)}
                         />
                       </div>
                     </div>
@@ -507,8 +592,10 @@ export default function FinancialSummaryPage() {
                           id="adjust_amount"
                           name="adjust_amount"
                           placeholder="0.00"
-                          type="text"
-                          defaultValue="0.00"
+                          type="number"
+                          step="0.01"
+                          value={adjustment}
+                          onChange={(e) => setAdjustment(e.target.value)}
                         />
                       </div>
                       <div className="mt-3">
@@ -524,6 +611,8 @@ export default function FinancialSummaryPage() {
                           name="adjust_reason"
                           placeholder="Optional reason for adjustment..."
                           type="text"
+                          value={adjustmentReason}
+                          onChange={(e) => setAdjustmentReason(e.target.value)}
                         />
                       </div>
                     </div>
@@ -550,7 +639,7 @@ export default function FinancialSummaryPage() {
                           Less: Airline Penalty
                         </span>
                         <span className="font-medium text-red-600">
-                          - $50.00
+                          - ${penaltyVal.toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
@@ -558,7 +647,7 @@ export default function FinancialSummaryPage() {
                           Less: Agency Fees
                         </span>
                         <span className="font-medium text-red-600">
-                          - $30.00
+                          - ${agencyFeeVal.toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
@@ -566,13 +655,13 @@ export default function FinancialSummaryPage() {
                           Less: Skytrips Fee
                         </span>
                         <span className="font-medium text-red-600">
-                          - $10.00
+                          - ${skytripsFeeVal.toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-slate-600">Adjustments</span>
                         <span className="font-medium text-slate-900">
-                          $0.00
+                          ${adjustmentVal.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -588,7 +677,7 @@ export default function FinancialSummaryPage() {
                           </span>
                         </div>
                         <div className="text-3xl font-bold text-primary">
-                          ${(sellingPrice - 90).toFixed(2)}
+                          ${netRefund.toFixed(2)}
                         </div>
                       </div>
                     </div>

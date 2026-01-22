@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Booking, ManageBooking, Reason } from "@/types";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import SendEmailModal from "@/components/booking-management/SendEmailModal";
 
 export default function ManageBookingEditPage() {
   const params = useParams();
@@ -20,6 +21,8 @@ export default function ManageBookingEditPage() {
     agency?: string;
   } | null>(null);
   const [reasons, setReasons] = useState<Reason[]>([]);
+  const [notifyEmail, setNotifyEmail] = useState(true);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -82,12 +85,39 @@ export default function ManageBookingEditPage() {
     }
   };
 
+  const handleSendEmail = async (data: {
+    subject: string;
+    message: string;
+    template: string;
+  }) => {
+    if (!booking?.email) return;
+
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: booking.email,
+          subject: data.subject,
+          message: data.message,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to send email");
+      }
+    } catch (err) {
+      console.error("Error sending email:", err);
+      throw err;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    // const formData = new FormData(e.currentTarget);
-    // const reason = formData.get("reason") as string;
-    // const notes = formData.get("notes") as string;
+    const formData = new FormData(e.currentTarget);
+    const reason = formData.get("reason") as string;
+    const notes = formData.get("notes") as string;
 
     try {
       if (!id) {
@@ -97,6 +127,32 @@ export default function ManageBookingEditPage() {
         return;
       }
 
+      // Save reason and notes to Supabase via API (to bypass RLS)
+      const response = await fetch(`/api/manage-booking/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reason: reason,
+          reason_detail: notes,
+          refund_status:
+            record?.refund_status === "Pending"
+              ? "Initiated"
+              : record?.refund_status || "Initiated",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = result.error || "Failed to update record";
+        console.error("Error updating record:", errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      console.log("Update successful, returned data:", result.data);
+
       console.log(
         "Navigating to:",
         `/dashboard/manage-booking/edit/${id}/flight-details`,
@@ -104,7 +160,8 @@ export default function ManageBookingEditPage() {
       // Navigate to the next step: Flight Booking Details
       router.push(`/dashboard/manage-booking/edit/${id}/flight-details`);
     } catch (err) {
-      console.error("Error navigating:", err);
+      console.error("Error processing request:", err);
+      alert("Failed to save details. Please try again.");
       setLoading(false);
     }
   };
@@ -144,6 +201,11 @@ export default function ManageBookingEditPage() {
   // or handle as per business logic. For now, let's show selected ones if any, else all.
   const displayTravellers =
     selectedTravellers.length > 0 ? selectedTravellers : travellers;
+
+  const itinerary = booking.itineraries?.[0];
+  const segments = itinerary?.segments || [];
+  const firstSegment = segments[0];
+  const lastSegment = segments[segments.length - 1];
 
   const sellingPrice = parseFloat(booking.sellingPrice || "0");
   const costPrice = parseFloat(booking.buyingPrice || "0");
@@ -186,12 +248,14 @@ export default function ManageBookingEditPage() {
             </div>
             <span
               className={`inline-flex items-center rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset ${
-                record.status === "Completed"
+                record.status === "REFUNDED"
                   ? "bg-green-50 text-green-700 ring-green-600/20"
-                  : "bg-yellow-50 text-yellow-700 ring-yellow-600/20"
+                  : record.status === "SEND"
+                    ? "bg-blue-50 text-blue-700 ring-blue-600/20"
+                    : "bg-yellow-50 text-yellow-700 ring-yellow-600/20"
               }`}
             >
-              {record.status || "Pending"}
+              {record.status || "PENDING"}
             </span>
           </div>
         </div>
@@ -277,11 +341,15 @@ export default function ManageBookingEditPage() {
                   Route
                 </label>
                 <div className="mt-1 flex items-center gap-2 text-base font-medium text-slate-900">
-                  <span>{booking.origin}</span>
+                  <span>
+                    {firstSegment?.departure?.iataCode || booking.origin}
+                  </span>
                   <span className="material-symbols-outlined text-slate-400 text-[16px]">
                     arrow_forward
                   </span>
-                  <span>{booking.destination}</span>
+                  <span>
+                    {lastSegment?.arrival?.iataCode || booking.destination}
+                  </span>
                 </div>
               </div>
             </div>
@@ -376,7 +444,11 @@ export default function ManageBookingEditPage() {
                     className="block w-full rounded-md border-0 py-2.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
                     id="reason"
                     name="reason"
-                    defaultValue={record.reason || ""}
+                    defaultValue={
+                      record.reason === "Requested via Admin Dashboard"
+                        ? ""
+                        : record.reason || ""
+                    }
                   >
                     <option value="">Select a reason...</option>
                     {reasons.length > 0 ? (
@@ -410,6 +482,7 @@ export default function ManageBookingEditPage() {
                     className="block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
                     id="notes"
                     name="notes"
+                    defaultValue={record.reason_detail || ""}
                     placeholder="Add any additional details about this request..."
                     rows={3}
                   ></textarea>
@@ -428,7 +501,8 @@ export default function ManageBookingEditPage() {
                       <div className="flex h-6 items-center">
                         <input
                           aria-describedby="notify-email-description"
-                          defaultChecked
+                          checked={notifyEmail}
+                          onChange={(e) => setNotifyEmail(e.target.checked)}
                           className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
                           id="notify-email"
                           name="notify-email"
@@ -476,46 +550,21 @@ export default function ManageBookingEditPage() {
                       </div>
                     </div>
                   </div>
-                  <div>
-                    <label
-                      className="block text-sm font-medium leading-6 text-slate-900"
-                      htmlFor="notification-template"
-                    >
-                      Custom Notification Messages
-                    </label>
-                    <div className="mt-2">
-                      <select
-                        className="block w-full rounded-md border-0 py-2.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
-                        id="notification-template"
-                        name="notification-template"
+
+                  {notifyEmail && (
+                    <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                      <button
+                        type="button"
+                        onClick={() => setIsEmailModalOpen(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
                       >
-                        <option>Select a message template...</option>
-                        <option>Refund Processed Successfully</option>
-                        <option>Ticket Reissued - New Details Attached</option>
-                        <option>Booking Cancellation Confirmed</option>
-                        <option>Flight Schedule Change Notification</option>
-                        <option>Partial Refund Approved</option>
-                        <option>Custom Message</option>
-                      </select>
+                        <span className="material-symbols-outlined text-[18px] text-primary">
+                          edit_square
+                        </span>
+                        Compose Email
+                      </button>
                     </div>
-                  </div>
-                  <div>
-                    <label
-                      className="block text-sm font-medium leading-6 text-slate-900"
-                      htmlFor="notification-message"
-                    >
-                      Message Content
-                    </label>
-                    <div className="mt-2">
-                      <textarea
-                        className="block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
-                        id="notification-message"
-                        name="notification-message"
-                        placeholder="e.g. Your refund has been processed successfully. Please allow 5-7 business days for the amount to reflect in your account."
-                        rows={3}
-                      ></textarea>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -540,6 +589,24 @@ export default function ManageBookingEditPage() {
           </form>
         </div>
       </div>
+
+      {booking && (
+        <SendEmailModal
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          recipient={{
+            name: booking.customer
+              ? `${booking.customer.firstName} ${booking.customer.lastName}`
+              : `${booking.travellers?.[0]?.firstName || ""} ${booking.travellers?.[0]?.lastName || ""}`,
+            email: booking.email || "",
+            phone: booking.phone,
+            organization: (booking as any).companyName || "Individual",
+            pnr: booking.PNR,
+          }}
+          initialTemplateId="refund_request_received"
+          onSend={handleSendEmail}
+        />
+      )}
     </div>
   );
 }

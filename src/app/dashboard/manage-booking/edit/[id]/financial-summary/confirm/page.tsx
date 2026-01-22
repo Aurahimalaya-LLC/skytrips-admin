@@ -14,6 +14,7 @@ export default function ConfirmTransactionPage() {
   const [loading, setLoading] = useState(true);
   const [record, setRecord] = useState<ManageBooking | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -74,13 +75,61 @@ export default function ConfirmTransactionPage() {
   const profitMargin =
     costPrice > 0 ? ((profit / costPrice) * 100).toFixed(2) : "0.00";
 
-  // Mock calculations for refund scenario (matching previous step)
-  const airlinePenalty = 50.0;
-  const agencyFees = 30.0;
-  const skytripsFee = 10.0;
-  const manualAdjustment = 0.0;
+  // Use actual values from financial_breakdown if available, otherwise default to 0
+  const airlinePenalty = record.financial_breakdown?.airline_penalty || 0;
+  const agencyFees = record.financial_breakdown?.agency_fees || 0;
+  const skytripsFee = record.financial_breakdown?.skytrips_fee || 0;
+  const manualAdjustment = record.financial_breakdown?.manual_adjustment || 0;
+
+  // Recalculate based on saved values
   const totalDeductions = airlinePenalty + agencyFees + skytripsFee;
   const finalRefundAmount = sellingPrice - totalDeductions + manualAdjustment;
+
+  const handleConfirmTransaction = async () => {
+    try {
+      setProcessing(true);
+
+      // Use API route to bypass RLS policies
+      const response = await fetch(`/api/manage-booking/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          refund_status: "Refunded",
+          status: "REFUNDED",
+          // Explicitly save the financial breakdown values that were calculated above
+          financial_breakdown: {
+            airline_penalty: airlinePenalty,
+            agency_fees: agencyFees,
+            skytrips_fee: skytripsFee,
+            manual_adjustment: manualAdjustment,
+            total_refund_amount: finalRefundAmount,
+            adjustment_reason:
+              record.financial_breakdown?.adjustment_reason || "",
+          },
+          // Also save the final calculated refund amount
+          amount: finalRefundAmount,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = result.error || "Failed to confirm transaction";
+        console.error("API update error:", errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      alert("Refund Processed Successfully!");
+      router.push("/dashboard/manage-booking");
+    } catch (err) {
+      console.error("Error confirming transaction:", err);
+      alert("Failed to confirm transaction. Please try again.");
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto w-full font-display">
@@ -457,15 +506,20 @@ export default function ConfirmTransactionPage() {
               Cancel
             </button>
             <button
-              onClick={() => alert("Refund Processed!")} // Placeholder for actual submission
-              className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-md hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-all"
+              onClick={handleConfirmTransaction}
+              disabled={processing}
+              className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-md hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: "18px" }}
-              >
-                check_circle
-              </span>
+              {processing ? (
+                <span className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              ) : (
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: "18px" }}
+                >
+                  check_circle
+                </span>
+              )}
               Confirm Transaction
             </button>
           </div>
