@@ -360,11 +360,27 @@ export default function EditBookingPage({
         // Try to find customer ID from the booking data if available (lowercase 'customerid' in DB)
         // Since we don't have it in the typed response, we might need to cast or rely on prop if passed
         // For now, let's assume it might be in the data object even if untyped
-        const possibleCustomerId =
-          (data as any).customerid || (data as any).customerId;
+        const rawCustomer =
+          (data as any).customer ||
+          (data as any).customerid ||
+          (data as any).customerId;
+
+        let possibleCustomerId = rawCustomer;
+
+        // Handle case where customer is stored as a JSON object
+        if (rawCustomer && typeof rawCustomer === "object") {
+          possibleCustomerId = rawCustomer.id;
+          // Use the stored customer object directly
+          setSelectedCustomer(rawCustomer);
+          setExistingContactSelected(true);
+        }
+
         if (possibleCustomerId) {
           setSelectedCustomerId(possibleCustomerId);
-          // Fetch customer details to display in Existing Contact card
+
+          // Only fetch if we didn't already get it from the object (or to refresh)
+          // If rawCustomer was an object, we already set it above, but fetching ensures fresh data
+          // and consistency if the stored object is stale.
           const { data: customerData } = await supabase
             .from("customers")
             .select("*")
@@ -771,8 +787,27 @@ export default function EditBookingPage({
         }
       }
 
+      // Construct the customer object for the JSON column
+      let customerDataForColumn: any = null;
+
+      if (formData.contactType === "existing" && selectedCustomer) {
+        // Ensure ID is current
+        customerDataForColumn = { ...selectedCustomer, id: customerIdToUse };
+      } else {
+        // For new contact, construct from form data
+        // Note: In edit mode, we rely on the first traveller for name if not explicitly separate fields
+        customerDataForColumn = {
+          id: customerIdToUse,
+          firstName: formData.travellers?.[0]?.firstName || "Unknown",
+          lastName: formData.travellers?.[0]?.lastName || "Traveller",
+          email: formData.email,
+          phone: formData.phone,
+          country: formData.nationality || "Nepalese",
+          // address: formData.address,
+        };
+      }
+
       const rawUpdateData = {
-        customerid: customerIdToUse,
         email: formData.email,
         phone: formData.phone,
         // address: formData.address, // Still excluded
@@ -789,9 +824,9 @@ export default function EditBookingPage({
         origin: formData.origin,
         destination: formData.destination,
         transit: formData.transit,
-        stopoverLocation: formData.stopoverLocation,
-        stopoverArrival: toDateOrNull(formData.stopoverArrival),
-        stopoverDeparture: toDateOrNull(formData.stopoverDeparture),
+        // stopoverLocation: formData.stopoverLocation,
+        // stopoverArrival: toDateOrNull(formData.stopoverArrival),
+        // stopoverDeparture: toDateOrNull(formData.stopoverDeparture),
         airlines: formData.airlines,
         flightNumber: formData.flightNumber,
         flightClass: formData.flightClass,
@@ -803,8 +838,8 @@ export default function EditBookingPage({
         handledBy: formData.handledBy,
         status: formData.status,
         paymentStatus: formData.paymentStatus,
-        paymentMethod: formData.paymentMethod,
-        transactionId: formData.transactionId,
+        // paymentMethod: formData.paymentMethod,
+        // transactionId: formData.transactionId,
         dateofpayment: toDateOrNull(formData.dateofpayment),
         buyingPrice: formData.costPrice,
         costprice: formData.costPrice,
@@ -812,7 +847,7 @@ export default function EditBookingPage({
         customerType: formData.customerType,
         contactType: formData.contactType,
         notes: formData.notes,
-        customer: selectedCustomer || undefined,
+        customer: customerDataForColumn,
         itineraries: formData.itineraries,
       };
 
@@ -2350,7 +2385,7 @@ export default function EditBookingPage({
                     <option value="Refunded">Refunded</option>
                   </select>
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
                     Payment Method
                   </label>
@@ -2365,7 +2400,7 @@ export default function EditBookingPage({
                     <option value="Bank Transfer">Bank Transfer</option>
                     <option value="Cash">Cash</option>
                   </select>
-                </div>
+                </div> */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
                     Transaction ID

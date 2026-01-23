@@ -47,6 +47,8 @@ interface FormData {
   travellers: Traveller[]; // Array of travellers
   travellerFirstName: string; // Deprecated
   travellerLastName: string; // Deprecated
+  customerFirstName: string; // New: for Customer Contact Details
+  customerLastName: string; // New: for Customer Contact Details
   passportNumber: string; // Deprecated
   passportExpiry: string; // Deprecated
   nationality: string; // Deprecated
@@ -85,7 +87,6 @@ interface FormData {
   prices: Prices;
   customerType: string;
   contactType: string;
-  customerid?: string;
   itineraries: FlightItinerary[];
 }
 
@@ -117,6 +118,8 @@ export default function BookingModal({
     travellers: [],
     travellerFirstName: "",
     travellerLastName: "",
+    customerFirstName: "",
+    customerLastName: "",
     passportNumber: "",
     passportExpiry: "",
     nationality: "Nepalese",
@@ -306,6 +309,8 @@ export default function BookingModal({
         ],
         travellerFirstName: "",
         travellerLastName: "",
+        customerFirstName: "",
+        customerLastName: "",
         passportNumber: "",
         passportExpiry: "",
         nationality: "Australian",
@@ -353,7 +358,6 @@ export default function BookingModal({
         },
         customerType: "existing",
         contactType: "existing",
-        customerid: undefined,
         itineraries: [{ segments: [] }],
       });
       setShowStopover(false);
@@ -393,6 +397,35 @@ export default function BookingModal({
         ...prev,
         prices: { ...prev.prices, [priceName]: value },
       }));
+    } else if (
+      [
+        "travellerFirstName",
+        "travellerLastName",
+        "passportNumber",
+        "passportExpiry",
+        "nationality",
+        "dob",
+      ].includes(name)
+    ) {
+      setFormData((prev) => {
+        const newTravellers = [...prev.travellers];
+        if (newTravellers.length > 0) {
+          const mapping: Record<string, string> = {
+            travellerFirstName: "firstName",
+            travellerLastName: "lastName",
+            passportNumber: "passportNumber",
+            passportExpiry: "passportExpiry",
+            nationality: "nationality",
+            dob: "dob",
+          };
+          const travellerField = mapping[name];
+          newTravellers[0] = {
+            ...newTravellers[0],
+            [travellerField]: value,
+          };
+        }
+        return { ...prev, [name]: value, travellers: newTravellers };
+      });
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
@@ -448,7 +481,6 @@ export default function BookingModal({
           // Also sync contact info if needed
           updates.email = prev.email || customer.email;
           updates.phone = prev.phone || customer.phone;
-          updates.customerid = customer.id?.toString();
           updates.customerType = "existing";
         }
 
@@ -465,30 +497,10 @@ export default function BookingModal({
       email: customer.email || prev.email,
       phone: customer.phone || prev.phone,
       nationality: customer.country || prev.nationality,
-      customerid: customer.id?.toString(),
 
-      // Update traveller fields if we are in traveller selection mode OR if they match
-      travellerFirstName: customer.firstName || prev.travellerFirstName,
-      travellerLastName: customer.lastName || prev.travellerLastName,
-      passportNumber: customer.passport?.number || prev.passportNumber,
-      passportExpiry: customer.passport?.expiryDate || prev.passportExpiry,
-      dob: customer.dateOfBirth || prev.dob,
-
-      // Update first traveller in array too
-      travellers: prev.travellers.map((t, i) =>
-        i === 0
-          ? {
-              ...t,
-              firstName: customer.firstName,
-              lastName: customer.lastName,
-              passportNumber: customer.passport?.number || t.passportNumber,
-              passportExpiry: customer.passport?.expiryDate || t.passportExpiry,
-              dob: customer.dateOfBirth || t.dob,
-              nationality: customer.country || t.nationality,
-              customerId: customer.id,
-            }
-          : t,
-      ),
+      // Update Customer Contact fields only
+      customerFirstName: customer.firstName || prev.customerFirstName,
+      customerLastName: customer.lastName || prev.customerLastName,
     }));
   };
 
@@ -707,19 +719,29 @@ export default function BookingModal({
       issuedthroughagency: formData.agency,
       handledBy: formData.handledBy,
       paymentStatus: formData.paymentStatus,
-      paymentMethod: formData.paymentMethod,
-      transactionId: formData.transactionId,
+      // paymentMethod: formData.paymentMethod,
+      // transactionId: formData.transactionId,
       dateofpayment: toDateOrNull(formData.paymentDate), // Mapped to correct DB column
-      stopoverLocation: formData.stopoverLocation,
-      customerid: formData.customerid,
+      // stopoverLocation: formData.stopoverLocation,
       travellers: formData.travellers, // The Source of Truth
-      customer: selectedCustomer || undefined,
+      customer:
+        formData.contactType === "existing" && selectedCustomer
+          ? selectedCustomer
+          : ({
+              firstName: formData.customerFirstName,
+              lastName: formData.customerLastName,
+              email: formData.email,
+              phone: formData.phone,
+              country: formData.nationality,
+            } as unknown as Customer),
 
       // Custom fields
       customerType: formData.customerType,
       contactType: formData.contactType,
       addons: formData.addons,
       prices: formData.prices,
+      // customerFirstName: formData.customerFirstName,
+      // customerLastName: formData.customerLastName,
     };
     onSave(bookingToSave);
   };
@@ -842,7 +864,7 @@ export default function BookingModal({
                             <div>
                               <label
                                 className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
-                                htmlFor="travellerFirstName"
+                                htmlFor="customerFirstName"
                               >
                                 First Name
                               </label>
@@ -857,10 +879,10 @@ export default function BookingModal({
                                 </div>
                                 <input
                                   className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium uppercase"
-                                  id="travellerFirstName"
-                                  name="travellerFirstName"
+                                  id="customerFirstName"
+                                  name="customerFirstName"
                                   type="text"
-                                  value={formData.travellerFirstName}
+                                  value={formData.customerFirstName}
                                   onChange={handleChange}
                                   placeholder="Given Name"
                                   disabled={isReadOnly}
@@ -870,7 +892,7 @@ export default function BookingModal({
                             <div>
                               <label
                                 className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
-                                htmlFor="travellerLastName"
+                                htmlFor="customerLastName"
                               >
                                 Last Name
                               </label>
@@ -885,10 +907,10 @@ export default function BookingModal({
                                 </div>
                                 <input
                                   className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium uppercase"
-                                  id="travellerLastName"
-                                  name="travellerLastName"
+                                  id="customerLastName"
+                                  name="customerLastName"
                                   type="text"
-                                  value={formData.travellerLastName}
+                                  value={formData.customerLastName}
                                   onChange={handleChange}
                                   placeholder="Surname"
                                   disabled={isReadOnly}

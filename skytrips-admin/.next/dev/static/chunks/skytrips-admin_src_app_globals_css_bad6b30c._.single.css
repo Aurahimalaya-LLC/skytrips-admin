@@ -1476,6 +1476,10 @@
     min-width: 240px;
   }
 
+  .min-w-full {
+    min-width: 100%;
+  }
+
   .flex-1 {
     flex: 1;
   }
@@ -1846,6 +1850,10 @@
 
   :where(.divide-slate-100 > :not(:last-child)) {
     border-color: var(--color-slate-100);
+  }
+
+  :where(.divide-slate-200 > :not(:last-child)) {
+    border-color: var(--color-slate-200);
   }
 
   .self-start {

@@ -223,8 +223,15 @@ export default function BookingPage() {
 
         if (!customerIdToUse) {
           // 2. Create new customer
-          const firstName = booking.travellers?.[0]?.firstName || "Unknown";
-          const lastName = booking.travellers?.[0]?.lastName || "Traveller";
+          // Use the explicit first/last name fields from the booking form first, fallback to first traveller
+          const firstName =
+            (booking as any).customerFirstName ||
+            booking.travellers?.[0]?.firstName ||
+            "Unknown";
+          const lastName =
+            (booking as any).customerLastName ||
+            booking.travellers?.[0]?.lastName ||
+            "Traveller";
 
           const newCustomer = {
             firstName,
@@ -277,11 +284,36 @@ export default function BookingPage() {
           );
         }
 
-        // Update booking with the customer ID
-        bookingToSave.customerid = customerIdToUse;
-        // Also update the 'customer' object in the booking to reflect the link immediately in UI if needed
-        // bookingToSave.customer = { id: customerIdToUse, ... } as any;
+        // Update booking with the customer object and ID
+        if (
+          typeof bookingToSave.customer === "object" &&
+          bookingToSave.customer !== null
+        ) {
+          (bookingToSave.customer as any).id = customerIdToUse;
+        } else {
+          // Fallback construction if it wasn't an object
+          bookingToSave.customer = {
+            id: customerIdToUse,
+            firstName: (booking as any).customerFirstName,
+            lastName: (booking as any).customerLastName,
+            email: booking.email,
+            phone: booking.phone,
+            country: booking.nationality,
+          } as any;
+        }
       }
+
+      // Remove temporary fields not present in the bookings table
+      const fieldsToRemove = [
+        "travellerFirstName",
+        "travellerLastName",
+        "customerFirstName",
+        "customerLastName",
+        "contactType",
+        "customerType",
+        "count",
+      ];
+      fieldsToRemove.forEach((field) => delete (bookingToSave as any)[field]);
 
       if (editingBooking?.id) {
         // Update

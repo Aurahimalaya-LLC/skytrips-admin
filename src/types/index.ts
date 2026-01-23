@@ -40,8 +40,7 @@ export interface Booking {
   currency?: string;
   issuedthroughagency?: string;
   travellers?: Traveller[];
-  customer?: Customer;
-  customerid?: string;
+  customer?: Customer | number | string;
   customerType?: string;
   contactType?: string;
   addons?: Addons;
