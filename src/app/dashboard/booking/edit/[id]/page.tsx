@@ -824,9 +824,9 @@ export default function EditBookingPage({
         origin: formData.origin,
         destination: formData.destination,
         transit: formData.transit,
-        stopoverLocation: formData.stopoverLocation,
-        stopoverArrival: toDateOrNull(formData.stopoverArrival),
-        stopoverDeparture: toDateOrNull(formData.stopoverDeparture),
+        // stopoverLocation: formData.stopoverLocation,
+        // stopoverArrival: toDateOrNull(formData.stopoverArrival),
+        // stopoverDeparture: toDateOrNull(formData.stopoverDeparture),
         airlines: formData.airlines,
         flightNumber: formData.flightNumber,
         flightClass: formData.flightClass,
@@ -838,8 +838,8 @@ export default function EditBookingPage({
         handledBy: formData.handledBy,
         status: formData.status,
         paymentStatus: formData.paymentStatus,
-        paymentMethod: formData.paymentMethod,
-        transactionId: formData.transactionId,
+        // paymentMethod: formData.paymentMethod,
+        // transactionId: formData.transactionId,
         dateofpayment: toDateOrNull(formData.dateofpayment),
         buyingPrice: formData.costPrice,
         costprice: formData.costPrice,
@@ -2385,7 +2385,7 @@ export default function EditBookingPage({
                     <option value="Refunded">Refunded</option>
                   </select>
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
                     Payment Method
                   </label>
@@ -2400,7 +2400,7 @@ export default function EditBookingPage({
                     <option value="Bank Transfer">Bank Transfer</option>
                     <option value="Cash">Cash</option>
                   </select>
-                </div>
+                </div> */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
                     Transaction ID

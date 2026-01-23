@@ -1790,10 +1790,10 @@ function BookingModal({ isOpen, onClose, onSave, onEdit, booking, isLoading, isR
             issuedthroughagency: formData.agency,
             handledBy: formData.handledBy,
             paymentStatus: formData.paymentStatus,
-            paymentMethod: formData.paymentMethod,
-            transactionId: formData.transactionId,
+            // paymentMethod: formData.paymentMethod,
+            // transactionId: formData.transactionId,
             dateofpayment: toDateOrNull(formData.paymentDate),
-            stopoverLocation: formData.stopoverLocation,
+            // stopoverLocation: formData.stopoverLocation,
             travellers: formData.travellers,
             customer: formData.contactType === "existing" && selectedCustomer ? selectedCustomer : {
                 firstName: formData.customerFirstName,
