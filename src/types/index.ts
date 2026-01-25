@@ -27,7 +27,7 @@ export interface Booking {
   handledBy?: string;
   status?: string;
   paymentStatus?: string;
-  paymentMethod?: string;
+  paymentmethod?: string;
   transactionId?: string;
   dateofpayment?: string;
   payment: string;
