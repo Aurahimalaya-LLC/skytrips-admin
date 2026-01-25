@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Booking, ManageBooking } from "@/types";
+import { getCustomerName } from "@/lib/booking-helpers";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -134,7 +135,7 @@ export default function ManageBookingViewPage() {
             </div>
             <span
               className={`inline-flex items-center rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset ${
-                record.status === "REFUNDED" 
+                record.status === "REFUNDED"
                   ? "bg-green-50 text-green-700 ring-green-600/20"
                   : record.status === "SEND"
                     ? "bg-blue-50 text-blue-700 ring-blue-600/20"
@@ -186,10 +187,7 @@ export default function ManageBookingViewPage() {
                   Passenger Name
                 </label>
                 <p className="mt-1 text-base font-medium text-slate-900">
-                  {booking.customer?.firstName ||
-                    booking.travellers?.[0]?.firstName}{" "}
-                  {booking.customer?.lastName ||
-                    booking.travellers?.[0]?.lastName}
+                  {getCustomerName(booking)}
                 </p>
               </div>
               <div>
@@ -328,7 +326,7 @@ export default function ManageBookingViewPage() {
                   24 Oct, 2023 10:30
                 </time>
                 <p className="text-sm font-normal text-slate-500">
-                  By {booking.customer?.firstName} (Customer) - Reason: Medical
+                  By {getCustomerName(booking)} (Customer) - Reason: Medical
                 </p>
               </li>
             </ol>
