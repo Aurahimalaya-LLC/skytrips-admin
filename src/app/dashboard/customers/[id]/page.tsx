@@ -332,32 +332,62 @@ export default function CustomerDetailsPage() {
         // Filter and deduplicate travellers
         const uniqueTravellers = bookings.reduce((acc: any[], booking) => {
           const b = booking as any;
-          const fName = b.travellerFirstName || b.travellerfirstname || "";
-          const lName = b.travellerLastName || b.travellerlastname || "";
-          const fullName = `${fName} ${lName}`.trim();
 
-          // Skip if empty name
-          if (!fullName) return acc;
+          // Get travellers from the JSONB column
+          let bookingTravellers = Array.isArray(b.travellers)
+            ? b.travellers
+            : [];
 
-          // Skip if matches current customer
-          if (customer) {
-            const customerName =
-              `${customer.firstName} ${customer.lastName}`.trim();
-            if (fullName.toLowerCase() === customerName.toLowerCase())
-              return acc;
+          // Fallback for legacy data if array is empty
+          if (bookingTravellers.length === 0) {
+            const fName = b.travellerFirstName || b.travellerfirstname;
+            const lName = b.travellerLastName || b.travellerlastname;
+            if (fName || lName) {
+              bookingTravellers = [
+                {
+                  firstName: fName || "",
+                  lastName: lName || "",
+                },
+              ];
+            }
           }
 
-          // Check if already in accumulator
-          if (
-            !acc.some((t) => `${t.firstName} ${t.lastName}`.trim() === fullName)
-          ) {
-            acc.push({
-              firstName: fName,
-              lastName: lName,
-              linkedVia: b.PNR || b.ticketNumber || b.pnr || "N/A",
-              bookingId: b.id,
-            });
-          }
+          bookingTravellers.forEach((t: any) => {
+            const fName = t.firstName || "";
+            const lName = t.lastName || "";
+            const fullName = `${fName} ${lName}`.trim();
+
+            // Skip if empty name
+            if (!fullName) return;
+
+            // Skip if matches current customer
+            if (customer) {
+              const customerName =
+                `${customer.firstName} ${customer.lastName}`.trim();
+              if (fullName.toLowerCase() === customerName.toLowerCase()) return;
+            }
+
+            // Check if already in accumulator (case insensitive)
+            if (
+              !acc.some(
+                (existing) =>
+                  `${existing.firstName} ${existing.lastName}`
+                    .trim()
+                    .toLowerCase() === fullName.toLowerCase(),
+              )
+            ) {
+              acc.push({
+                firstName: fName,
+                lastName: lName,
+                passportNumber: t.passportNumber,
+                nationality: t.nationality,
+                dob: t.dob,
+                linkedVia: b.PNR || b.ticketNumber || b.pnr || "N/A",
+                bookingId: b.id,
+              });
+            }
+          });
+
           return acc;
         }, []);
 
@@ -398,9 +428,23 @@ export default function CustomerDetailsPage() {
                     <h4 className="font-bold text-slate-900 capitalize">
                       {traveller.firstName} {traveller.lastName}
                     </h4>
-                    <p className="text-xs text-slate-500">
-                      Linked via Booking #{traveller.linkedVia}
-                    </p>
+                    <div className="flex flex-col gap-0.5 mt-1">
+                      {traveller.passportNumber && (
+                        <p className="text-xs text-slate-600">
+                          <span className="font-medium">Passport:</span>{" "}
+                          {traveller.passportNumber}
+                        </p>
+                      )}
+                      {traveller.nationality && (
+                        <p className="text-xs text-slate-600">
+                          <span className="font-medium">Nationality:</span>{" "}
+                          {traveller.nationality}
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Linked via Booking #{traveller.linkedVia}
+                      </p>
+                    </div>
                   </div>
                   <button
                     onClick={() =>
