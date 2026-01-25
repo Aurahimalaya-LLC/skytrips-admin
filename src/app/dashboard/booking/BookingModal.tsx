@@ -719,7 +719,7 @@ export default function BookingModal({
       issuedthroughagency: formData.agency,
       handledBy: formData.handledBy,
       paymentStatus: formData.paymentStatus,
-      // paymentMethod: formData.paymentMethod,
+      paymentmethod: formData.paymentMethod,
       // transactionId: formData.transactionId,
       dateofpayment: toDateOrNull(formData.paymentDate), // Mapped to correct DB column
       // stopoverLocation: formData.stopoverLocation,
