@@ -415,44 +415,6 @@ export default function ETicketPage({
                     booking.agency ||
                     "SkyHigh Agency"}
                 </h1>
-                <address className="not-italic text-xs text-slate-500 font-medium space-y-0.5">
-                  {selectedCompany ? (
-                    <>
-                      {selectedCompany.address.street && (
-                        <p>{selectedCompany.address.street}</p>
-                      )}
-                      {(selectedCompany.address.city ||
-                        selectedCompany.address.state ||
-                        selectedCompany.address.postalCode) && (
-                        <p>
-                          {[
-                            selectedCompany.address.city,
-                            selectedCompany.address.state,
-                            selectedCompany.address.postalCode,
-                          ]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </p>
-                      )}
-                      {selectedCompany.address.country && (
-                        <p>{selectedCompany.address.country}</p>
-                      )}
-                      {selectedCompany.emails[0]?.value && (
-                        <p>{selectedCompany.emails[0].value}</p>
-                      )}
-                      {selectedCompany.phones[0]?.value && (
-                        <p>{selectedCompany.phones[0].value}</p>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <p>123 Sky Tower, Aviation Street</p>
-                      <p>Singapore, 018956</p>
-                      <p>Tax ID: SG-99887766</p>
-                      <p>support@skyhigh.com</p>
-                    </>
-                  )}
-                </address>
               </div>
             </div>
             <div className="text-left md:text-right">
@@ -464,6 +426,56 @@ export default function ETicketPage({
                 <span className="text-primary">{booking.PNR || "UNKNOWN"}</span>
               </p>
             </div>
+          </div>
+
+          <div className="mt-8 pt-8 border-t border-slate-200/60">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+              Company Information
+            </h3>
+            <address className="not-italic text-sm text-slate-600 space-y-1">
+              <p className="font-bold text-slate-900">
+                {selectedCompany?.name ||
+                  (booking as BookingWithAgency).issuedthroughagency ||
+                  booking.agency ||
+                  "SkyHigh Agency Ltd."}
+              </p>
+              {selectedCompany ? (
+                <>
+                  {selectedCompany.address.street && (
+                    <p>{selectedCompany.address.street}</p>
+                  )}
+                  {(selectedCompany.address.city ||
+                    selectedCompany.address.state ||
+                    selectedCompany.address.postalCode) && (
+                    <p>
+                      {[
+                        selectedCompany.address.city,
+                        selectedCompany.address.state,
+                        selectedCompany.address.postalCode,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  )}
+                  {selectedCompany.address.country && (
+                    <p>{selectedCompany.address.country}</p>
+                  )}
+                  {selectedCompany.emails[0]?.value && (
+                    <p>{selectedCompany.emails[0].value}</p>
+                  )}
+                  {selectedCompany.phones[0]?.value && (
+                    <p>{selectedCompany.phones[0].value}</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p>123 Sky Tower, Aviation Street</p>
+                  <p>Singapore, 018956</p>
+                  <p>Tax ID: SG-99887766</p>
+                  <p>support@skyhigh.com</p>
+                </>
+              )}
+            </address>
           </div>
         </div>
 

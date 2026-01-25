@@ -2186,6 +2186,16 @@
     border-color: var(--color-slate-200);
   }
 
+  .border-slate-200\/60 {
+    border-color: #e2e8f099;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .border-slate-200\/60 {
+      border-color: color-mix(in oklab, var(--color-slate-200) 60%, transparent);
+    }
+  }
+
   .border-slate-300 {
     border-color: var(--color-slate-300);
   }
