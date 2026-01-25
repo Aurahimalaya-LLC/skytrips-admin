@@ -579,9 +579,12 @@ export default function FlightDetailsPage() {
           isOpen={isEmailModalOpen}
           onClose={() => setIsEmailModalOpen(false)}
           recipient={{
-            name: booking.customer
-              ? `${booking.customer.firstName} ${booking.customer.lastName}`
-              : `${booking.travellers?.[0]?.firstName || ""} ${booking.travellers?.[0]?.lastName || ""}`,
+            name:
+              booking.customer && typeof booking.customer === "object"
+                ? `${booking.customer.firstName} ${booking.customer.lastName}`
+                : `${booking.travellers?.[0]?.firstName || ""} ${
+                    booking.travellers?.[0]?.lastName || ""
+                  }`,
             email: booking.email || "",
             phone: booking.phone,
             organization: (booking as any).companyName || "Individual",

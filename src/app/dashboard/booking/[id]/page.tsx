@@ -323,7 +323,7 @@ export default function BookingDetailsPage({
                     <p className="text-sm font-bold text-slate-900 uppercase">
                       {(booking.travellers?.[0]
                         ? `${booking.travellers[0].firstName} ${booking.travellers[0].lastName}`
-                        : booking.customer
+                        : booking.customer && typeof booking.customer === "object"
                         ? `${booking.customer.firstName} ${booking.customer.lastName}`
                         : "N/A"
                       ).toUpperCase()}

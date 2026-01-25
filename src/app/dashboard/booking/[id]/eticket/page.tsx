@@ -243,9 +243,11 @@ export default function ETicketPage({
           message: data.message
             .replace(
               "{NAME}",
-              booking.customer
+              booking.customer && typeof booking.customer === "object"
                 ? `${booking.customer.firstName} ${booking.customer.lastName}`
-                : `${booking.travellers?.[0]?.firstName || ""} ${booking.travellers?.[0]?.lastName || ""}`,
+                : `${booking.travellers?.[0]?.firstName || ""} ${
+                    booking.travellers?.[0]?.lastName || ""
+                  }`,
             )
             .replace("{PNR}", booking.PNR || "")
             .replace("{ORIGIN}", booking.origin)
