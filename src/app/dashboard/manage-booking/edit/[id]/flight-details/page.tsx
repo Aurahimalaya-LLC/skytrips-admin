@@ -3,6 +3,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Booking, ManageBooking } from "@/types";
+import {
+  getCustomerName,
+  getCustomerEmail,
+  getCustomerPhone,
+} from "@/lib/booking-helpers";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import SendEmailModal from "@/components/booking-management/SendEmailModal";
@@ -177,11 +182,10 @@ export default function FlightDetailsPage() {
         console.error("Error updating status:", error);
         // We don't throw here to avoid blocking the UI since email was sent
       }
-      
+
       // Update local state if needed or show success message
       alert("Email sent successfully and status updated to Processing.");
       setIsEmailModalOpen(false);
-      
     } catch (err) {
       console.error("Error sending email:", err);
       throw err;
@@ -579,9 +583,7 @@ export default function FlightDetailsPage() {
           isOpen={isEmailModalOpen}
           onClose={() => setIsEmailModalOpen(false)}
           recipient={{
-            name: booking.customer
-              ? `${booking.customer.firstName} ${booking.customer.lastName}`
-              : `${booking.travellers?.[0]?.firstName || ""} ${booking.travellers?.[0]?.lastName || ""}`,
+            name: getCustomerName(booking),
             email: booking.email || "",
             phone: booking.phone,
             organization: (booking as any).companyName || "Individual",

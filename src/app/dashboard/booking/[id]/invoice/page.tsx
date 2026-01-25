@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter, notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Booking } from "@/types";
+import { getCustomerName, getCustomerEmail, getCustomerPhone } from "@/lib/booking-helpers";
 import { CompanyProfile } from "@/types/company";
 import SendEmailModal from "@/components/booking-management/SendEmailModal";
 import html2canvas from "html2canvas-pro";
@@ -26,7 +27,7 @@ export default function InvoicePage({
   const [error, setError] = useState<string | null>(null);
   const [companyProfiles, setCompanyProfiles] = useState<CompanyProfile[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(
-    null
+    null,
   );
   const [settingsCompanyName, setSettingsCompanyName] = useState<string>("");
   const [settingsLogoUrl, setSettingsLogoUrl] = useState<string>("");
@@ -170,12 +171,11 @@ export default function InvoicePage({
 
   const primaryTravellerName = booking.travellers?.[0]
     ? `${booking.travellers[0].firstName} ${booking.travellers[0].lastName}`.trim()
-    : booking.customer
-    ? `${booking.customer.firstName} ${booking.customer.lastName}`.trim()
-    : "";
+    : booking.customer && typeof booking.customer === "object"
+      ? `${booking.customer.firstName} ${booking.customer.lastName}`.trim()
+      : "";
 
-  const displayTravellerName =
-    primaryTravellerName || "Valued Customer";
+  const displayTravellerName = primaryTravellerName || "Valued Customer";
 
   const handlePrint = () => {
     window.print();
@@ -214,7 +214,7 @@ export default function InvoicePage({
               htmlEl.style.setProperty(
                 "background-color",
                 "#ffffff",
-                "important"
+                "important",
               );
             }
             if (style.borderColor && style.borderColor.includes("oklab")) {
@@ -235,7 +235,7 @@ export default function InvoicePage({
         0,
         0,
         imgWidth,
-        imgHeight
+        imgHeight,
       );
 
       const pdfBase64 = pdf.output("datauristring");
@@ -465,13 +465,16 @@ export default function InvoicePage({
                     <span className="material-symbols-outlined text-[18px] text-slate-400">
                       email
                     </span>
-                    {booking.customer?.email || booking.email || "N/A"}
+                    {(typeof booking.customer === "object" &&
+                      booking.customer?.email) ||
+                      booking.email ||
+                      "N/A"}
                   </p>
                   <p className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-[18px] text-slate-400">
                       phone
                     </span>
-                    {booking.customer?.phone || booking.phone || "N/A"}
+                    {getCustomerPhone(booking) || "N/A"}
                   </p>
                   <p className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-[18px] text-slate-400">

@@ -135,20 +135,20 @@ export interface Customer {
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
-  dateOfBirth: string;
-  gender: string;
+  phone: string | null;
+  dateOfBirth: string | null;
+  gender: string | null;
   userType: string;
   isActive: string | boolean;
   country: string;
   address: Address;
-  phoneCountryCode: string;
+  phoneCountryCode: string | null;
   isDisabled: string | boolean;
   isVerified: string | boolean;
   passport: Passport;
-  socialProvider: string;
-  socialId: string;
-  referralCode: string;
+  socialProvider: string | null;
+  socialId: string | null;
+  referralCode: string | null;
   totalMiles?: number;
   totalSpend?: number;
   lastLogin?: string;
@@ -161,6 +161,9 @@ export interface Customer {
   preferredLanguage?: string;
   preferredCurrency?: string;
   marketingConsent?: boolean;
+  middleName?: string | null;
+  profileImage?: string | null;
+  readableTemporaryPassword?: string | null;
 }
 
 export interface Reason {

@@ -5,6 +5,11 @@ import { useRouter, notFound } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Booking } from "@/types";
+import {
+  getCustomerName,
+  getCustomerEmail,
+  getCustomerPhone,
+} from "@/lib/booking-helpers";
 
 export default function BookingDetailsPage({
   params,
@@ -210,7 +215,7 @@ export default function BookingDetailsPage({
                     <span className="material-symbols-outlined text-slate-400 text-[18px]">
                       email
                     </span>
-                    {booking.customer?.email || booking.email || "N/A"}
+                    {getCustomerEmail(booking) || "N/A"}
                   </div>
                 </div>
                 <div>
@@ -221,7 +226,7 @@ export default function BookingDetailsPage({
                     <span className="material-symbols-outlined text-slate-400 text-[18px]">
                       phone
                     </span>
-                    {booking.customer?.phone || booking.phone || "N/A"}
+                    {getCustomerPhone(booking) || "N/A"}
                   </div>
                 </div>
               </div>
@@ -323,9 +328,10 @@ export default function BookingDetailsPage({
                     <p className="text-sm font-bold text-slate-900 uppercase">
                       {(booking.travellers?.[0]
                         ? `${booking.travellers[0].firstName} ${booking.travellers[0].lastName}`
-                        : booking.customer
-                        ? `${booking.customer.firstName} ${booking.customer.lastName}`
-                        : "N/A"
+                        : booking.customer &&
+                            typeof booking.customer === "object"
+                          ? `${booking.customer.firstName} ${booking.customer.lastName}`
+                          : "N/A"
                       ).toUpperCase()}
                     </p>
                   </div>
@@ -809,7 +815,7 @@ export default function BookingDetailsPage({
                     <span className="material-symbols-outlined text-slate-400 text-[16px]">
                       credit_card
                     </span>
-                    {booking.paymentMethod || "Credit Card"}
+                    {booking.paymentmethod || "Credit Card"}
                   </div>
                 </div>
                 <div>

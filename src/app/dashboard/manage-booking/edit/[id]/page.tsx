@@ -3,6 +3,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Booking, ManageBooking, Reason } from "@/types";
+import {
+  getCustomerName,
+  getCustomerEmail,
+  getCustomerPhone,
+} from "@/lib/booking-helpers";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import SendEmailModal from "@/components/booking-management/SendEmailModal";
@@ -595,9 +600,7 @@ export default function ManageBookingEditPage() {
           isOpen={isEmailModalOpen}
           onClose={() => setIsEmailModalOpen(false)}
           recipient={{
-            name: booking.customer
-              ? `${booking.customer.firstName} ${booking.customer.lastName}`
-              : `${booking.travellers?.[0]?.firstName || ""} ${booking.travellers?.[0]?.lastName || ""}`,
+            name: getCustomerName(booking),
             email: booking.email || "",
             phone: booking.phone,
             organization: (booking as any).companyName || "Individual",

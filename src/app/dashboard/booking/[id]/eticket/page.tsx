@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter, notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Booking } from "@/types";
+import { getCustomerName } from "@/lib/booking-helpers";
 import SendEmailModal from "@/components/booking-management/SendEmailModal";
 import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
@@ -241,12 +242,7 @@ export default function ETicketPage({
           to: booking.email,
           subject: data.subject.replace("{PNR}", booking.PNR || ""),
           message: data.message
-            .replace(
-              "{NAME}",
-              booking.customer
-                ? `${booking.customer.firstName} ${booking.customer.lastName}`
-                : `${booking.travellers?.[0]?.firstName || ""} ${booking.travellers?.[0]?.lastName || ""}`,
-            )
+            .replace("{NAME}", getCustomerName(booking))
             .replace("{PNR}", booking.PNR || "")
             .replace("{ORIGIN}", booking.origin)
             .replace("{DESTINATION}", booking.destination)
@@ -277,9 +273,12 @@ export default function ETicketPage({
           isOpen={isEmailModalOpen}
           onClose={() => setIsEmailModalOpen(false)}
           recipient={{
-            name: booking.customer
-              ? `${booking.customer.firstName} ${booking.customer.lastName}`
-              : `${booking.travellers?.[0]?.firstName || ""} ${booking.travellers?.[0]?.lastName || ""}`,
+            name:
+              booking.customer && typeof booking.customer === "object"
+                ? `${booking.customer.firstName} ${booking.customer.lastName}`
+                : `${booking.travellers?.[0]?.firstName || ""} ${
+                    booking.travellers?.[0]?.lastName || ""
+                  }`,
             email: booking.email || "",
             phone: booking.phone,
             organization: (booking as any).companyName || "Individual",
