@@ -99,6 +99,49 @@ export default function EditBookingPage({
   const [agenciesLoading, setAgenciesLoading] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Fetch current user
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      let currentUserData: any = null;
+
+      // 1. Try localStorage
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("sky_admin_user");
+          if (stored) {
+            currentUserData = JSON.parse(stored);
+          }
+        } catch (e) {
+          console.error("Error parsing local user", e);
+        }
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        if (!currentUserData) currentUserData = { email: user.email };
+
+        const { data: userData } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        if (userData) {
+          currentUserData = { ...currentUserData, ...userData };
+        }
+      }
+
+      if (currentUserData) {
+        setCurrentUser(currentUserData);
+      }
+    };
+    fetchCurrentUser();
+  }, []);
   const [isMealModalOpen, setIsMealModalOpen] = useState(false);
   const [showStopover, setShowStopover] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
@@ -965,6 +1008,7 @@ export default function EditBookingPage({
             );
           }
         });
+
         return processed;
       };
 
@@ -2308,30 +2352,15 @@ export default function EditBookingPage({
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
                     Issued By
                   </label>
-                  <select
-                    className="block w-full h-10 rounded-lg border-slate-200 px-3 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium"
+                  <input
+                    type="text"
+                    className="block w-full h-10 rounded-lg border-slate-200 px-3 bg-slate-50 text-slate-500 sm:text-sm font-medium cursor-not-allowed"
                     name="handledBy"
                     value={formData.handledBy}
-                    onChange={handleChange}
-                  >
-                    <option value="">
-                      {usersLoading ? "Loading users..." : "Select user"}
-                    </option>
-                    {users.map((user) => (
-                      <option
-                        key={user.id}
-                        value={
-                          user.first_name && user.last_name
-                            ? `${user.first_name} ${user.last_name}`
-                            : user.username || user.email
-                        }
-                      >
-                        {user.first_name && user.last_name
-                          ? `${user.first_name} ${user.last_name}`
-                          : user.username || user.email}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="System User"
+                    readOnly
+                    disabled
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">

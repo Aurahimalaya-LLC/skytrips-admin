@@ -110,6 +110,62 @@ export default function BookingModal({
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [agenciesLoading, setAgenciesLoading] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Fetch current user and set it as handledBy
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      let nameToUse = "System User";
+
+      // 1. Try localStorage first (fastest and requested by user)
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("sky_admin_user");
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.name) nameToUse = parsed.name;
+            else if (parsed.email) nameToUse = parsed.email;
+          }
+        } catch (e) {
+          console.error("Error reading user from localStorage", e);
+        }
+      }
+
+      // 2. Try Supabase Auth as fallback/enhancement
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        // Try to get more details from public.users
+        const { data: userData } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        if (userData) {
+          setCurrentUser(userData);
+          // If we didn't get a good name from localStorage, try DB
+          if (nameToUse === "System User" || nameToUse === user.email) {
+            const fullName =
+              `${userData.first_name || ""} ${userData.last_name || ""}`.trim();
+            if (fullName) nameToUse = fullName;
+            else if (userData.email) nameToUse = userData.email;
+          }
+        }
+      }
+
+      if (!booking) {
+        // Only set default for new bookings
+        setFormData((prev) => ({
+          ...prev,
+          handledBy: nameToUse,
+        }));
+      }
+    };
+    fetchCurrentUser();
+  }, [booking]);
   const [usersLoading, setUsersLoading] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
@@ -1876,31 +1932,15 @@ export default function BookingModal({
                         >
                           Issued By
                         </label>
-                        <select
-                          className="block w-full h-10 rounded-lg border-slate-200 px-3 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium"
+                        <input
+                          type="text"
+                          className="block w-full h-10 rounded-lg border-slate-200 px-3 bg-slate-50 text-slate-500 sm:text-sm font-medium cursor-not-allowed"
                           name="handledBy"
                           value={formData.handledBy}
-                          onChange={handleChange}
-                          disabled={isReadOnly}
-                        >
-                          <option value="">
-                            {usersLoading ? "Loading users..." : "Select user"}
-                          </option>
-                          {users.map((user) => (
-                            <option
-                              key={user.id}
-                              value={
-                                user.first_name && user.last_name
-                                  ? `${user.first_name} ${user.last_name}`
-                                  : user.username || user.email
-                              }
-                            >
-                              {user.first_name && user.last_name
-                                ? `${user.first_name} ${user.last_name}`
-                                : user.username || user.email}
-                            </option>
-                          ))}
-                        </select>
+                          placeholder="System User"
+                          readOnly
+                          disabled
+                        />
                       </div>
                       <div>
                         <label

@@ -5156,6 +5156,20 @@
     }
   }
 
+  .focus\:ring-red-500\/30:focus {
+    --tw-ring-color: #fb2c364d;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .focus\:ring-red-500\/30:focus {
+      --tw-ring-color: color-mix(in oklab, var(--color-red-500) 30%, transparent);
+    }
+  }
+
+  .focus\:ring-slate-500:focus {
+    --tw-ring-color: var(--color-slate-500);
+  }
+
   .focus\:ring-teal-400\/20:focus {
     --tw-ring-color: #00d3bd33;
   }
@@ -5355,6 +5369,12 @@
   @media (min-width: 40rem) {
     .sm\:items-start {
       align-items: flex-start;
+    }
+  }
+
+  @media (min-width: 40rem) {
+    .sm\:justify-end {
+      justify-content: flex-end;
     }
   }
 
