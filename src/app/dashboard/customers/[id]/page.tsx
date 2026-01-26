@@ -1275,34 +1275,34 @@ export default function CustomerDetailsPage() {
                     </div>
 
                     {/* Row 3: Contact */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        defaultValue={customer?.email}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                        Phone
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          defaultValue={customer?.phoneCountryCode}
-                          placeholder="+1"
-                          className="w-20 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                        />
-                        <input
-                          type="tel"
-                          defaultValue={customer?.phone || ""}
-                          className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                        />
-                      </div>
-                    </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    defaultValue={customer?.email}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                    Phone
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      defaultValue={customer?.phoneCountryCode}
+                      placeholder="+1"
+                      className="w-20 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                    />
+                    <input
+                      type="tel"
+                      defaultValue={customer?.phone || ""}
+                      className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                    />
+                  </div>
+                </div>
                   </div>
                 </div>
 
