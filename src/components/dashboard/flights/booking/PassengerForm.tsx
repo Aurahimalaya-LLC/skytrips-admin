@@ -9,16 +9,18 @@ interface PassengerFormProps {
   canRemove?: boolean;
 }
 
+import countries from "@/data/countries.json";
+
 export default function PassengerForm({ id, label, onRemove, canRemove }: PassengerFormProps) {
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm transition-all hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 font-display">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-            id === 1 ? "bg-blue-50 text-primary" : "bg-slate-100 text-slate-500"
+            !canRemove ? "bg-blue-50 text-[#0EA5E9]" : "bg-slate-100 text-slate-500"
           }`}>
             <span className="material-symbols-outlined text-[20px]">
-              {id === 1 ? "person" : "person_add"}
+              {!canRemove ? "person" : "person_add"}
             </span>
           </div>
           <h3 className="font-bold text-lg text-slate-900">{label}</h3>
@@ -27,7 +29,7 @@ export default function PassengerForm({ id, label, onRemove, canRemove }: Passen
         {canRemove && (
           <button 
             onClick={onRemove}
-            className="flex items-center gap-1.5 text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full transition-colors"
+            className="flex items-center gap-1 text-xs font-bold text-red-500 hover:text-red-600 transition-colors"
           >
             Remove
             <span className="material-symbols-outlined text-[16px]">remove_circle</span>
@@ -38,10 +40,13 @@ export default function PassengerForm({ id, label, onRemove, canRemove }: Passen
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* First Name */}
         <div className="space-y-2">
-          <label htmlFor={`fname-${id}`} className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">First Name</label>
+          <label htmlFor={`fname-${id}`} className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">
+            First Name <span className="text-red-500">*</span>
+          </label>
           <input 
             type="text" 
             id={`fname-${id}`}
+            required
             placeholder={id === 1 ? "John" : "Jane"}
             className="w-full h-12 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-slate-300"
           />
@@ -49,10 +54,13 @@ export default function PassengerForm({ id, label, onRemove, canRemove }: Passen
 
         {/* Last Name */}
         <div className="space-y-2">
-          <label htmlFor={`lname-${id}`} className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Last Name</label>
+          <label htmlFor={`lname-${id}`} className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">
+            Last Name <span className="text-red-500">*</span>
+          </label>
           <input 
             type="text" 
             id={`lname-${id}`}
+            required
             placeholder="Doe"
             className="w-full h-12 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-slate-300"
           />
@@ -108,12 +116,23 @@ export default function PassengerForm({ id, label, onRemove, canRemove }: Passen
         {/* Country */}
         <div className="space-y-2">
           <label htmlFor={`country-${id}`} className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Country</label>
-          <input 
-            type="text" 
-            id={`country-${id}`}
-            placeholder="Australia"
-            className="w-full h-12 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-slate-300"
-          />
+          <div className="relative">
+            <select
+              id={`country-${id}`}
+              className="w-full h-12 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all appearance-none"
+              defaultValue=""
+            >
+              <option value="" disabled>Select Country</option>
+              {countries.map((country) => (
+                <option key={country.code} value={country.name}>
+                  {country.name}
+                </option>
+              ))}
+            </select>
+            <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+              expand_more
+            </span>
+          </div>
         </div>
 
         {/* Passport Number */}
@@ -130,12 +149,23 @@ export default function PassengerForm({ id, label, onRemove, canRemove }: Passen
         {/* Passport Country */}
         <div className="space-y-2">
           <label htmlFor={`passportCountry-${id}`} className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Passport Country</label>
-          <input 
-            type="text" 
-            id={`passportCountry-${id}`}
-            placeholder="Australia"
-            className="w-full h-12 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-slate-300"
-          />
+          <div className="relative">
+            <select
+              id={`passportCountry-${id}`}
+              className="w-full h-12 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all appearance-none"
+              defaultValue=""
+            >
+              <option value="" disabled>Select Country</option>
+              {countries.map((country) => (
+                <option key={country.code} value={country.name}>
+                  {country.name}
+                </option>
+              ))}
+            </select>
+            <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+              expand_more
+            </span>
+          </div>
         </div>
 
         {/* Passport Expiry Date */}
@@ -169,12 +199,6 @@ export default function PassengerForm({ id, label, onRemove, canRemove }: Passen
           </div>
         </div>
       </div>
-
-      {id === 2 && (
-        <p className="text-xs font-medium text-primary mt-4 italic">
-          * Please ensure names match the passenger&apos;s valid government-issued ID.
-        </p>
-      )}
     </div>
   );
 }

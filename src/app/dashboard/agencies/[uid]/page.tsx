@@ -42,6 +42,7 @@ const parsePrice = (price: string | number | undefined): number => {
 };
 
 import TotalBookingsCard from "@/components/agency/TotalBookingsCard";
+import DateRangeFilter, { DateRange } from "@/components/DateRangeFilter";
 
 export default function AgencyDetailPage({ params }: { params: Promise<{ uid: string }> }) {
   const { uid } = use(params);
@@ -51,6 +52,11 @@ export default function AgencyDetailPage({ params }: { params: Promise<{ uid: st
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    to: new Date(),
+    label: "Last 30 Days",
+  });
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -73,34 +79,34 @@ export default function AgencyDetailPage({ params }: { params: Promise<{ uid: st
     load();
   }, [uid]);
 
+  const dateFilteredBookings = useMemo(() => {
+    if (!dateRange.from || !dateRange.to) return bookings;
+
+    const from = new Date(dateRange.from);
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(dateRange.to);
+    to.setHours(23, 59, 59, 999);
+
+    return bookings.filter((b) => {
+      // Check created_at or travelDate
+      const dateStr = (b.created_at as string) || (b.travelDate as string) || (b.traveldate as string);
+      if (!dateStr) return false;
+      
+      const date = new Date(dateStr);
+      return date >= from && date <= to;
+    });
+  }, [bookings, dateRange]);
+
   const stats = useMemo(() => {
-    const totalBookings = bookings.length;
-    const totalCP = bookings.reduce((sum, b) => sum + parsePrice(b.buyingPrice), 0);
-    // Assuming 'paid' means selling price for confirmed/paid bookings. 
-    // For now, let's assume all bookings contribute to paid amount if they have a selling price, 
-    // or we can mock logic. Let's sum sellingPrice.
-    const paidAmount = bookings.reduce((sum, b) => sum + parsePrice(b.sellingPrice), 0);
-    // Mock Due Amount logic: 10% of total sales pending? Or random? 
-    // Let's make it totalCP * 0.1 for now or similar to reference ratio.
-    // Reference: CP 384k, Paid 342k, Due 42k. 
-    // It seems Paid + Due approx Total CP? No, 342+42 = 384.2k ~ 384k.
-    // So Due = Total CP - Paid? Or Total Sales - Paid?
-    // Let's use Due = Total Sales - Paid. But if Paid = Total Sales...
-    // Let's assume Paid Amount is what has been collected.
-    // Let's calculate 'Total Sales' (sellingPrice) and assume 'Paid' is random for demo,
-    // or better: Paid = sum of sellingPrice where paymentStatus === 'paid'.
-    // Due = sum of sellingPrice where paymentStatus !== 'paid'.
-    
-    // Better logic based on reference names:
-    // Total CP (Cost Price) = Sum(buyingPrice)
-    // Paid Amount = Amount Agency Paid to Us? Or We Paid Agency?
-    // Let's stick to the visual labels.
+    const currentBookings = dateFilteredBookings;
+    const totalBookings = currentBookings.length;
+    const totalCP = currentBookings.reduce((sum, b) => sum + parsePrice(b.buyingPrice), 0);
     
     // For this redesign, I'll calculate strictly:
-    const totalSellingPrice = bookings.reduce((sum, b) => sum + parsePrice(b.sellingPrice), 0);
+    const totalSellingPrice = currentBookings.reduce((sum, b) => sum + parsePrice(b.sellingPrice), 0);
     // Mocking paid status for calculation diversity
-    const paidBookings = bookings.filter((_, i) => i % 5 !== 0); // 80% paid
-    const dueBookings = bookings.filter((_, i) => i % 5 === 0); // 20% due
+    const paidBookings = currentBookings.filter((_, i) => i % 5 !== 0); // 80% paid
+    const dueBookings = currentBookings.filter((_, i) => i % 5 === 0); // 20% due
     
     const calculatedPaid = paidBookings.reduce((sum, b) => sum + parsePrice(b.sellingPrice), 0);
     const calculatedDue = dueBookings.reduce((sum, b) => sum + parsePrice(b.sellingPrice), 0);
@@ -111,9 +117,9 @@ export default function AgencyDetailPage({ params }: { params: Promise<{ uid: st
       paidAmount: calculatedPaid,
       dueAmount: calculatedDue
     };
-  }, [bookings]);
+  }, [dateFilteredBookings]);
 
-  const filteredBookings = bookings.filter(b => 
+  const filteredBookings = dateFilteredBookings.filter(b => 
     (b.travellerFirstName + " " + b.travellerLastName).toLowerCase().includes(searchTerm.toLowerCase()) ||
     b.PNR?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     b.ticketNumber?.includes(searchTerm)
@@ -180,10 +186,13 @@ export default function AgencyDetailPage({ params }: { params: Promise<{ uid: st
           </div>
 
           <div className="flex items-center gap-3 self-start">
-            <button className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-sm hover:bg-slate-50 flex items-center gap-2 transition-colors">
+            <Link 
+              href={`/dashboard/agencies/${agency.uid}/commissions`} 
+              className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-sm hover:bg-slate-50 flex items-center gap-2 transition-colors"
+            >
               <span className="material-symbols-outlined text-[18px]">visibility</span>
-              View Details
-            </button>
+              View Commission
+            </Link>
             <button className="h-10 px-4 rounded-lg bg-[#00A76F] text-white font-bold text-sm hover:bg-[#009462] flex items-center gap-2 shadow-sm transition-colors">
               <span className="material-symbols-outlined text-[18px]">payments</span>
               Record Payment
@@ -204,11 +213,10 @@ export default function AgencyDetailPage({ params }: { params: Promise<{ uid: st
             <p className="text-slate-500 text-sm">Summary of transactions and billing for the selected period.</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="h-10 px-4 bg-white border border-slate-200 rounded-lg text-slate-700 text-sm font-bold flex items-center gap-2 hover:bg-slate-50">
-              <span className="material-symbols-outlined text-[18px]">calendar_today</span>
-              Jan 01, 2024 - May 24, 2024
-              <span className="material-symbols-outlined text-[18px]">expand_more</span>
-            </button>
+            <DateRangeFilter 
+              onRangeChange={setDateRange} 
+              initialRange={dateRange}
+            />
             <button className="h-10 px-4 bg-white border border-slate-200 rounded-lg text-slate-700 text-sm font-bold flex items-center gap-2 hover:bg-slate-50">
               <span className="material-symbols-outlined text-[18px]">filter_list</span>
               Filters
@@ -278,21 +286,8 @@ export default function AgencyDetailPage({ params }: { params: Promise<{ uid: st
 
       {/* Recent Bookings Section */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-slate-400">history</span>
-              <h2 className="text-lg font-bold text-slate-900">Recent Bookings</h2>
-            </div>
-            <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
-            <span className="text-sm text-slate-500 font-medium hidden md:block">2 bookings selected</span>
-          </div>
-
+        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-end gap-4">
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <button className="text-[#00A76F] font-bold text-sm flex items-center gap-1 hover:text-[#009462]">
-              <span className="material-symbols-outlined text-[18px]">download</span>
-              Export
-            </button>
             <div className="relative group w-full md:w-64">
               <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[20px] group-focus-within:text-primary transition-colors">search</span>
               <input 

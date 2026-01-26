@@ -7,6 +7,8 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const type = searchParams.get('type') || 'upcoming'; // 'upcoming' or 'recent'
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
     
     // Validate pagination params
     const pageNumber = isNaN(page) || page < 1 ? 1 : page;
@@ -14,6 +16,10 @@ export async function GET(request: Request) {
     const offset = (pageNumber - 1) * pageSize;
 
     let query = supabase.from('bookings').select('*', { count: 'exact' });
+
+    if (from && to) {
+      query = query.gte('created_at', from).lte('created_at', to);
+    }
 
     const now = new Date();
     const todayStr = now.toISOString();

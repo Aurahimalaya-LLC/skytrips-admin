@@ -86,14 +86,6 @@ export default function LoginPage() {
         } catch {}
       }
       router.replace("/dashboard");
-      if (typeof window !== "undefined") {
-        window.location.href = "/dashboard";
-        setTimeout(() => {
-          try {
-            window.location.assign("/dashboard");
-          } catch {}
-        }, 50);
-      }
     } catch (err: unknown) {
       console.error("Login error:", err);
       const errorMessage = err instanceof Error ? err.message : "An error occurred during login";

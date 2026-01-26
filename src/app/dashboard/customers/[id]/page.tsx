@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Customer, Booking } from "@/types";
+import { Customer, Booking, Address, Passport } from "@/types";
+import locationsData from "@/data/locations.json";
+import countriesData from "@/data/countries.json";
 
 export default function CustomerDetailsPage() {
   const params = useParams();
@@ -15,12 +17,18 @@ export default function CustomerDetailsPage() {
   const [error, setError] = useState<string | null>(null);
 
   // UI State
-  const [activeTab, setActiveTab] = useState("booking-history");
+  const [activeTab, setActiveTab] = useState("profile");
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Record<
     string,
     string | number
   > | null>(null);
+
+  // Location State for Edit Modal
+  const [editCountry, setEditCountry] = useState("");
+  const [editState, setEditState] = useState("");
+  const [editCity, setEditCity] = useState("");
 
   // Booking History State
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -58,6 +66,16 @@ export default function CustomerDetailsPage() {
   const fetchCustomerDetails = async () => {
     try {
       console.log("Fetching customer details for ID:", customerId);
+
+      // Validate UUID format to prevent database errors
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(customerId)) {
+        console.warn("Invalid UUID format for customerId:", customerId);
+        // If it's not a UUID, it might be a legacy ID or invalid.
+        // We can throw immediately or try to find by other means if supported.
+        throw new Error("Invalid Customer ID format");
+      }
+
       const { data, error } = await supabase
         .from("customers")
         .select("*")
@@ -65,7 +83,12 @@ export default function CustomerDetailsPage() {
         .single();
 
       if (error) {
-        console.error("Supabase error fetching customer:", error);
+        console.error("Supabase error fetching customer:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         throw error;
       }
 
@@ -74,6 +97,7 @@ export default function CustomerDetailsPage() {
       }
 
       setCustomer(data);
+      console.log("Customer data:", data);
     } catch (err: unknown) {
       console.error("Error fetching customer:", err);
       const errorMessage =
@@ -95,20 +119,34 @@ export default function CustomerDetailsPage() {
 
       // 1. Legacy: Check Foreign Key 'customerid' (Standard relation)
       // We check both string (UUID) and number formats
-      conditions.push(`customerid.eq.${JSON.stringify(idStr)}`);
+      // CAUTION: Querying integer column with string (UUID) causes error 22P02.
+      // Only query 'customerid' if we have a number, or if we are sure it's not an int column.
+      // Since we validated customerId is UUID (lines 47-48), idNum is NaN.
+      // conditions.push(`customerid.eq.${JSON.stringify(idStr)}`); 
+      
       if (!isNaN(idNum)) {
         conditions.push(`customerid.eq.${idNum}`);
+      } else {
+         // If it's a UUID, it might be stored in 'customerid' if that column is UUID type.
+         // But if 'customerid' is INT, this crashes.
+         // We'll rely on customer->>id for UUIDs to be safe.
+         // If you are sure customerid is UUID, uncomment the line below:
+         // conditions.push(`customerid.eq.${JSON.stringify(idStr)}`);
       }
 
       // 2. New: Check JSON field 'id' in 'customer' column
       // Use ->> to extract field as text (works for json/jsonb)
       conditions.push(`customer->>id.eq.${JSON.stringify(idStr)}`);
+<<<<<<< HEAD
+      
+=======
       // 3. Legacy JSON: Check 'customer_details' column (older migration) - REMOVED due to column missing
       // conditions.push(`customer_details->>id.eq.${JSON.stringify(idStr)}`);
 
       // Remove direct 'customer.eq' check as it causes 400 error on JSONB columns when comparing with string
       // and 'customerid' covers the legacy case anyway.
 
+>>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
       // 3. Email match (Root column or inside JSON)
       if (customer?.email) {
         // Use ilike for case-insensitive matching with wildcards to handle whitespace
@@ -122,22 +160,44 @@ export default function CustomerDetailsPage() {
 
         // Check email inside customer JSON: {"email": "..."}
         conditions.push(`customer->>email.ilike.${emailStr}`);
+<<<<<<< HEAD
+=======
 
         // Check email inside legacy customer_details JSON - REMOVED due to column missing
         // conditions.push(`customer_details->>email.ilike.${emailStr}`);
+>>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
       }
+
+      const queryFilter = conditions.join(",");
+      console.log("Booking History Query Filter:", queryFilter);
 
       const { data, error } = await supabase
         .from("bookings")
         .select("*")
-        .or(conditions.join(","))
+        .or(queryFilter)
         .order("travelDate", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase Raw Error:", error);
+        throw error;
+      }
       console.log("Booking history fetched:", data);
       setBookings(data || []);
-    } catch (err) {
-      console.error("Error fetching booking history:", err);
+    } catch (err: unknown) {
+      console.error("Full Error Object:", err);
+      if (typeof err === 'object' && err !== null) {
+          console.error("Error keys:", Object.keys(err));
+          console.error("Error stringified:", JSON.stringify(err, null, 2));
+      }
+      
+      const sbError = err as { message?: string; details?: string; hint?: string; code?: string };
+      console.error("Error fetching booking history:", {
+        message: sbError?.message,
+        details: sbError?.details,
+        hint: sbError?.hint,
+        code: sbError?.code,
+        fullError: err
+      });
     } finally {
       setBookingsLoading(false);
     }
@@ -151,8 +211,220 @@ export default function CustomerDetailsPage() {
   const renderTabContent = () => {
     if (!customer) return null;
     switch (activeTab) {
+      case "profile":
+        return (
+<<<<<<< HEAD
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                  <h3 className="text-slate-900 text-base font-bold flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[20px]">
+                      person
+                    </span>
+                    Personal Information
+                  </h3>
+                </div>
+                <div className="p-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                        First Name
+                      </p>
+                      <p className="text-slate-900 font-medium">
+                        {customer.firstName}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                        Last Name
+                      </p>
+                      <p className="text-slate-900 font-medium">
+                        {customer.lastName}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                        Date of Birth
+                      </p>
+                      <p className="text-slate-900 font-medium">
+                        {customer.dateOfBirth || "N/A"}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                        Gender
+                      </p>
+                      <p className="text-slate-900 font-medium">
+                        {customer.gender || "N/A"}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                        Phone Country Code
+                      </p>
+                      <p className="text-slate-900 font-medium flex items-center gap-2">
+                        {customer.phoneCountryCode} ({customer.country})
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                        Nationality
+                      </p>
+                      <p className="text-slate-900 font-medium">
+                        {customer.country}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                  <h3 className="text-slate-900 text-base font-bold flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[20px]">
+                      home_pin
+                    </span>
+                    Address Details
+                  </h3>
+                  <a
+                    className="text-xs font-medium text-primary hover:text-blue-600 flex items-center gap-1"
+                    href="#"
+                  >
+                    Open Map{" "}
+                    <span className="material-symbols-outlined text-[14px]">
+                      open_in_new
+                    </span>
+                  </a>
+                </div>
+                <div className="p-0">
+                  <div className="flex flex-col md:flex-row">
+                    <div className="w-full md:w-1/3 h-40 md:h-auto bg-slate-100 relative overflow-hidden border-b md:border-b-0 md:border-r border-slate-100">
+                      <div
+                        className="absolute inset-0 bg-cover bg-center opacity-80"
+                        style={{
+                          backgroundImage:
+                            "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCKcaqUPfNzFUXIasZ9PxpmvmrnRmOaRp7wcxwTfHbBDGcQMoIa8AQXrOXZWfXd2O_PgoZ6HLTOvIVU4yeKQKaU3k9BwEpR36jIIcGrPzpcQDG8K_f5_ZoAdOTXi5O5xKski2M4r6LpEN04XlUjY6WVqkZzNvPmEsYP-etxNeH1nhKHxcRV5t_LXlqYTuHVFb0flVoeXI1GSORmwpXR3TCot2fP0IYXcqBXCd5j1YIQhQemb-nQBdG3R0l3PaapHtNK7GRs_y_X5-5K')",
+                        }}
+                      ></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-primary text-white p-2 rounded-full shadow-lg">
+                          <span className="material-symbols-outlined text-[20px] block">
+                            location_on
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="w-full md:w-2/3 p-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+                        <div className="sm:col-span-2 flex flex-col gap-1">
+                          <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                            Street Address
+                          </p>
+                          <p className="text-slate-900 font-medium">
+                            {address.street || "N/A"}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                            City
+                          </p>
+                          <p className="text-slate-900 font-medium">
+                            {address.city || "N/A"}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                            State / Province
+                          </p>
+                          <p className="text-slate-900 font-medium">
+                            {address.state || "N/A"}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                            Postal Code
+                          </p>
+                          <p className="text-slate-900 font-medium">
+                            {address.postalCode || "N/A"}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                            Country
+                          </p>
+                          <p className="text-slate-900 font-medium">
+                            {customer.country}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                  <h3 className="text-slate-900 text-base font-bold flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[20px]">
+                      badge
+                    </span>
+                    Passport Details
+                  </h3>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300">
+                    CONFIDENTIAL
+                  </span>
+                </div>
+                <div className="p-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-6 gap-x-8">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                        Passport Number
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-slate-900 font-mono font-bold text-lg">
+                          {passport.number || "N/A"}
+                        </p>
+                        {customer.isVerified === "true" && (
+                          <span
+                            className="material-symbols-outlined text-green-500 text-[18px]"
+                            title="Verified"
+                          >
+                            check_circle
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                        Issue Country
+                      </p>
+                      <p className="text-slate-900 font-medium flex items-center gap-2">
+                        {passport.issueCountry || customer.country}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                        Expiry Date
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-slate-900 font-medium">
+                          {passport.expiryDate || "N/A"}
+                        </p>
+                        {passport.expiryDate &&
+                          new Date(passport.expiryDate) > new Date() && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
+                              VALID
+                            </span>
+                          )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+          </div>
+        );
       case "booking-history":
         return (
+=======
+>>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mb-6">
               <div className="relative w-full sm:w-64">
@@ -199,6 +471,22 @@ export default function CustomerDetailsPage() {
               </div>
             ) : (
               bookings.map((booking, index) => {
+<<<<<<< HEAD
+                const b = booking as unknown as Record<string, unknown>;
+                const status =
+                  booking.status || (b.status as string) || (b.bookingstatus as string) || "Pending";
+                const origin = booking.origin || (b.origin as string) || "N/A";
+                const destination =
+                  booking.destination || (b.destination as string) || "N/A";
+                const pnr = booking.PNR || (b.PNR as string) || (b.pnr as string) || "N/A";
+                const travelDate =
+                  booking.travelDate || (b.traveldate as string) || (b.created_at as string);
+                const price =
+                  booking.sellingPrice ||
+                  (b.sellingprice as string) ||
+                  booking.buyingPrice ||
+                  (b.buyingPrice as string) ||
+=======
                 const b = booking as any;
                 const status =
                   booking.status || b.status || b.bookingstatus || "Pending";
@@ -220,6 +508,7 @@ export default function CustomerDetailsPage() {
                   b.sellingprice ||
                   booking.buyingPrice ||
                   b.buyingPrice ||
+>>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
                   "$0.00";
 
                 return (
@@ -347,6 +636,43 @@ export default function CustomerDetailsPage() {
         );
       case "linked-travellers":
         // Filter and deduplicate travellers
+<<<<<<< HEAD
+        interface LinkedTraveller {
+          firstName: string;
+          lastName: string;
+          linkedVia: string;
+          bookingId: string | number;
+        }
+
+        const uniqueTravellers = bookings.reduce<LinkedTraveller[]>((acc, booking) => {
+          const b = booking as unknown as Record<string, unknown>;
+          const fName = (b.travellerFirstName as string) || (b.travellerfirstname as string) || "";
+          const lName = (b.travellerLastName as string) || (b.travellerlastname as string) || "";
+          const fullName = `${fName} ${lName}`.trim();
+
+          // Skip if empty name
+          if (!fullName) return acc;
+
+          // Skip if matches current customer
+          if (customer) {
+            const customerName =
+              `${customer.firstName} ${customer.lastName}`.trim();
+            if (fullName.toLowerCase() === customerName.toLowerCase())
+              return acc;
+          }
+
+          // Check if already in accumulator
+          if (
+            !acc.some((t) => `${t.firstName} ${t.lastName}`.trim() === fullName)
+          ) {
+            acc.push({
+              firstName: fName,
+              lastName: lName,
+              linkedVia: (b.PNR as string) || (b.ticketNumber as string) || (b.pnr as string) || "N/A",
+              bookingId: (b.id as string | number),
+            });
+          }
+=======
         const uniqueTravellers = bookings.reduce((acc: any[], booking) => {
           const b = booking as any;
 
@@ -405,6 +731,7 @@ export default function CustomerDetailsPage() {
             }
           });
 
+>>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
           return acc;
         }, []);
 
@@ -445,6 +772,11 @@ export default function CustomerDetailsPage() {
                     <h4 className="font-bold text-slate-900 capitalize">
                       {traveller.firstName} {traveller.lastName}
                     </h4>
+<<<<<<< HEAD
+                    <p className="text-xs text-slate-500">
+                      Linked via Booking #{traveller.linkedVia}
+                    </p>
+=======
                     <div className="flex flex-col gap-0.5 mt-1">
                       {traveller.passportNumber && (
                         <p className="text-xs text-slate-600">
@@ -462,6 +794,7 @@ export default function CustomerDetailsPage() {
                         Linked via Booking #{traveller.linkedVia}
                       </p>
                     </div>
+>>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
                   </div>
                   <button
                     onClick={() =>
@@ -488,6 +821,8 @@ export default function CustomerDetailsPage() {
             </button>
           </div>
         );
+<<<<<<< HEAD
+=======
       case "customer-profile":
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -702,6 +1037,7 @@ export default function CustomerDetailsPage() {
             </div>
           </div>
         );
+>>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
       default:
         return null;
     }
@@ -736,6 +1072,25 @@ export default function CustomerDetailsPage() {
     );
   }
 
+<<<<<<< HEAD
+  // Parse JSON fields safely
+  const safeJsonParse = <T,>(value: unknown, fallback: T): T => {
+    if (typeof value === "string") {
+      try {
+        return JSON.parse(value) as T;
+      } catch (e) {
+        console.error("JSON Parse Error:", e);
+        return fallback;
+      }
+    }
+    return (value as T) || fallback;
+  };
+
+  const address = safeJsonParse<Partial<Address>>(customer.address, {});
+  const passport = safeJsonParse<Partial<Passport>>(customer.passport, {});
+
+=======
+>>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
   return (
     <div className="flex flex-col w-full max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
       <div className="flex flex-col border-b border-slate-200 bg-white shrink-0">
@@ -752,6 +1107,16 @@ export default function CustomerDetailsPage() {
           <div className="flex gap-2">
             <button
               aria-label="Edit"
+<<<<<<< HEAD
+              onClick={() => {
+                setEditCountry(customer?.country || "");
+                const addr = safeJsonParse<Partial<Address>>(customer?.address, {});
+                setEditState(addr.state || "");
+                setEditCity(addr.city || "");
+                setShowEditModal(true);
+              }}
+=======
+>>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
               className="flex items-center justify-center h-9 w-9 rounded-full hover:bg-slate-100 transition-colors text-slate-500"
             >
               <span className="material-symbols-outlined text-[20px]">
@@ -856,10 +1221,17 @@ export default function CustomerDetailsPage() {
           <div className="border-b border-slate-200">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
               {[
+<<<<<<< HEAD
+                "profile",
+                "booking-history",
+                "payment-due",
+                "linked-travellers",
+=======
                 "booking-history",
                 "payment-due",
                 "linked-travellers",
                 "customer-profile",
+>>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
               ].map((tab) => (
                 <button
                   key={tab}
@@ -883,7 +1255,13 @@ export default function CustomerDetailsPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<<<<<<< HEAD
+            <div className="lg:col-span-2 space-y-6">
+              {renderTabContent()}
+            </div>
+=======
             <div className="lg:col-span-2 space-y-6">{renderTabContent()}</div>
+>>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
             <div className="lg:col-span-1 space-y-6">
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
@@ -908,16 +1286,16 @@ export default function CustomerDetailsPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1 pb-4 border-b border-slate-100">
-                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                      Created At
-                    </p>
-                    <p className="text-slate-900 text-sm">
-                      {customer.created_at
-                        ? new Date(customer.created_at).toLocaleDateString()
-                        : "N/A"}
-                    </p>
-                  </div>
+                    <div className="flex flex-col gap-1 pb-4 border-b border-slate-100">
+                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                        Created At
+                      </p>
+                      <p className="text-slate-900 text-sm">
+                        {customer.created_at || (customer as unknown as Record<string, string>).createdAt
+                          ? new Date(customer.created_at || (customer as unknown as Record<string, string>).createdAt).toLocaleDateString()
+                          : "N/A"}
+                      </p>
+                    </div>
                   <div className="flex flex-col gap-1 pb-4 border-b border-slate-100">
                     <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
                       Referral Code
@@ -1006,6 +1384,215 @@ export default function CustomerDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Customer Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="bg-white border-b border-slate-100 p-4 flex justify-between items-center">
+              <h3 className="font-bold text-slate-900 text-lg">Edit Customer</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto custom-scrollbar">
+              <form className="space-y-6">
+                <div className="space-y-4">
+                  <h4 className="font-bold text-slate-900 text-sm border-b border-slate-100 pb-2">
+                    Personal & Contact Information
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Row 1: Name */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                        First Name
+                      </label>
+                      <input
+                        type="text"
+                        defaultValue={customer?.firstName}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        defaultValue={customer?.lastName}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                      />
+                    </div>
+
+                    {/* Row 2: Demographics */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                        Date of Birth
+                      </label>
+                      <input
+                        type="date"
+                        defaultValue={customer?.dateOfBirth || ""}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                        Gender
+                      </label>
+                      <select
+                        defaultValue={customer?.gender || ""}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white"
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+
+                    {/* Row 3: Contact */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        defaultValue={customer?.email}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                        Phone
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          defaultValue={customer?.phoneCountryCode}
+                          placeholder="+1"
+                          className="w-20 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                        />
+                        <input
+                          type="tel"
+                          defaultValue={customer?.phone || ""}
+                          className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-bold text-slate-900 text-sm border-b border-slate-100 pb-2">
+                    Address Details
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                        Street Address
+                      </label>
+                      <input
+                        type="text"
+                        defaultValue={address.street}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                        Country
+                      </label>
+                      <select
+                        value={editCountry}
+                        onChange={(e) => {
+                          setEditCountry(e.target.value);
+                          setEditState("");
+                          setEditCity("");
+                        }}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white"
+                      >
+                        <option value="">Select Country</option>
+                        {countriesData.map((country) => (
+                          <option key={country.code} value={country.name}>
+                            {country.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                        State / Province
+                      </label>
+                      <select
+                        value={editState}
+                        onChange={(e) => {
+                          setEditState(e.target.value);
+                          setEditCity("");
+                        }}
+                        disabled={!editCountry}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                      >
+                        <option value="">Select State</option>
+                        {locationsData
+                          .find((c) => c.name === editCountry)
+                          ?.states.map((state) => (
+                            <option key={state.name} value={state.name}>
+                              {state.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                        City
+                      </label>
+                      <select
+                        value={editCity}
+                        onChange={(e) => setEditCity(e.target.value)}
+                        disabled={!editState}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                      >
+                        <option value="">Select City</option>
+                        {locationsData
+                          .find((c) => c.name === editCountry)
+                          ?.states.find((s) => s.name === editState)
+                          ?.cities.map((city) => (
+                            <option key={city} value={city}>
+                              {city}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                        Postal Code
+                      </label>
+                      <input
+                        type="text"
+                        defaultValue={address.postalCode}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div className="border-t border-slate-100 p-4 flex justify-end gap-3 bg-slate-50">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button className="px-4 py-2 text-sm font-bold text-white bg-primary hover:bg-blue-600 rounded-lg shadow-sm transition-colors">
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Invoice/Reminder Modal */}
       {showInvoiceModal && selectedInvoice && (

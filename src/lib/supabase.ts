@@ -8,7 +8,9 @@ if (!env.isValid) {
 }
 
 export const supabase = createClient(
-  env.supabase.url || "https://placeholder.supabase.co",
+  env.supabase.url && env.supabase.url.startsWith("http")
+    ? env.supabase.url
+    : "https://placeholder.supabase.co",
   env.supabase.anonKey || "placeholder"
 );
 

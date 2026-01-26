@@ -174,3 +174,15 @@ export interface Reason {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface Service {
+  id?: string;
+  name: string;
+  description?: string;
+  type: string;
+  pricing_type: string;
+  base_price: number;
+  status: boolean;
+  created_at?: string;
+  updated_at?: string;
+}

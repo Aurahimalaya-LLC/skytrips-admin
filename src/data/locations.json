@@ -1,0 +1,120 @@
+[
+  {
+    "name": "United States",
+    "code": "US",
+    "states": [
+      {
+        "name": "California",
+        "cities": ["Los Angeles", "San Francisco", "San Diego", "Sacramento", "San Jose"]
+      },
+      {
+        "name": "New York",
+        "cities": ["New York City", "Buffalo", "Albany", "Rochester", "Syracuse"]
+      },
+      {
+        "name": "Texas",
+        "cities": ["Houston", "Austin", "Dallas", "San Antonio", "Fort Worth"]
+      },
+      {
+        "name": "Florida",
+        "cities": ["Miami", "Orlando", "Tampa", "Jacksonville", "Tallahassee"]
+      },
+      {
+        "name": "Illinois",
+        "cities": ["Chicago", "Springfield", "Peoria", "Naperville", "Rockford"]
+      }
+    ]
+  },
+  {
+    "name": "United Kingdom",
+    "code": "GB",
+    "states": [
+      {
+        "name": "England",
+        "cities": ["London", "Manchester", "Birmingham", "Liverpool", "Leeds"]
+      },
+      {
+        "name": "Scotland",
+        "cities": ["Edinburgh", "Glasgow", "Aberdeen", "Dundee", "Inverness"]
+      },
+      {
+        "name": "Wales",
+        "cities": ["Cardiff", "Swansea", "Newport", "Bangor", "St Davids"]
+      },
+      {
+        "name": "Northern Ireland",
+        "cities": ["Belfast", "Derry", "Lisburn", "Newry", "Armagh"]
+      }
+    ]
+  },
+  {
+    "name": "Canada",
+    "code": "CA",
+    "states": [
+      {
+        "name": "Ontario",
+        "cities": ["Toronto", "Ottawa", "Mississauga", "Hamilton", "London"]
+      },
+      {
+        "name": "Quebec",
+        "cities": ["Montreal", "Quebec City", "Laval", "Gatineau", "Longueuil"]
+      },
+      {
+        "name": "British Columbia",
+        "cities": ["Vancouver", "Victoria", "Surrey", "Burnaby", "Kelowna"]
+      },
+      {
+        "name": "Alberta",
+        "cities": ["Calgary", "Edmonton", "Red Deer", "Lethbridge", "St. Albert"]
+      }
+    ]
+  },
+  {
+    "name": "India",
+    "code": "IN",
+    "states": [
+      {
+        "name": "Maharashtra",
+        "cities": ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"]
+      },
+      {
+        "name": "Delhi",
+        "cities": ["New Delhi", "Delhi"]
+      },
+      {
+        "name": "Karnataka",
+        "cities": ["Bangalore", "Mysore", "Hubli", "Mangalore", "Belgaum"]
+      },
+      {
+        "name": "Tamil Nadu",
+        "cities": ["Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem"]
+      },
+      {
+        "name": "Uttar Pradesh",
+        "cities": ["Lucknow", "Kanpur", "Agra", "Varanasi", "Ghaziabad"]
+      }
+    ]
+  },
+  {
+    "name": "Australia",
+    "code": "AU",
+    "states": [
+      {
+        "name": "New South Wales",
+        "cities": ["Sydney", "Newcastle", "Wollongong", "Maitland", "Tweed Heads"]
+      },
+      {
+        "name": "Victoria",
+        "cities": ["Melbourne", "Geelong", "Ballarat", "Bendigo", "Shepparton"]
+      },
+      {
+        "name": "Queensland",
+        "cities": ["Brisbane", "Gold Coast", "Sunshine Coast", "Townsville", "Cairns"]
+      },
+      {
+        "name": "Western Australia",
+        "cities": ["Perth", "Bunbury", "Geraldton", "Kalgoorlie", "Albany"]
+      }
+    ]
+  }
+]
