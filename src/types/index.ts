@@ -176,6 +176,11 @@ export interface Reason {
   updated_at?: string;
 }
 
+export interface ServiceOption {
+  name: string;
+  price: number;
+}
+
 export interface Service {
   id?: string;
   name: string;
@@ -184,6 +189,7 @@ export interface Service {
   pricing_type: string;
   base_price: number;
   status: boolean;
+  options?: ServiceOption[];
   created_at?: string;
   updated_at?: string;
 }

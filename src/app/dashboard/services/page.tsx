@@ -262,7 +262,12 @@ export default function ServicesPage() {
                              'cases'}
                           </span>
                         </div>
-                        <span className="font-bold text-foreground">{service.name}</span>
+                        <Link 
+                          href={`/dashboard/services/${service.id}`}
+                          className="font-bold text-foreground hover:text-primary transition-colors"
+                        >
+                          {service.name}
+                        </Link>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -294,6 +299,13 @@ export default function ServicesPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Link 
+                          href={`/dashboard/services/${service.id}`}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-blue-500/10 hover:text-blue-600 transition-all"
+                          title="View Details"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">visibility</span>
+                        </Link>
                         <Link 
                           href={`/dashboard/services/${service.id}/edit`}
                           className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
