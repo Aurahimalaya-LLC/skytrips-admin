@@ -5,7 +5,11 @@ import Image from "next/image";
 import { useRouter, notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Booking } from "@/types";
-import { getCustomerName, getCustomerEmail, getCustomerPhone } from "@/lib/booking-helpers";
+import {
+  getCustomerName,
+  getCustomerEmail,
+  getCustomerPhone,
+} from "@/lib/booking-helpers";
 import { CompanyProfile } from "@/types/company";
 import SendEmailModal from "@/components/booking-management/SendEmailModal";
 import html2canvas from "html2canvas-pro";
@@ -126,6 +130,12 @@ export default function InvoicePage({
 
   const selectedCompany =
     companyProfiles.find((c) => c.id === selectedCompanyId) || null;
+
+  // Dynamic Support Info based on selected company
+  const supportPhone = selectedCompany?.phones[0]?.value || "+1 800 123 4567";
+  const supportEmail =
+    selectedCompany?.emails[0]?.value || "support@skyhigh.com";
+  const supportHours = "24/7 Support";
 
   // Calculate financials
   const sellingPrice = Number(booking.sellingPrice) || 0;
@@ -406,7 +416,7 @@ export default function InvoicePage({
                 {selectedCompany?.name ||
                   (booking as BookingWithAgency).issuedthroughagency ||
                   booking.agency ||
-                  "SkyHigh Agency Ltd."}
+                  "Skytrips"}
               </p>
               {selectedCompany ? (
                 <>
@@ -510,7 +520,7 @@ export default function InvoicePage({
                     BOOKING REFERENCE
                   </h3>
                   <p className="text-base font-bold text-slate-900">
-                    #{booking.id}
+                    {booking.id}
                   </p>
                 </div>
                 <div>
@@ -625,22 +635,77 @@ export default function InvoicePage({
               </div>
             </div>
           </div>
+
+          {/* Customer Support Section */}
+          <div className="bg-white border border-slate-200 rounded-xl p-8 mt-12 print:mt-8 print:border-slate-300">
+            <h4 className="text-sm font-bold text-black uppercase tracking-widest mb-6 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">
+                support_agent
+              </span>
+              Customer Support
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div>
+                <div className="text-xs font-bold text-slate-400 uppercase mb-1">
+                  24/7 Support Line
+                </div>
+                <a
+                  href={`https://wa.me/${supportPhone.replace(/[^0-9]/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-bold hover:text-primary transition-colors text-slate-400"
+                >
+                  {supportPhone}
+                </a>
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-400 uppercase mb-1">
+                  Email Support
+                </div>
+                <a
+                  href={`mailto:${supportEmail}`}
+                  className="text-sm font-bold hover:text-primary transition-colors text-slate-400"
+                >
+                  {supportEmail}
+                </a>
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-400 uppercase mb-1">
+                  Operating Hours
+                </div>
+                <div className="text-sm font-bold flex items-center gap-2 text-slate-400">
+                  {supportHours}
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase tracking-wide">
+                    Online
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-8 pt-6 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-400">
+              <span className="material-symbols-outlined text-[16px] text-red-400">
+                emergency
+              </span>
+              For emergency travel assistance within 24 hours of departure,
+              please use the priority line above.
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
         <div className="p-8 md:p-12 bg-slate-50 border-t border-slate-100 text-center">
           <h4 className="font-bold text-slate-900 mb-2">
             Thank you for booking with{" "}
-            {(booking as BookingWithAgency).issuedthroughagency ||
+            {selectedCompany?.name ||
+              (booking as BookingWithAgency).issuedthroughagency ||
               booking.agency ||
-              "SkyHigh Agency"}
+              "Skytrips"}
             !
           </h4>
           <p className="text-sm text-slate-500 max-w-2xl mx-auto">
             Please note that this invoice is computer generated and is valid
             without a signature. For any billing inquiries, please contact our
-            support team at support@skyhigh.com or call +1 800 123 4567 within 7
-            days of receiving this invoice.
+            support team at {supportEmail} or call {supportPhone} within 7 days
+            of receiving this invoice.
           </p>
         </div>
       </div>
