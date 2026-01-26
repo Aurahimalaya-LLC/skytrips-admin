@@ -106,14 +106,6 @@ function LoginPage() {
                 } catch  {}
             }
             router.replace("/dashboard");
-            if ("TURBOPACK compile-time truthy", 1) {
-                window.location.href = "/dashboard";
-                setTimeout(()=>{
-                    try {
-                        window.location.assign("/dashboard");
-                    } catch  {}
-                }, 50);
-            }
         } catch (err) {
             console.error("Login error:", err);
             const errorMessage = err instanceof Error ? err.message : "An error occurred during login";
@@ -130,12 +122,12 @@ function LoginPage() {
                 children: "Loading..."
             }, void 0, false, {
                 fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                lineNumber: 109,
+                lineNumber: 101,
                 columnNumber: 9
             }, this)
         }, void 0, false, {
             fileName: "[project]/skytrips-admin/src/app/page.tsx",
-            lineNumber: 108,
+            lineNumber: 100,
             columnNumber: 7
         }, this);
     }
@@ -154,7 +146,7 @@ function LoginPage() {
                                 children: "Sky Trips Admin"
                             }, void 0, false, {
                                 fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                                lineNumber: 119,
+                                lineNumber: 111,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -162,13 +154,13 @@ function LoginPage() {
                                 children: "Sign in to your account"
                             }, void 0, false, {
                                 fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                                lineNumber: 122,
+                                lineNumber: 114,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                        lineNumber: 118,
+                        lineNumber: 110,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("form", {
@@ -183,7 +175,7 @@ function LoginPage() {
                                         children: "Email Address"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                                        lineNumber: 127,
+                                        lineNumber: 119,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -196,13 +188,13 @@ function LoginPage() {
                                         disabled: isLoading
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                                        lineNumber: 130,
+                                        lineNumber: 122,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                                lineNumber: 126,
+                                lineNumber: 118,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -213,7 +205,7 @@ function LoginPage() {
                                         children: "Password"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                                        lineNumber: 142,
+                                        lineNumber: 134,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -229,7 +221,7 @@ function LoginPage() {
                                                 disabled: isLoading
                                             }, void 0, false, {
                                                 fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                                                lineNumber: 146,
+                                                lineNumber: 138,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -240,19 +232,19 @@ function LoginPage() {
                                                 children: showPassword ? "Hide" : "Show"
                                             }, void 0, false, {
                                                 fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                                                lineNumber: 155,
+                                                lineNumber: 147,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                                        lineNumber: 145,
+                                        lineNumber: 137,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                                lineNumber: 141,
+                                lineNumber: 133,
                                 columnNumber: 13
                             }, this),
                             error && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -260,7 +252,7 @@ function LoginPage() {
                                 children: error
                             }, void 0, false, {
                                 fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                                lineNumber: 167,
+                                lineNumber: 159,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -270,29 +262,29 @@ function LoginPage() {
                                 children: isLoading ? "Signing in..." : "Sign In"
                             }, void 0, false, {
                                 fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                                lineNumber: 172,
+                                lineNumber: 164,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                        lineNumber: 125,
+                        lineNumber: 117,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/skytrips-admin/src/app/page.tsx",
-                lineNumber: 117,
+                lineNumber: 109,
                 columnNumber: 9
             }, this)
         }, void 0, false, {
             fileName: "[project]/skytrips-admin/src/app/page.tsx",
-            lineNumber: 116,
+            lineNumber: 108,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/skytrips-admin/src/app/page.tsx",
-        lineNumber: 115,
+        lineNumber: 107,
         columnNumber: 5
     }, this);
 }

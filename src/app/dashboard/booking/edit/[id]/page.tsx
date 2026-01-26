@@ -102,10 +102,8 @@ export default function EditBookingPage({
   const [agenciesLoading, setAgenciesLoading] = useState(false);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
-<<<<<<< HEAD
   const [services, setServices] = useState<Service[]>([]);
   const [servicesLoading, setServicesLoading] = useState(false);
-=======
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Fetch current user
@@ -149,7 +147,6 @@ export default function EditBookingPage({
     };
     fetchCurrentUser();
   }, []);
->>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
   const [isMealModalOpen, setIsMealModalOpen] = useState(false);
   const [showStopover, setShowStopover] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
