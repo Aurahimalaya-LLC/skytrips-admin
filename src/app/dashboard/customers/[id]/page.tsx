@@ -7,12 +7,20 @@ import { Customer, Booking, Address, Passport } from "@/types";
 import locationsData from "@/data/locations.json";
 import countriesData from "@/data/countries.json";
 
+type Identity = {
+  provider: string;
+  created_at: string;
+  last_sign_in_at: string;
+  email?: string;
+};
+
 export default function CustomerDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const customerId = params.id as string;
 
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [identities, setIdentities] = useState<Identity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,6 +111,19 @@ export default function CustomerDetailsPage() {
 
       setCustomer(data);
       console.log("Customer data:", data);
+
+      // Fetch identities
+      const { data: identitiesData, error: identitiesError } = await supabase.rpc(
+        "get_customer_identities",
+        { p_customer_id: customerId },
+      );
+
+      if (identitiesError) {
+        console.error("Error fetching identities:", identitiesError);
+      } else {
+        console.log("Identities fetched:", identitiesData);
+        setIdentities((identitiesData as Identity[]) || []);
+      }
     } catch (err: unknown) {
       console.error("Error fetching customer:", err);
       const errorMessage =
@@ -1042,6 +1063,29 @@ export default function CustomerDetailsPage() {
                   </div>
                   <div className="flex flex-col gap-1 pb-4 border-b border-slate-100">
                     <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                      Verification Status
+                    </p>
+                    <div className="flex items-center gap-2">
+                      {String(customer.isVerified) === "true" ||
+                      customer.isVerified === true ? (
+                        <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-sm font-medium flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[16px]">
+                            verified
+                          </span>
+                          Verified
+                        </span>
+                      ) : (
+                        <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-sm font-medium flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[16px]">
+                            warning
+                          </span>
+                          Unverified
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 pb-4 border-b border-slate-100">
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
                       Referral Code
                     </p>
                     <div className="flex items-center gap-2">
@@ -1052,17 +1096,62 @@ export default function CustomerDetailsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                      Social Provider
+                      Linked Auth Providers
                     </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <p className="text-slate-900 text-sm font-medium capitalize">
-                        {customer.socialProvider || "Email"}
-                      </p>
-                    </div>
-                    {customer.socialId && (
-                      <p className="text-slate-400 text-xs font-mono mt-1 break-all">
-                        {customer.socialId}
-                      </p>
+                    {identities.length > 0 ? (
+                      <div className="flex flex-col gap-2 mt-1">
+                        {identities.map((identity, idx) => (
+                          <div key={idx} className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`px-2 py-0.5 rounded text-xs font-bold capitalize flex items-center gap-1 ${
+                                  identity.provider === "google"
+                                    ? "bg-red-50 text-red-600 border border-red-100"
+                                    : identity.provider === "facebook"
+                                      ? "bg-blue-50 text-blue-600 border border-blue-100"
+                                      : "bg-slate-50 text-slate-600 border border-slate-100"
+                                }`}
+                              >
+                                {identity.provider === "google" && (
+                                  <span className="text-[14px]">G</span>
+                                )}
+                                {identity.provider === "facebook" && (
+                                  <span className="text-[14px]">f</span>
+                                )}
+                                {identity.provider === "email" && (
+                                  <span className="material-symbols-outlined text-[14px]">
+                                    mail
+                                  </span>
+                                )}
+                                {identity.provider}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                {new Date(
+                                  identity.last_sign_in_at,
+                                ).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {identity.email && (
+                              <p className="text-xs text-slate-500 font-mono ml-1">
+                                {identity.email}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-slate-900 text-sm font-medium capitalize">
+                            {customer.socialProvider || "Email"}
+                          </p>
+                        </div>
+                        {customer.socialId && (
+                          <p className="text-slate-400 text-xs font-mono mt-1 break-all">
+                            {customer.socialId}
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -1112,20 +1201,6 @@ export default function CustomerDetailsPage() {
           >
             Close
           </button>
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-red-50 text-red-600 font-bold text-sm hover:bg-red-100 transition-colors">
-              <span className="material-symbols-outlined text-[18px]">
-                block
-              </span>
-              Disable Account
-            </button>
-            <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all">
-              <span className="material-symbols-outlined text-[18px]">
-                lock_reset
-              </span>
-              Reset Password
-            </button>
-          </div>
         </div>
       </div>
 
