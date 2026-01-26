@@ -157,7 +157,14 @@ export default function BookingPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, debouncedSearch, sortConfig, createdFrom, createdTo]);
+  }, [
+    currentPage,
+    pageSize,
+    debouncedSearch,
+    sortConfig,
+    createdFrom,
+    createdTo,
+  ]);
 
   const fetchCounts = useCallback(async () => {
     const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -186,8 +193,7 @@ export default function BookingPage() {
           });
           return;
         }
-      } catch {
-      }
+      } catch {}
 
       await wait(350);
     }
@@ -244,42 +250,6 @@ export default function BookingPage() {
     // Navigate to booking details page
     router.push(`/dashboard/booking/${booking.id}`);
   };
-
-<<<<<<< HEAD
-=======
-  const handleEdit = (booking: Booking) => {
-    setEditingBooking(booking);
-    setIsViewOnly(false);
-    setIsModalOpen(true);
-  };
-
-  const handleDelete = (id: number) => {
-    setBookingToDelete(id);
-    setIsDeleteModalOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!bookingToDelete) return;
-
-    setActionLoading(bookingToDelete);
-    try {
-      const { error: deleteError } = await supabase
-        .from("bookings")
-        .delete()
-        .eq("id", bookingToDelete);
-
-      if (deleteError) throw deleteError;
-
-      setIsDeleteModalOpen(false);
-      setBookingToDelete(null);
-      await fetchBookings();
-    } catch (err: any) {
-      alert(err.message || "Failed to delete booking");
-    } finally {
-      setActionLoading(null);
-    }
-  };
->>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
 
   const handleSave = async (booking: Booking) => {
     setActionLoading(-1);
@@ -480,6 +450,29 @@ export default function BookingPage() {
           : "";
       alert(message || "Failed to save booking");
       console.error(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!bookingToDelete) return;
+
+    setActionLoading(bookingToDelete);
+    try {
+      const { error } = await supabase
+        .from("bookings")
+        .delete()
+        .eq("id", bookingToDelete);
+
+      if (error) throw error;
+
+      await fetchBookings();
+      setIsDeleteModalOpen(false);
+      setBookingToDelete(null);
+    } catch (err: unknown) {
+      console.error("Delete error:", err);
+      alert("Failed to delete booking");
     } finally {
       setActionLoading(null);
     }
@@ -895,47 +888,6 @@ export default function BookingPage() {
                     </td>
                     <td className="px-6 py-4 text-right align-top">
                       <div className="inline-flex flex-col items-end gap-2">
-<<<<<<< HEAD
-=======
-                        <div className="flex items-center justify-end gap-4">
-                          <button
-                            onClick={() => handleView(booking)}
-                            className="rounded p-2 text-slate-600 hover:bg-slate-100 hover:text-primary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                            aria-label="View booking"
-                            tabIndex={0}
-                          >
-                            <span className="material-symbols-outlined text-[18px] transition-transform duration-200 hover:scale-105">
-                              visibility
-                            </span>
-                          </button>
-                          <button
-                            onClick={() =>
-                              router.push(
-                                `/dashboard/booking/edit/${booking.id}`,
-                              )
-                            }
-                            className="rounded p-2 text-slate-600 hover:bg-slate-100 hover:text-primary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                            aria-label="Edit booking"
-                            tabIndex={0}
-                          >
-                            <span className="material-symbols-outlined text-[18px] transition-transform duration-200 hover:scale-105">
-                              edit
-                            </span>
-                          </button>
-                          <button
-                            onClick={() =>
-                              booking.id && handleDelete(booking.id)
-                            }
-                            className="rounded p-2 text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/30"
-                            aria-label="Delete booking"
-                            tabIndex={0}
-                          >
-                            <span className="material-symbols-outlined text-[18px] transition-transform duration-200 hover:scale-105">
-                              delete
-                            </span>
-                          </button>
-                        </div>
->>>>>>> 3117d61b6704ee6c0bc2cd401172d93be2f6915f
                         <BookingRowMenu
                           booking={booking}
                           onView={() => handleView(booking)}

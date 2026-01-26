@@ -482,6 +482,7 @@ function DashboardLayout({ children }) {
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
                                 href: "/dashboard/manage-booking",
+                                prefetch: false,
                                 className: `flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${pathname === "/dashboard/manage-booking" ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none" : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"}`,
                                 "aria-label": "Manage Booking",
                                 title: "Manage Booking",
@@ -491,7 +492,7 @@ function DashboardLayout({ children }) {
                                         children: "edit_calendar"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                        lineNumber: 346,
+                                        lineNumber: 347,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -499,7 +500,7 @@ function DashboardLayout({ children }) {
                                         children: "Manage Booking"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                        lineNumber: 355,
+                                        lineNumber: 356,
                                         columnNumber: 13
                                     }, this)
                                 ]
@@ -519,7 +520,7 @@ function DashboardLayout({ children }) {
                                         children: "perm_media"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                        lineNumber: 373,
+                                        lineNumber: 374,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -527,13 +528,13 @@ function DashboardLayout({ children }) {
                                         children: "Media"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                        lineNumber: 382,
+                                        lineNumber: 383,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                lineNumber: 363,
+                                lineNumber: 364,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -547,7 +548,7 @@ function DashboardLayout({ children }) {
                                         children: "domain"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                        lineNumber: 400,
+                                        lineNumber: 401,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -555,17 +556,18 @@ function DashboardLayout({ children }) {
                                         children: "Agency"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                        lineNumber: 409,
+                                        lineNumber: 410,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                lineNumber: 390,
+                                lineNumber: 391,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
                                 href: "/dashboard/users",
+                                prefetch: false,
                                 className: `flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${pathname.startsWith("/dashboard/users") ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none" : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"}`,
                                 "aria-label": "Users",
                                 title: "Users",
@@ -575,7 +577,7 @@ function DashboardLayout({ children }) {
                                         children: "group"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                        lineNumber: 427,
+                                        lineNumber: 429,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -583,13 +585,41 @@ function DashboardLayout({ children }) {
                                         children: "Users"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                        lineNumber: 436,
+                                        lineNumber: 438,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                lineNumber: 417,
+                                lineNumber: 418,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
+                                href: "/dashboard/services",
+                                className: `flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${pathname.startsWith("/dashboard/services") ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none" : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"}`,
+                                "aria-label": "Services",
+                                title: "Services",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: `material-symbols-outlined ${pathname.startsWith("/dashboard/services") ? "active-icon" : "group-hover:text-primary transition-colors"}`,
+                                        children: "room_service"
+                                    }, void 0, false, {
+                                        fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
+                                        lineNumber: 456,
+                                        columnNumber: 13
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                        className: `text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`,
+                                        children: "Services"
+                                    }, void 0, false, {
+                                        fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
+                                        lineNumber: 465,
+                                        columnNumber: 13
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
+                                lineNumber: 446,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -603,7 +633,7 @@ function DashboardLayout({ children }) {
                                         children: "settings"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                        lineNumber: 454,
+                                        lineNumber: 483,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -611,13 +641,13 @@ function DashboardLayout({ children }) {
                                         children: "Setting"
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                        lineNumber: 463,
+                                        lineNumber: 492,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                lineNumber: 444,
+                                lineNumber: 473,
                                 columnNumber: 11
                             }, this)
                         ]
@@ -639,7 +669,7 @@ function DashboardLayout({ children }) {
                                     children: "logout"
                                 }, void 0, false, {
                                     fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                    lineNumber: 478,
+                                    lineNumber: 507,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -647,18 +677,18 @@ function DashboardLayout({ children }) {
                                     children: "Sign Out"
                                 }, void 0, false, {
                                     fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                    lineNumber: 479,
+                                    lineNumber: 508,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                            lineNumber: 472,
+                            lineNumber: 501,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                        lineNumber: 471,
+                        lineNumber: 500,
                         columnNumber: 9
                     }, this)
                 ]
@@ -684,12 +714,12 @@ function DashboardLayout({ children }) {
                                             children: "menu"
                                         }, void 0, false, {
                                             fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                            lineNumber: 498,
+                                            lineNumber: 527,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                        lineNumber: 494,
+                                        lineNumber: 523,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -700,7 +730,7 @@ function DashboardLayout({ children }) {
                                                 children: "Dashboard Overview"
                                             }, void 0, false, {
                                                 fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                                lineNumber: 501,
+                                                lineNumber: 530,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -708,19 +738,19 @@ function DashboardLayout({ children }) {
                                                 children: "Welcome back, Admin"
                                             }, void 0, false, {
                                                 fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                                lineNumber: 504,
+                                                lineNumber: 533,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                        lineNumber: 500,
+                                        lineNumber: 529,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                lineNumber: 492,
+                                lineNumber: 521,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -730,7 +760,7 @@ function DashboardLayout({ children }) {
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$src$2f$components$2f$ThemeToggle$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ThemeToggle"], {}, void 0, false, {
                                             fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                            lineNumber: 513,
+                                            lineNumber: 542,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -741,20 +771,20 @@ function DashboardLayout({ children }) {
                                                     children: "notifications"
                                                 }, void 0, false, {
                                                     fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                                    lineNumber: 515,
+                                                    lineNumber: 544,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                     className: "absolute top-2 right-2 size-2 bg-destructive rounded-full border-2 border-background"
                                                 }, void 0, false, {
                                                     fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                                    lineNumber: 516,
+                                                    lineNumber: 545,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                            lineNumber: 514,
+                                            lineNumber: 543,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -765,24 +795,24 @@ function DashboardLayout({ children }) {
                                             }
                                         }, void 0, false, {
                                             fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                            lineNumber: 518,
+                                            lineNumber: 547,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                    lineNumber: 512,
+                                    lineNumber: 541,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                                lineNumber: 510,
+                                lineNumber: 539,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                        lineNumber: 491,
+                        lineNumber: 520,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$skytrips$2d$admin$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("main", {
@@ -790,13 +820,13 @@ function DashboardLayout({ children }) {
                         children: children
                     }, void 0, false, {
                         fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                        lineNumber: 531,
+                        lineNumber: 560,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/skytrips-admin/src/app/dashboard/layout.tsx",
-                lineNumber: 489,
+                lineNumber: 518,
                 columnNumber: 7
             }, this)
         ]
