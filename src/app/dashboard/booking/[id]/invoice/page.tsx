@@ -297,7 +297,7 @@ export default function InvoicePage({
         />
       )}
       {/* Navigation / Actions - Hidden in Print */}
-      <div className="max-w-4xl mx-auto mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
+      <div className="max-w-6xl mx-auto mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <nav className="flex text-sm text-slate-500">
           <button
             onClick={() => router.back()}
@@ -361,14 +361,14 @@ export default function InvoicePage({
       {/* Invoice Container */}
       <div
         id="invoice-content"
-        className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden print:shadow-none print:rounded-none print:w-full print:max-w-none"
+        className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden print:shadow-none print:rounded-none print:w-full print:max-w-none"
         style={{ colorScheme: "only light" }}
       >
         {/* Header Section */}
         <div className="p-8 md:p-12 border-b border-slate-100">
           <div className="flex flex-row justify-between items-center gap-8">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg overflow-hidden bg-primary flex items-center justify-center text-white font-black text-2xl">
+              <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center text-white font-black text-2xl">
                 {settingsLogoUrl ? (
                   <Image
                     src={settingsLogoUrl}
