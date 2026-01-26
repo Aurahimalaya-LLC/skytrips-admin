@@ -41,6 +41,30 @@ export default function CustomerDetailsPage() {
   // Booking History State
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [inviting, setInviting] = useState(false);
+
+  const handleInvite = async () => {
+    if (!customer) return;
+    setInviting(true);
+    try {
+      const res = await fetch("/api/customers/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: customer.email,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to send invite");
+      alert("Invitation sent successfully!");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to send invite");
+    } finally {
+      setInviting(false);
+    }
+  };
 
   // Parse JSON fields safely
   const safeJsonParse = <T,>(value: unknown, fallback: T): T => {
@@ -300,15 +324,6 @@ export default function CustomerDetailsPage() {
                   </span>
                   Address Details
                 </h3>
-                <a
-                  className="text-xs font-medium text-primary hover:text-blue-600 flex items-center gap-1"
-                  href="#"
-                >
-                  Open Map{" "}
-                  <span className="material-symbols-outlined text-[14px]">
-                    open_in_new
-                  </span>
-                </a>
               </div>
               <div className="p-0">
                 <div className="flex flex-col md:flex-row">
@@ -320,13 +335,6 @@ export default function CustomerDetailsPage() {
                           "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCKcaqUPfNzFUXIasZ9PxpmvmrnRmOaRp7wcxwTfHbBDGcQMoIa8AQXrOXZWfXd2O_PgoZ6HLTOvIVU4yeKQKaU3k9BwEpR36jIIcGrPzpcQDG8K_f5_ZoAdOTXi5O5xKski2M4r6LpEN04XlUjY6WVqkZzNvPmEsYP-etxNeH1nhKHxcRV5t_LXlqYTuHVFb0flVoeXI1GSORmwpXR3TCot2fP0IYXcqBXCd5j1YIQhQemb-nQBdG3R0l3PaapHtNK7GRs_y_X5-5K')",
                       }}
                     ></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="bg-primary text-white p-2 rounded-full shadow-lg">
-                        <span className="material-symbols-outlined text-[20px] block">
-                          location_on
-                        </span>
-                      </div>
-                    </div>
                   </div>
                   <div className="w-full md:w-2/3 p-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
@@ -939,9 +947,6 @@ export default function CustomerDetailsPage() {
                   </div>
                   <span className="hidden sm:block text-slate-300">•</span>
                   <div className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[16px]">
-                      call
-                    </span>
                     <span>
                       {customer.phoneCountryCode} {customer.phone}
                     </span>
@@ -1060,6 +1065,37 @@ export default function CustomerDetailsPage() {
                           ).toLocaleDateString()
                         : "N/A"}
                     </p>
+                  </div>
+                  <div className="flex flex-col gap-1 pb-4 border-b border-slate-100">
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                      Registration Status
+                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      {customer.auth_user_id ? (
+                        <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-sm font-medium flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[16px]">
+                            how_to_reg
+                          </span>
+                          Registered
+                        </span>
+                      ) : (
+                        <>
+                          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-sm font-medium flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[16px]">
+                              person_off
+                            </span>
+                            Not Registered
+                          </span>
+                          <button
+                            onClick={handleInvite}
+                            disabled={inviting}
+                            className="text-xs font-bold text-primary hover:underline disabled:opacity-50"
+                          >
+                            {inviting ? "Sending..." : "Send Signup Link"}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-col gap-1 pb-4 border-b border-slate-100">
                     <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
@@ -1275,34 +1311,34 @@ export default function CustomerDetailsPage() {
                     </div>
 
                     {/* Row 3: Contact */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        defaultValue={customer?.email}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                        Phone
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          defaultValue={customer?.phoneCountryCode}
-                          placeholder="+1"
-                          className="w-20 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                        />
-                        <input
-                          type="tel"
-                          defaultValue={customer?.phone || ""}
-                          className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                        />
-                      </div>
-                    </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    defaultValue={customer?.email}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                    Phone
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      defaultValue={customer?.phoneCountryCode}
+                      placeholder="+1"
+                      className="w-20 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                    />
+                    <input
+                      type="tel"
+                      defaultValue={customer?.phone || ""}
+                      className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                    />
+                  </div>
+                </div>
                   </div>
                 </div>
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Service } from "@/types";
+import { Service, ServiceOption } from "@/types";
 
 interface ServiceFormProps {
   initialData?: Service;
@@ -15,6 +15,9 @@ export default function ServiceForm({ initialData, isEditMode = false }: Service
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Preview state
+  const [previewSelected, setPreviewSelected] = useState<number[]>([]);
+  
   const [formData, setFormData] = useState<Service>({
     name: "",
     description: "",
@@ -22,6 +25,7 @@ export default function ServiceForm({ initialData, isEditMode = false }: Service
     pricing_type: "Per Person",
     base_price: 0,
     status: true,
+    options: [],
   });
 
   useEffect(() => {
@@ -30,6 +34,7 @@ export default function ServiceForm({ initialData, isEditMode = false }: Service
         ...initialData,
         // Ensure status is boolean
         status: initialData.status === true || String(initialData.status) === 'true',
+        options: initialData.options || [],
       });
     }
   }, [initialData]);
@@ -46,24 +51,68 @@ export default function ServiceForm({ initialData, isEditMode = false }: Service
     setFormData(prev => ({ ...prev, status: !prev.status }));
   };
 
+  const addOption = () => {
+    setFormData(prev => ({
+      ...prev,
+      options: [...(prev.options || []), { name: "", price: 0 }]
+    }));
+  };
+
+  const updateOption = (index: number, field: keyof ServiceOption, value: string | number) => {
+    const newOptions = [...(formData.options || [])];
+    newOptions[index] = {
+      ...newOptions[index],
+      [field]: field === 'price' ? parseFloat(value as string) : value
+    };
+    setFormData(prev => ({ ...prev, options: newOptions }));
+  };
+
+  const removeOption = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      options: (prev.options || []).filter((_, i) => i !== index)
+    }));
+    // Also remove from preview if selected
+    setPreviewSelected(prev => prev.filter(i => i !== index));
+  };
+
+  const togglePreviewOption = (index: number) => {
+    setPreviewSelected(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  const calculatePreviewTotal = () => {
+    const base = formData.base_price || 0;
+    const optionsTotal = previewSelected.reduce((sum, index) => {
+      return sum + (formData.options?.[index]?.price || 0);
+    }, 0);
+    return base + optionsTotal;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        pricing_type: formData.pricing_type,
+        base_price: formData.base_price,
+        status: formData.status,
+        options: formData.options,
+        updated_at: new Date().toISOString(),
+      };
+
       if (isEditMode && initialData?.id) {
         const { error: updateError } = await supabase
           .from("services")
-          .update({
-            name: formData.name,
-            description: formData.description,
-            type: formData.type,
-            pricing_type: formData.pricing_type,
-            base_price: formData.base_price,
-            status: formData.status,
-            updated_at: new Date().toISOString(),
-          })
+          .update(payload)
           .eq("id", initialData.id);
 
         if (updateError) throw updateError;
@@ -71,9 +120,8 @@ export default function ServiceForm({ initialData, isEditMode = false }: Service
         const { error: insertError } = await supabase
           .from("services")
           .insert([{
-            ...formData,
+            ...payload,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
           }]);
 
         if (insertError) throw insertError;
@@ -205,6 +253,107 @@ export default function ServiceForm({ initialData, isEditMode = false }: Service
               placeholder="Describe the service..."
             />
           </div>
+
+          {/* Meal Options Configuration */}
+          {formData.type === "Meal" && (
+            <div className="col-span-2 space-y-4 border-t border-border pt-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-foreground">Meal Options / Add-ons</h3>
+                <button
+                  type="button"
+                  onClick={addOption}
+                  className="text-xs font-bold text-primary hover:text-primary/80 flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  Add Option
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {formData.options?.map((option, index) => (
+                  <div key={index} className="flex gap-3 items-start">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="Option Name (e.g. Extra Cheese)"
+                        value={option.name}
+                        onChange={(e) => updateOption(index, 'name', e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                      />
+                    </div>
+                    <div className="w-32">
+                      <input
+                        type="number"
+                        placeholder="Price"
+                        min="0"
+                        step="0.01"
+                        value={option.price}
+                        onChange={(e) => updateOption(index, 'price', e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeOption(index)}
+                      className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                  </div>
+                ))}
+                {(!formData.options || formData.options.length === 0) && (
+                  <p className="text-xs text-muted-foreground italic">No options added yet.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Preview Section */}
+          {formData.type === "Meal" && (formData.options?.length || 0) > 0 && (
+            <div className="col-span-2 mt-4 bg-muted/30 p-4 rounded-xl border border-border">
+              <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">visibility</span>
+                Preview & Price Calculation
+              </h3>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Base Meal Price:</span>
+                  <span className="font-mono font-medium">${formData.base_price.toFixed(2)}</span>
+                </div>
+                
+                <div className="space-y-2 py-2 border-y border-border/50">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Select Options to Test:</p>
+                  {formData.options?.map((option, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={previewSelected.includes(index)}
+                          onChange={() => togglePreviewOption(index)}
+                          className="rounded border-border text-primary focus:ring-primary/20 w-4 h-4"
+                        />
+                        <span>{option.name || "Untitled Option"}</span>
+                      </label>
+                      <span className="font-mono text-muted-foreground">+${option.price.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="flex justify-between items-center pt-2">
+                  <span className="font-bold text-foreground">Total Price:</span>
+                  <div className="text-right">
+                     <span className="block font-mono font-bold text-lg text-primary">
+                       ${calculatePreviewTotal().toFixed(2)}
+                     </span>
+                     <span className="text-xs text-muted-foreground">
+                       (Base + Selected Options)
+                     </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Actions */}

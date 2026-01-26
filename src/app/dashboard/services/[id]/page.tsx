@@ -88,11 +88,26 @@ export default function ServiceDetailsPage() {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">{service.name}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Service Details
-          </p>
+        <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${
+                service.type === "Meal" ? "bg-orange-100 text-orange-600" :
+                service.type === "Insurance" ? "bg-purple-100 text-purple-600" :
+                service.type === "Transfer" ? "bg-blue-100 text-blue-600" :
+                "bg-slate-100 text-slate-600"
+            }`}>
+                <span className="material-symbols-outlined text-[32px]">
+                    {service.type === "Meal" ? "restaurant" :
+                     service.type === "Insurance" ? "security" :
+                     service.type === "Transfer" ? "directions_car" :
+                     "inventory_2"}
+                </span>
+            </div>
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">{service.name}</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                    Service Details
+                </p>
+            </div>
         </div>
         <div className="flex gap-3">
             <Link
@@ -145,6 +160,33 @@ export default function ServiceDetailsPage() {
                             <span className="font-bold text-xl text-foreground">${Number(service.base_price).toFixed(2)}</span>
                         </div>
                     </div>
+
+                    {/* Meal Options Display */}
+                    {service.type === "Meal" && service.options && service.options.length > 0 && (
+                        <div className="pt-4 border-t border-border">
+                            <span className="text-sm text-muted-foreground block mb-3">Meal Options / Add-ons</span>
+                            <div className="bg-background rounded-lg border border-border overflow-hidden">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-muted/50 text-muted-foreground font-medium">
+                                        <tr>
+                                            <th className="px-4 py-2">Option Name</th>
+                                            <th className="px-4 py-2 text-right">Additional Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {service.options.map((option, index) => (
+                                            <tr key={index} className="hover:bg-muted/10 transition-colors">
+                                                <td className="px-4 py-2 font-medium text-foreground">{option.name}</td>
+                                                <td className="px-4 py-2 text-right font-mono text-foreground">
+                                                    +${Number(option.price).toFixed(2)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="pt-4 border-t border-border">
                         <span className="text-sm text-muted-foreground block mb-1">Description</span>
