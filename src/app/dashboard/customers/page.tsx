@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Customer } from "@/types";
 import CustomerForm from "@/components/CustomerForm";
@@ -401,11 +402,11 @@ export default function CustomersPage() {
                     />
                   </td>
                   <td className="px-6 py-4">
-                    <div>
-                      <div className="font-bold text-foreground text-sm">
+                    <Link href={`/dashboard/customers/${customer.id}`}>
+                      <div className="font-bold text-foreground text-sm hover:text-primary transition-colors cursor-pointer">
                         {customer.firstName} {customer.lastName}
                       </div>
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-6 py-4">
                     <div className="font-medium text-foreground">

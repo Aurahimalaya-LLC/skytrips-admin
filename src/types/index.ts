@@ -164,6 +164,7 @@ export interface Customer {
   middleName?: string | null;
   profileImage?: string | null;
   readableTemporaryPassword?: string | null;
+  auth_user_id?: string | null;
 }
 
 export interface Reason {
