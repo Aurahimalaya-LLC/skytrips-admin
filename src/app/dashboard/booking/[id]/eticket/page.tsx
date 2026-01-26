@@ -437,7 +437,7 @@ export default function ETicketPage({
                 {selectedCompany?.name ||
                   (booking as BookingWithAgency).issuedthroughagency ||
                   booking.agency ||
-                  "SkyHigh Agency Ltd."}
+                  "Sktrips"}
               </p>
               {selectedCompany ? (
                 <>
@@ -906,8 +906,8 @@ export default function ETicketPage({
             </ul>
           </div>
           {/* Support Information */}
-          <div className="bg-slate-900 rounded-xl p-8 text-white mt-8">
-            <h4 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+          <div className="bg-white border border-slate-200 rounded-xl p-8 text-white mt-8">
+            <h4 className="text-sm font-bold text-black uppercase tracking-widest mb-6 flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">
                 support_agent
               </span>
@@ -919,8 +919,10 @@ export default function ETicketPage({
                   24/7 Support Line
                 </div>
                 <a
-                  href={`tel:${supportPhone}`}
-                  className="text-lg font-bold hover:text-primary transition-colors"
+                  href={`https://wa.me/${supportPhone.replace(/[^0-9]/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-bold hover:text-primary transition-colors text-slate-400"
                 >
                   {supportPhone}
                 </a>
@@ -931,7 +933,7 @@ export default function ETicketPage({
                 </div>
                 <a
                   href={`mailto:${supportEmail}`}
-                  className="text-lg font-bold hover:text-primary transition-colors"
+                  className="text-sm font-bold hover:text-primary transition-colors text-slate-400"
                 >
                   {supportEmail}
                 </a>
@@ -940,7 +942,7 @@ export default function ETicketPage({
                 <div className="text-xs font-bold text-slate-400 uppercase mb-1">
                   Operating Hours
                 </div>
-                <div className="text-lg font-bold flex items-center gap-2">
+                <div className="text-sm font-bold flex items-center gap-2 text-slate-400">
                   {supportHours}
                   <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase tracking-wide">
                     Online
@@ -962,11 +964,10 @@ export default function ETicketPage({
         <div className="p-6 bg-slate-50 border-t border-slate-100 text-center text-xs text-slate-400">
           <p>
             © {new Date().getFullYear()}{" "}
-            {settingsCompanyName ||
-              (selectedCompany && selectedCompany.name) ||
-              (booking as any).issuedthroughagency ||
+            {selectedCompany?.name ||
+              (booking as BookingWithAgency).issuedthroughagency ||
               booking.agency ||
-              "SkyHigh Agency"}
+              "Sktrips"}
             . All rights reserved.
           </p>
           <p className="mt-1">Issued Date: {issueDate}</p>
