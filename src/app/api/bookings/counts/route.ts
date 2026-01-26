@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase-server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const supabase = getAdminClient();
   if (!supabase) {
@@ -18,23 +20,28 @@ export async function GET() {
     return NextResponse.json({ error: totalError.message }, { status: 500 });
   }
 
-  const { count: withCustomerCount, error: withCustomerError } = await supabase
+  // Count unlinked bookings: No customerid AND No customer JSON data
+  // This is faster than querying for linked bookings with JSONB filters
+  const { count: withoutCustomerCount, error: withoutCustomerError } = await supabase
     .from("bookings")
     .select("id", { count: "exact", head: true })
-    .not("customerid", "is", null)
-    .neq("customerid", "00000000-0000-0000-0000-000000000000");
+    .or("customerid.is.null,customerid.eq.00000000-0000-0000-0000-000000000000")
+    .is("customer", null);
 
-  if (withCustomerError) {
-    return NextResponse.json({ error: withCustomerError.message }, { status: 500 });
+  if (withoutCustomerError) {
+    return NextResponse.json(
+      { error: withoutCustomerError.message },
+      { status: 500 },
+    );
   }
 
-  const withoutCustomerCount = Math.max(
+  const withCustomerCount = Math.max(
     0,
-    (totalCount || 0) - (withCustomerCount || 0),
+    (totalCount || 0) - (withoutCustomerCount || 0),
   );
 
   return NextResponse.json({
     withCustomerCount: withCustomerCount || 0,
-    withoutCustomerCount,
+    withoutCustomerCount: withoutCustomerCount || 0,
   });
 }

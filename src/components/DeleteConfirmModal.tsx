@@ -8,6 +8,7 @@ interface DeleteConfirmModalProps {
   isDeleting: boolean;
   title?: string;
   message?: string;
+  confirmText?: string;
 }
 
 export default function DeleteConfirmModal({
@@ -17,6 +18,7 @@ export default function DeleteConfirmModal({
   isDeleting,
   title = "Delete Booking",
   message = "Are you sure you want to delete this booking? This action cannot be undone.",
+  confirmText = "Delete Booking",
 }: DeleteConfirmModalProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
@@ -85,7 +87,7 @@ export default function DeleteConfirmModal({
                 <span>Deleting...</span>
               </>
             ) : (
-              <span>Delete Booking</span>
+              <span>{confirmText}</span>
             )}
           </button>
         </div>
