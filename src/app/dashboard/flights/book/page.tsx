@@ -173,8 +173,8 @@ export default function FlightBookingPage() {
         const p = (typeof document !== "undefined" ? document.getElementById(`passport-${id}`) : null) as HTMLInputElement | null;
         const genderEl = (typeof document !== "undefined" ? document.getElementById(`gender-${id}`) : null) as HTMLSelectElement | null;
         const dobEl = (typeof document !== "undefined" ? document.getElementById(`dob-${id}`) : null) as HTMLInputElement | null;
-        const countryEl = (typeof document !== "undefined" ? document.getElementById(`country-${id}`) : null) as HTMLInputElement | null;
-        const passportCountryEl = (typeof document !== "undefined" ? document.getElementById(`passportCountry-${id}`) : null) as HTMLInputElement | null;
+        const countryEl = (typeof document !== "undefined" ? document.getElementById(`country-${id}`) : null) as HTMLSelectElement | null;
+        const passportCountryEl = (typeof document !== "undefined" ? document.getElementById(`passportCountry-${id}`) : null) as HTMLSelectElement | null;
         const passportExpiryEl = (typeof document !== "undefined" ? document.getElementById(`passportExpiry-${id}`) : null) as HTMLInputElement | null;
         const firstName = (f?.value || "").trim() || "Unknown";
         const lastName = (l?.value || "").trim() || "Unknown";
@@ -268,9 +268,16 @@ export default function FlightBookingPage() {
     <div className="min-h-screen bg-slate-50/50 pb-20 font-display">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {!success && (
-          <h1 className="text-2xl md:text-3xl font-black text-slate-900 mb-8 tracking-tight">
-            Passenger Info & Agency Commission
-          </h1>
+          <div className="mb-8">
+            <nav className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              <span>Search Results</span>
+              <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+              <span className="text-[#0EA5E9]">Passenger Information</span>
+            </nav>
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+              Passenger Info & Agency Commission
+            </h1>
+          </div>
         )}
 
         {!success && error && (
@@ -288,25 +295,40 @@ export default function FlightBookingPage() {
           {/* Main Content - Passenger Forms */}
           <div className="lg:col-span-8 space-y-6">
             
-            {passengers.map((id, index) => {
-              const isLead = index === 0;
-              let typeLabel = "Adult";
-              if (index >= adults && index < adults + children) typeLabel = "Child";
-              if (index >= adults + children) typeLabel = "Infant";
-              const label = isLead ? "Lead Passenger" : `Passenger ${index + 1} (${typeLabel})`;
-              return (
-                <PassengerForm
-                  key={id}
-                  id={id}
-                  label={label}
-                  onRemove={() => removePassenger(id)}
-                  canRemove={index > 0}
-                />
-              );
-            })}
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
+              {passengers.map((id, index) => {
+                const isLead = index === 0;
+                let typeLabel = "Adult";
+                if (index >= adults && index < adults + children) typeLabel = "Child";
+                if (index >= adults + children) typeLabel = "Infant";
+                const label = isLead ? "Lead Passenger" : `Passenger ${index + 1} (${typeLabel})`;
+                return (
+                  <div key={id} className={index > 0 ? "mt-8 pt-8 border-t border-slate-100" : ""}>
+                    <PassengerForm
+                      id={id}
+                      label={label}
+                      onRemove={() => removePassenger(id)}
+                      canRemove={index > 0}
+                    />
+                  </div>
+                );
+              })}
 
-            <div className="flex justify-between items-center pt-8">   
-              <button onClick={handleCreateBooking} disabled={creating} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50">
+              <p className="text-xs font-medium text-[#0EA5E9] mt-6 italic">
+                * Please ensure names match the passenger&apos;s valid government-issued ID.
+              </p>
+            </div>
+
+            <div className="flex justify-between items-center pt-2">   
+              <button 
+                onClick={() => router.back()}
+                className="flex items-center gap-2 text-sm font-bold text-[#0F766E] hover:text-[#0D655E] transition-colors"
+              >
+                <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                Back to Flight Selection
+              </button>
+
+              <button onClick={handleCreateBooking} disabled={creating} className="bg-[#0F766E] hover:bg-[#0D655E] text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-[#0F766E]/20 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50">
                 Create a booking
                 <span className="material-symbols-outlined text-[20px] fill-current">check_circle</span>
               </button>

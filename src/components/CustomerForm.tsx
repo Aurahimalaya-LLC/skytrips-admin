@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Customer, Booking } from "@/types";
+import countriesData from "@/data/countries.json";
+import locationsData from "@/data/locations.json";
 
 interface CustomerFormProps {
   isOpen: boolean;
@@ -193,13 +195,21 @@ export default function CustomerForm({
           .from("customers")
           .insert([customerData]);
         if (error) throw error;
+
+        // Log creation and simulate email verification
+        console.log(`[System Log] New customer created: ${customerData.email} at ${new Date().toISOString()}`);
+        console.log(`[Email Service] Sending verification email to: ${customerData.email}`);
+        
+        // TODO: Implement actual email sending logic here
+        // await sendVerificationEmail(customerData.email);
       }
 
       onSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error saving customer:", err);
-      setErrors({ submit: err.message || "Failed to save customer" });
+      const message = err instanceof Error ? err.message : "Failed to save customer";
+      setErrors({ submit: message });
     } finally {
       setLoading(false);
     }
@@ -346,8 +356,7 @@ export default function CustomerForm({
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Country Code
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.phoneCountryCode}
                     onChange={(e) =>
                       setFormData({
@@ -355,9 +364,15 @@ export default function CustomerForm({
                         phoneCountryCode: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
-                    placeholder="+1"
-                  />
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white"
+                  >
+                    <option value="">Select Code</option>
+                    {countriesData.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.name} ({country.code})
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -408,40 +423,141 @@ export default function CustomerForm({
                     placeholder="123 Main St"
                   />
                 </div>
+
+                {/* Country */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    City
+                    Country *
                   </label>
-                  <input
-                    type="text"
-                    value={formData.address.city}
+                  <select
+                    value={formData.country}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        address: { ...formData.address, city: e.target.value },
+                        country: e.target.value,
+                        address: {
+                          ...formData.address,
+                          country: e.target.value,
+                          state: "", // Reset state/city when country changes
+                          city: "",
+                        },
                       })
                     }
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
-                    placeholder="New York"
-                  />
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none transition-all bg-white ${errors.country ? "border-red-300" : "border-slate-200"}`}
+                  >
+                    <option value="">Select Country</option>
+                    {countriesData.map((country) => (
+                      <option key={country.code} value={country.name}>
+                        {country.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.country && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.country}
+                    </p>
+                  )}
                 </div>
+
+                {/* State / Province */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     State / Province
                   </label>
-                  <input
-                    type="text"
-                    value={formData.address.state}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        address: { ...formData.address, state: e.target.value },
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
-                    placeholder="NY"
-                  />
+                  {locationsData.find((c) => c.name === formData.country) ? (
+                    <select
+                      value={formData.address.state}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          address: {
+                            ...formData.address,
+                            state: e.target.value,
+                            city: "", // Reset city when state changes
+                          },
+                        })
+                      }
+                      disabled={!formData.country}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                    >
+                      <option value="">Select State</option>
+                      {locationsData
+                        .find((c) => c.name === formData.country)
+                        ?.states.map((state) => (
+                          <option key={state.name} value={state.name}>
+                            {state.name}
+                          </option>
+                        ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={formData.address.state}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          address: {
+                            ...formData.address,
+                            state: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
+                      placeholder="NY"
+                    />
+                  )}
                 </div>
+
+                {/* City */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    City
+                  </label>
+                  {locationsData.find((c) => c.name === formData.country) ? (
+                    <select
+                      value={formData.address.city}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          address: {
+                            ...formData.address,
+                            city: e.target.value,
+                          },
+                        })
+                      }
+                      disabled={!formData.address.state}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                    >
+                      <option value="">Select City</option>
+                      {locationsData
+                        .find((c) => c.name === formData.country)
+                        ?.states.find((s) => s.name === formData.address.state)
+                        ?.cities.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={formData.address.city}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          address: {
+                            ...formData.address,
+                            city: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
+                      placeholder="New York"
+                    />
+                  )}
+                </div>
+
+                {/* Postal Code */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Postal Code
@@ -461,32 +577,6 @@ export default function CustomerForm({
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
                     placeholder="10001"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Country *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.country}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        country: e.target.value,
-                        address: {
-                          ...formData.address,
-                          country: e.target.value,
-                        },
-                      })
-                    }
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none transition-all ${errors.country ? "border-red-300" : "border-slate-200"}`}
-                    placeholder="United States"
-                  />
-                  {errors.country && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.country}
-                    </p>
-                  )}
                 </div>
               </div>
             </section>
@@ -538,21 +628,6 @@ export default function CustomerForm({
                     }
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={formData.isActive}
-                    onChange={(e) =>
-                      setFormData({ ...formData, isActive: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white"
-                  >
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
-                  </select>
                 </div>
               </div>
             </section>

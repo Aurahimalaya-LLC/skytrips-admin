@@ -7,9 +7,8 @@ import AirportAutocomplete from "@/components/AirportAutocomplete";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import CustomerSearch from "@/components/CustomerSearch";
 import TravellerSearch from "@/components/TravellerSearch";
-import BookingHistory from "@/components/BookingHistory";
 import Link from "next/link";
-import { Customer, Traveller, FlightItinerary } from "@/types";
+import { Customer, Traveller, FlightItinerary, Service } from "@/types";
 import countryData from "../../../../../../libs/shared-utils/constants/country.json";
 
 type Agency = {
@@ -18,16 +17,31 @@ type Agency = {
   status: string;
 };
 
-const toAddressString = (addr: any): string => {
+type UserRow = {
+  id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  username?: string | null;
+  email?: string | null;
+};
+
+type TravellerRow = {
+  first_name?: string | null;
+  last_name?: string | null;
+  passport_number?: string | null;
+  passport_expiry?: string | null;
+  dob?: string | null;
+  nationality?: string | null;
+};
+
+const toAddressString = (addr: unknown): string => {
   if (!addr) return "";
   if (typeof addr === "string") return addr;
-  const parts = [
-    addr.street,
-    addr.city,
-    addr.state,
-    addr.postalCode,
-    addr.country,
-  ].filter(Boolean);
+  if (typeof addr !== "object") return "";
+  const a = addr as Record<string, unknown>;
+  const parts = [a.street, a.city, a.state, a.postalCode, a.country].filter(
+    (v) => typeof v === "string" && v.trim().length > 0,
+  ) as string[];
   return parts.join(", ");
 };
 
@@ -56,20 +70,8 @@ interface FormData {
   flightNumber: string;
   flightClass: string;
   itineraries: FlightItinerary[];
-  addons: {
-    meals: boolean;
-    wheelchair: boolean;
-    pickup: boolean;
-    dropoff: boolean;
-    luggage: boolean;
-  };
-  prices: {
-    meals: string;
-    wheelchair: string;
-    pickup: string;
-    dropoff: string;
-    luggage: string;
-  };
+  addons: Record<string, boolean>;
+  prices: Record<string, string>;
   frequentFlyer: string;
   pnr: string;
   agency: string;
@@ -95,10 +97,13 @@ export default function EditBookingPage({
   const { id } = use(params);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [agenciesLoading, setAgenciesLoading] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
   const [isMealModalOpen, setIsMealModalOpen] = useState(false);
   const [showStopover, setShowStopover] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
@@ -132,6 +137,13 @@ export default function EditBookingPage({
         oldId || "None"
       } -> ${newId}`,
     );
+  };
+
+  const formatDateTime = (value: string | null) => {
+    if (!value) return "";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleString();
   };
 
   useEffect(() => {
@@ -171,7 +183,7 @@ export default function EditBookingPage({
           console.error("Failed to load users", error);
           return;
         }
-        setUsers(data || []);
+        setUsers(((data || []) as unknown as UserRow[]) || []);
       } catch (e) {
         console.error("Failed to load users", e);
       } finally {
@@ -179,6 +191,29 @@ export default function EditBookingPage({
       }
     };
     loadUsers();
+  }, []);
+
+  useEffect(() => {
+    const loadServices = async () => {
+      setServicesLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("services")
+          .select("*")
+          .eq("status", true)
+          .order("created_at", { ascending: false });
+        if (error) {
+          console.error("Failed to load services", error);
+          return;
+        }
+        setServices((data || []) as Service[]);
+      } catch (e) {
+        console.error("Failed to load services", e);
+      } finally {
+        setServicesLoading(false);
+      }
+    };
+    loadServices();
   }, []);
 
   const validateForm = () => {
@@ -253,15 +288,15 @@ export default function EditBookingPage({
     setFormErrors({});
   };
 
-  const handleTravellerSelect = (traveller: any) => {
+  const handleTravellerSelect = (traveller: TravellerRow) => {
     if (searchingTravellerIndex === null) return;
 
     setFormData((prev) => {
       const newTravellers = [...prev.travellers];
       newTravellers[searchingTravellerIndex] = {
         ...newTravellers[searchingTravellerIndex],
-        firstName: traveller.first_name,
-        lastName: traveller.last_name,
+        firstName: traveller.first_name || "",
+        lastName: traveller.last_name || "",
         passportNumber: traveller.passport_number || "",
         passportExpiry: traveller.passport_expiry || "",
         dob: traveller.dob || "",
@@ -270,7 +305,7 @@ export default function EditBookingPage({
       };
 
       // Sync primary if index 0
-      const updates: any = { travellers: newTravellers };
+      const updates: Partial<FormData> = { travellers: newTravellers };
       if (searchingTravellerIndex === 0) {
         updates.passportNumber = traveller.passport_number || "";
         updates.passportExpiry = traveller.passport_expiry || "";
@@ -357,25 +392,26 @@ export default function EditBookingPage({
 
       if (error) throw error;
       if (data) {
+        const row = data as unknown as Record<string, unknown>;
+        setCreatedAt(typeof row.created_at === "string" ? row.created_at : null);
         // Try to find customer ID from the booking data if available (lowercase 'customerid' in DB)
         // Since we don't have it in the typed response, we might need to cast or rely on prop if passed
         // For now, let's assume it might be in the data object even if untyped
-        const rawCustomer =
-          (data as any).customer ||
-          (data as any).customerid ||
-          (data as any).customerId;
+        const rawCustomer = row.customer ?? row.customerid ?? row.customerId;
 
-        let possibleCustomerId = rawCustomer;
+        let possibleCustomerId: string | number | undefined;
 
-        // Handle case where customer is stored as a JSON object
-        if (rawCustomer && typeof rawCustomer === "object") {
-          possibleCustomerId = rawCustomer.id;
-          // Use the stored customer object directly
-          setSelectedCustomer(rawCustomer);
-          setExistingContactSelected(true);
+        if (typeof rawCustomer === "string" || typeof rawCustomer === "number") {
+          possibleCustomerId = rawCustomer;
+        } else if (rawCustomer && typeof rawCustomer === "object") {
+          const rawObj = rawCustomer as Record<string, unknown>;
+          const objId = rawObj.id;
+          if (typeof objId === "string" || typeof objId === "number") {
+            possibleCustomerId = objId;
+          }
         }
 
-        if (possibleCustomerId) {
+        if (possibleCustomerId !== undefined) {
           setSelectedCustomerId(possibleCustomerId);
 
           // Only fetch if we didn't already get it from the object (or to refresh)
@@ -394,23 +430,51 @@ export default function EditBookingPage({
         }
 
         let loadedTravellers: Traveller[] = [];
-        if (
-          (data as any).travellers &&
-          Array.isArray((data as any).travellers) &&
-          (data as any).travellers.length > 0
-        ) {
-          loadedTravellers = (data as any).travellers.map((t: any) => ({
-            id: t.id || Date.now().toString() + Math.random().toString(),
-            firstName: t.firstName || t.first_name || "",
-            lastName: t.lastName || t.last_name || "",
-            passportNumber: t.passportNumber || t.passport_number || "",
-            passportExpiry: t.passportExpiry || t.passport_expiry || "",
-            dob: t.dob || "",
-            nationality: t.nationality || "Nepalese",
-            customerId: t.customerId || t.customer_id,
-            saveToDatabase: t.saveToDatabase || false,
-            eticketNumber: t.eticketNumber || t.eticket_number || "",
-          }));
+        const travellersRaw = row.travellers;
+        if (Array.isArray(travellersRaw) && travellersRaw.length > 0) {
+          loadedTravellers = travellersRaw.map((t) => {
+            const tr = t as Record<string, unknown>;
+            const idValue = tr.id;
+            return {
+              id:
+                typeof idValue === "string"
+                  ? idValue
+                  : Date.now().toString() + Math.random().toString(),
+              firstName:
+                (typeof tr.firstName === "string" && tr.firstName) ||
+                (typeof tr.first_name === "string" && tr.first_name) ||
+                "",
+              lastName:
+                (typeof tr.lastName === "string" && tr.lastName) ||
+                (typeof tr.last_name === "string" && tr.last_name) ||
+                "",
+              passportNumber:
+                (typeof tr.passportNumber === "string" && tr.passportNumber) ||
+                (typeof tr.passport_number === "string" && tr.passport_number) ||
+                "",
+              passportExpiry:
+                (typeof tr.passportExpiry === "string" && tr.passportExpiry) ||
+                (typeof tr.passport_expiry === "string" && tr.passport_expiry) ||
+                "",
+              dob: typeof tr.dob === "string" ? tr.dob : "",
+              nationality:
+                typeof tr.nationality === "string" && tr.nationality
+                  ? tr.nationality
+                  : "Nepalese",
+              customerId:
+                (typeof tr.customerId === "string" && tr.customerId) ||
+                (typeof tr.customerId === "number" && tr.customerId) ||
+                (typeof tr.customer_id === "string" && tr.customer_id) ||
+                (typeof tr.customer_id === "number" && tr.customer_id) ||
+                undefined,
+              saveToDatabase:
+                typeof tr.saveToDatabase === "boolean" ? tr.saveToDatabase : false,
+              eticketNumber:
+                (typeof tr.eticketNumber === "string" && tr.eticketNumber) ||
+                (typeof tr.eticket_number === "string" && tr.eticket_number) ||
+                "",
+            };
+          });
         } else {
           // Fallback to flat fields if travellers array is empty
           loadedTravellers = [
@@ -432,9 +496,9 @@ export default function EditBookingPage({
           email: data.email || "",
           phone: data.phone || "",
           address:
-            typeof (data as any).address === "string"
-              ? ((data as any).address as string)
-              : toAddressString((data as any).address || ""),
+            typeof row.address === "string"
+              ? row.address
+              : toAddressString(row.address || ""),
           travellers: loadedTravellers,
           // travellerFirstName: data.travellerFirstName || "",
           // travellerLastName: data.travellerLastName || "",
@@ -454,24 +518,33 @@ export default function EditBookingPage({
           airlines: data.airlines || "",
           flightNumber: data.flightNumber || "",
           flightClass: data.flightClass || "Economy",
-          addons: data.addons || {
-            meals: false,
-            wheelchair: false,
-            pickup: false,
-            dropoff: false,
-            luggage: false,
-          },
-          prices: data.prices || {
-            meals: "0.00",
-            wheelchair: "0.00",
-            pickup: "0.00",
-            dropoff: "0.00",
-            luggage: "0.00",
-          },
+          addons:
+            typeof (row as Record<string, unknown>).addons === "object" &&
+            (row as Record<string, unknown>).addons !== null
+              ? ((row as Record<string, unknown>).addons as Record<string, boolean>)
+              : {
+                  meals: false,
+                  wheelchair: false,
+                  pickup: false,
+                  dropoff: false,
+                  luggage: false,
+                },
+          prices:
+            typeof (row as Record<string, unknown>).prices === "object" &&
+            (row as Record<string, unknown>).prices !== null
+              ? ((row as Record<string, unknown>).prices as Record<string, string>)
+              : {
+                  meals: "0.00",
+                  wheelchair: "0.00",
+                  pickup: "0.00",
+                  dropoff: "0.00",
+                  luggage: "0.00",
+                },
           frequentFlyer: data.frequentFlyer || "",
           pnr: data.PNR || "",
           agency:
-            (data as any).issuedthroughagency ||
+            (typeof row.issuedthroughagency === "string" &&
+              row.issuedthroughagency) ||
             data.agency ||
             "SkyHigh Agency Ltd.",
           handledBy: data.handledBy || "John Doe",
@@ -533,7 +606,7 @@ export default function EditBookingPage({
           ...prev,
           addons: {
             ...prev.addons,
-            [addonName as keyof typeof prev.addons]: checked,
+            [addonName]: checked,
           },
         }));
         return;
@@ -559,25 +632,30 @@ export default function EditBookingPage({
   const handleTravellerChange = (
     index: number,
     field: keyof Traveller,
-    value: any,
+    value: unknown,
   ) => {
     setFormData((prev) => {
       const newTravellers = [...prev.travellers];
       newTravellers[index] = { ...newTravellers[index], [field]: value };
 
+      const next = { ...prev, travellers: newTravellers };
+
       // Sync primary traveller (index 0) with flat fields for backward compatibility/UI
       if (index === 0) {
-        const mapping: any = {
-          passportNumber: "passportNumber",
-          passportExpiry: "passportExpiry",
-          dob: "dob",
-          nationality: "nationality",
-        };
-        if (mapping[field]) {
-          (prev as any)[mapping[field]] = value;
+        if (field === "passportNumber") {
+          return { ...next, passportNumber: String(value ?? "") };
+        }
+        if (field === "passportExpiry") {
+          return { ...next, passportExpiry: String(value ?? "") };
+        }
+        if (field === "dob") {
+          return { ...next, dob: String(value ?? "") };
+        }
+        if (field === "nationality") {
+          return { ...next, nationality: String(value ?? "") };
         }
       }
-      return { ...prev, travellers: newTravellers };
+      return next;
     });
   };
 
@@ -635,22 +713,28 @@ export default function EditBookingPage({
     itineraryIndex: number,
     segmentIndex: number,
     field: string,
-    value: any,
+    value: unknown,
     nestedField?: string,
   ) => {
     setFormData((prev) => {
       const newItineraries = [...prev.itineraries];
-      const segment = newItineraries[itineraryIndex].segments[segmentIndex];
+      const segment = {
+        ...newItineraries[itineraryIndex].segments[segmentIndex],
+      } as unknown as Record<string, unknown>;
 
       if (nestedField) {
         // Handle nested fields like departure.iataCode
-        (segment as any)[field] = {
-          ...(segment as any)[field],
-          [nestedField]: value,
-        };
+        const base =
+          typeof segment[field] === "object" && segment[field] !== null
+            ? (segment[field] as Record<string, unknown>)
+            : {};
+        segment[field] = { ...base, [nestedField]: value };
       } else {
-        (segment as any)[field] = value;
+        segment[field] = value;
       }
+
+      newItineraries[itineraryIndex].segments[segmentIndex] =
+        segment as unknown as FlightItinerary["segments"][number];
 
       return { ...prev, itineraries: newItineraries };
     });
@@ -696,8 +780,8 @@ export default function EditBookingPage({
     try {
       // Temporary helper to filter out empty fields
       // TODO: Complete handling of empty fields should be implemented in a future update
-      const filterEmptyFields = (data: any) => {
-        const clean: any = {};
+      const filterEmptyFields = (data: Record<string, unknown>) => {
+        const clean: Record<string, unknown> = {};
         Object.keys(data).forEach((key) => {
           const value = data[key];
           if (value !== null && value !== undefined && value !== "") {
@@ -788,7 +872,7 @@ export default function EditBookingPage({
       }
 
       // Construct the customer object for the JSON column
-      let customerDataForColumn: any = null;
+      let customerDataForColumn: Record<string, unknown> | null = null;
 
       if (formData.contactType === "existing" && selectedCustomer) {
         // Ensure ID is current
@@ -852,15 +936,15 @@ export default function EditBookingPage({
       };
 
       // Exclude address specifically as requested by error log
-      // @ts-ignore
+      // @ts-expect-error dynamic payload field
       delete rawUpdateData.address;
 
       // Ensure deprecated fields are not sent to the backend
-      // @ts-ignore
+      // @ts-expect-error deprecated payload field
       delete rawUpdateData.travellerFirstName;
-      // @ts-ignore
+      // @ts-expect-error deprecated payload field
       delete rawUpdateData.travellerLastName;
-      // @ts-ignore
+      // @ts-expect-error deprecated payload field
       delete rawUpdateData.ticketNumber;
 
       // Schema Mapping & Validation Bypass
@@ -941,8 +1025,8 @@ export default function EditBookingPage({
         "frequentFlyer",
       ];
 
-      const mapAndFilterPayload = (data: any) => {
-        const processed: any = {};
+      const mapAndFilterPayload = (data: Record<string, unknown>) => {
+        const processed: Record<string, unknown> = {};
 
         Object.keys(data).forEach((key) => {
           let dbKey = key;
@@ -969,7 +1053,7 @@ export default function EditBookingPage({
       };
 
       // Apply mapping/filtering THEN empty check
-      const mappedData = mapAndFilterPayload(rawUpdateData);
+      const mappedData = mapAndFilterPayload(rawUpdateData as Record<string, unknown>);
       const updateData = filterEmptyFields(mappedData);
 
       console.log("Submitting update (mapped & filtered):", updateData);
@@ -981,16 +1065,27 @@ export default function EditBookingPage({
 
       if (error) throw error;
       router.push("/dashboard/booking");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error updating booking:", err);
       // Improve error logging to see the structure
       if (typeof err === "object" && err !== null) {
-        console.error("Error details:", JSON.stringify(err, null, 2));
-        if (err.message) console.error("Error message:", err.message);
-        if (err.code) console.error("Error code:", err.code);
-        if (err.details) console.error("Error details:", err.details);
+        const errObj = err as Record<string, unknown>;
+        console.error("Error details:", JSON.stringify(errObj, null, 2));
+        if (typeof errObj.message === "string") {
+          console.error("Error message:", errObj.message);
+        }
+        if (typeof errObj.code === "string") {
+          console.error("Error code:", errObj.code);
+        }
+        if (typeof errObj.details === "string") {
+          console.error("Error details:", errObj.details);
+        }
       }
-      alert(`Failed to update booking: ${err.message || "Unknown error"}`);
+      const message =
+        typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message?: unknown }).message || "")
+          : "";
+      alert(`Failed to update booking: ${message || "Unknown error"}`);
     } finally {
       setSaving(false);
     }
@@ -1059,7 +1154,7 @@ export default function EditBookingPage({
                   <button
                     type="button"
                     onClick={() => {
-                      setFormData((prev: any) => ({
+                      setFormData((prev) => ({
                         ...prev,
                         contactType: "existing",
                         ...(selectedCustomer
@@ -1344,9 +1439,6 @@ export default function EditBookingPage({
                 </div>
               </div>
             </div>
-
-            <BookingHistory customerId={selectedCustomerId} />
-
             {/* Traveller Information */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
@@ -2021,209 +2113,98 @@ export default function EditBookingPage({
                 </h3>
               </div>
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Ancillary Services */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-                      ANCILLARY SERVICES
-                    </label>
-                    <div className="space-y-4">
-                      {/* Meals */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            name="addon-meals"
-                            checked={formData.addons.meals}
-                            onChange={handleChange}
-                            className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary"
-                          />
-                          <span className="text-sm font-bold text-slate-700">
-                            Meals
-                          </span>
-                          <button
-                            type="button"
-                            className="text-xs text-blue-600 font-bold flex items-center"
-                            onClick={() => setIsMealModalOpen(true)}
-                          >
-                            <span className="material-symbols-outlined text-[16px] mr-1">
-                              tune
-                            </span>
-                            Select Options
-                          </button>
-                        </div>
-                        <div className="relative w-28">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-slate-400 text-xs">$</span>
-                          </div>
-                          <input
-                            type="number"
-                            name="price-meals"
-                            value={formData.prices.meals}
-                            onChange={handleChange}
-                            className="block w-full h-9 rounded-lg border-slate-200 pl-6 pr-3 text-right text-sm font-medium focus:border-primary focus:ring-primary/10"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Wheelchair */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            name="addon-wheelchair"
-                            checked={formData.addons.wheelchair}
-                            onChange={handleChange}
-                            className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary"
-                          />
-                          <span className="text-sm font-bold text-slate-700">
-                            Request Wheelchair
-                          </span>
-                        </div>
-                        <div className="relative w-28">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-slate-400 text-xs">$</span>
-                          </div>
-                          <input
-                            type="number"
-                            name="price-wheelchair"
-                            value={formData.prices.wheelchair}
-                            onChange={handleChange}
-                            className="block w-full h-9 rounded-lg border-slate-200 pl-6 pr-3 text-right text-sm font-medium focus:border-primary focus:ring-primary/10"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Airport Pick-up */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            name="addon-pickup"
-                            checked={formData.addons.pickup}
-                            onChange={handleChange}
-                            className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary"
-                          />
-                          <span className="text-sm font-bold text-slate-700">
-                            Airport Pick-up
-                          </span>
-                        </div>
-                        <div className="relative w-28">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-slate-400 text-xs">$</span>
-                          </div>
-                          <input
-                            type="number"
-                            name="price-pickup"
-                            value={formData.prices.pickup}
-                            onChange={handleChange}
-                            className="block w-full h-9 rounded-lg border-slate-200 pl-6 pr-3 text-right text-sm font-medium focus:border-primary focus:ring-primary/10"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Airport Drop-off */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            name="addon-dropoff"
-                            checked={formData.addons.dropoff}
-                            onChange={handleChange}
-                            className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary"
-                          />
-                          <span className="text-sm font-bold text-slate-700">
-                            Airport Drop-off
-                          </span>
-                        </div>
-                        <div className="relative w-28">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-slate-400 text-xs">$</span>
-                          </div>
-                          <input
-                            type="number"
-                            name="price-dropoff"
-                            value={formData.prices.dropoff}
-                            onChange={handleChange}
-                            className="block w-full h-9 rounded-lg border-slate-200 pl-6 pr-3 text-right text-sm font-medium focus:border-primary focus:ring-primary/10"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Extra Luggage */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            name="addon-luggage"
-                            checked={formData.addons.luggage}
-                            onChange={handleChange}
-                            className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary"
-                          />
-                          <span className="text-sm font-bold text-slate-700">
-                            Extra Luggage
-                          </span>
-                        </div>
-                        <div className="relative w-28">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-slate-400 text-xs">$</span>
-                          </div>
-                          <input
-                            type="number"
-                            name="price-luggage"
-                            value={formData.prices.luggage}
-                            onChange={handleChange}
-                            className="block w-full h-9 rounded-lg border-slate-200 pl-6 pr-3 text-right text-sm font-medium focus:border-primary focus:ring-primary/10"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
-                        <span className="text-sm font-bold text-slate-900">
-                          Add-ons Subtotal
-                        </span>
-                        <span className="text-lg font-bold text-blue-600">
-                          ${calculateAddonsTotal()}
-                        </span>
-                      </div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+                  ANCILLARY SERVICES
+                </label>
+                <div className="space-y-4">
+                  {servicesLoading ? (
+                    <div className="text-sm text-slate-500 font-medium">
+                      Loading services...
                     </div>
-                  </div>
+                  ) : services.length === 0 ? (
+                    <div className="text-sm text-slate-500 font-medium">
+                      No active services found.
+                    </div>
+                  ) : (
+                    services.map((service) => {
+                      const key = service.name;
+                      const selected = Object.prototype.hasOwnProperty.call(
+                        formData.prices,
+                        key,
+                      );
+                      const value = selected
+                        ? formData.prices[key]
+                        : String(service.base_price ?? 0);
 
-                  {/* Flyer & Seat */}
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                        Frequent Flyer Number
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <span className="material-symbols-outlined text-slate-400 text-[18px]">
-                            loyalty
-                          </span>
+                      return (
+                        <div
+                          key={service.id || service.name}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setFormData((prev) => {
+                                  const nextPrices = { ...prev.prices };
+                                  if (checked) {
+                                    nextPrices[key] =
+                                      nextPrices[key] ||
+                                      String(service.base_price ?? 0);
+                                  } else {
+                                    delete nextPrices[key];
+                                  }
+                                  return { ...prev, prices: nextPrices };
+                                });
+                              }}
+                              className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary"
+                            />
+                            <div className="min-w-0">
+                              <div className="text-sm font-bold text-slate-700 truncate">
+                                {service.name}
+                              </div>
+                              {service.type && (
+                                <div className="text-xs text-slate-400 font-medium truncate">
+                                  {service.type}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="relative w-28">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <span className="text-slate-400 text-xs">$</span>
+                            </div>
+                            <input
+                              type="number"
+                              value={value}
+                              disabled={!selected}
+                              onChange={(e) => {
+                                const nextValue = e.target.value;
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  prices: {
+                                    ...prev.prices,
+                                    [key]: nextValue,
+                                  },
+                                }));
+                              }}
+                              className="block w-full h-9 rounded-lg border-slate-200 pl-6 pr-3 text-right text-sm font-medium focus:border-primary focus:ring-primary/10 disabled:bg-slate-50 disabled:text-slate-400"
+                            />
+                          </div>
                         </div>
-                        <input
-                          className="block w-full h-10 rounded-lg border-slate-200 pl-10 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium"
-                          name="frequentFlyer"
-                          value={formData.frequentFlyer}
-                          onChange={handleChange}
-                          placeholder="e.g. AA-12345678"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                        Seat Selection
-                      </label>
-                      <div className="border border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer">
-                        <span className="material-symbols-outlined text-slate-400 text-[24px] mb-2">
-                          event_seat
-                        </span>
-                        <span className="text-sm font-bold text-slate-700">
-                          Select Seat
-                        </span>
-                        <span className="text-xs text-slate-500">$25.00</span>
-                      </div>
-                    </div>
+                      );
+                    })
+                  )}
+
+                  <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
+                    <span className="text-sm font-bold text-slate-900">
+                      Add-ons Subtotal
+                    </span>
+                    <span className="text-lg font-bold text-blue-600">
+                      ${calculateAddonsTotal()}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -2270,6 +2251,11 @@ export default function EditBookingPage({
                     readOnly
                     value={`#${id}`}
                   />
+                  {createdAt && (
+                    <div className="mt-1 text-xs text-slate-400 font-medium">
+                      Created: {formatDateTime(createdAt)}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">

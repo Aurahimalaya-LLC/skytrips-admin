@@ -8,10 +8,14 @@ import { Booking } from "@/types";
 
 export default function BookingRowMenu({
   booking,
+  onView,
+  onEdit,
   onRefund,
   onReissue,
 }: {
   booking: Booking;
+  onView?: () => void;
+  onEdit?: () => void;
   onRefund: () => void;
   onReissue: () => void;
 }) {
@@ -107,6 +111,24 @@ export default function BookingRowMenu({
   }, []);
 
   const options = [
+    ...(onView
+      ? [
+          {
+            label: "View",
+            icon: "visibility",
+            action: onView,
+          },
+        ]
+      : []),
+    ...(onEdit
+      ? [
+          {
+            label: "Edit",
+            icon: "edit",
+            action: onEdit,
+          },
+        ]
+      : []),
     {
       label: "Refund",
       icon: "currency_exchange",

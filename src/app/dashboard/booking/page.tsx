@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Booking } from "@/types";
@@ -12,6 +12,10 @@ export default function BookingPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [counts, setCounts] = useState<{
+    withCustomerCount: number;
+    withoutCustomerCount: number;
+  } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -20,19 +24,41 @@ export default function BookingPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [createdFrom, setCreatedFrom] = useState("");
+  const [createdTo, setCreatedTo] = useState("");
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: "asc" | "desc";
   }>({
-    key: "id",
+    key: "created_at",
     direction: "desc",
   });
 
   const [isViewOnly, setIsViewOnly] = useState(false);
 
-  useEffect(() => {
-    fetchBookings();
-  }, [currentPage, pageSize, debouncedSearch, sortConfig]);
+  const toIata = (value: unknown) => {
+    const text = String(value || "").trim();
+    if (!text) return "";
+    const upper = text.toUpperCase();
+    if (/^[A-Z]{3}$/.test(upper)) return upper;
+    const matches = upper.match(/[A-Z]{3}/g);
+    return matches?.[0] || "";
+  };
+
+  const toIsoStartUtc = (ymd: string) => {
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ymd)) return "";
+    const d = new Date(`${ymd}T00:00:00.000Z`);
+    return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+  };
+
+  const toIsoEndExclusiveUtc = (ymd: string) => {
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ymd)) return "";
+    const d = new Date(`${ymd}T00:00:00.000Z`);
+    if (Number.isNaN(d.getTime())) return "";
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString();
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -43,7 +69,7 @@ export default function BookingPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -62,17 +88,7 @@ export default function BookingPage() {
       let query = supabase.from("bookings").select("*", { count: "exact" });
 
       // Handle Sorting
-      if (sortConfig.key === "travelDate") {
-        // travelDate doesn't exist in DB, it's computed from IssueDay, issueMonth, issueYear
-        // For now, let's sort by issueYear, then issueMonth (string sort), then IssueDay
-        // Note: issueMonth is string (e.g., 'Oct '), so this won't be perfectly chronological
-        // without complex logic or a real travelDate column.
-        // We'll sort by issueYear first.
-        query = query
-          .order("issueYear", { ascending: sortConfig.direction === "asc" })
-          .order("issueMonth", { ascending: sortConfig.direction === "asc" })
-          .order("IssueDay", { ascending: sortConfig.direction === "asc" });
-      } else if (sortConfig.key === "sellingPrice") {
+      if (sortConfig.key === "sellingPrice") {
         // Fallback to buyingPrice if sellingPrice is null
         query = query.order("sellingPrice", {
           ascending: sortConfig.direction === "asc",
@@ -98,6 +114,16 @@ export default function BookingPage() {
         query = query.or(orFilter);
       }
 
+      if (createdFrom) {
+        const startIso = toIsoStartUtc(createdFrom);
+        if (startIso) query = query.gte("created_at", startIso);
+      }
+
+      if (createdTo) {
+        const endIso = toIsoEndExclusiveUtc(createdTo);
+        if (endIso) query = query.lt("created_at", endIso);
+      }
+
       const { data, count, error: fetchError } = await query;
 
       console.log("Query result:", { data, count, error: fetchError });
@@ -115,16 +141,62 @@ export default function BookingPage() {
       setBookings(data || []);
       setTotalCount(count || 0);
       console.log("Successfully loaded bookings:", data?.length || 0);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Fetch error:", err);
-      const errorMessage = err.message || "Failed to fetch bookings";
-      const errorDetails = err.details ? ` - ${err.details}` : "";
-      const errorHint = err.hint ? ` (Hint: ${err.hint})` : "";
+      const errObj =
+        typeof err === "object" && err !== null
+          ? (err as { message?: string; details?: string; hint?: string })
+          : undefined;
+      const errorMessage = errObj?.message || "Failed to fetch bookings";
+      const errorDetails = errObj?.details ? ` - ${errObj.details}` : "";
+      const errorHint = errObj?.hint ? ` (Hint: ${errObj.hint})` : "";
       setError(errorMessage + errorDetails + errorHint);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize, debouncedSearch, sortConfig, createdFrom, createdTo]);
+
+  const fetchCounts = useCallback(async () => {
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const res = await fetch("/api/bookings/counts", { cache: "no-store" });
+        const json = await res.json().catch(() => null);
+        const parsed =
+          json && typeof json === "object"
+            ? (json as {
+                withCustomerCount?: unknown;
+                withoutCustomerCount?: unknown;
+              })
+            : null;
+
+        if (res.ok && parsed) {
+          setCounts({
+            withCustomerCount:
+              typeof parsed.withCustomerCount === "number"
+                ? parsed.withCustomerCount
+                : 0,
+            withoutCustomerCount:
+              typeof parsed.withoutCustomerCount === "number"
+                ? parsed.withoutCustomerCount
+                : 0,
+          });
+          return;
+        }
+      } catch {
+      }
+
+      await wait(350);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -170,38 +242,16 @@ export default function BookingPage() {
     router.push(`/dashboard/booking/${booking.id}`);
   };
 
-  const handleEdit = (booking: Booking) => {
-    setEditingBooking(booking);
-    setIsViewOnly(false);
-    setIsModalOpen(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this booking?")) {
-      return;
-    }
-
-    setActionLoading(id);
-    try {
-      const { error: deleteError } = await supabase
-        .from("bookings")
-        .delete()
-        .eq("id", id);
-
-      if (deleteError) throw deleteError;
-      await fetchBookings();
-    } catch (err: any) {
-      alert(err.message || "Failed to delete booking");
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
   const handleSave = async (booking: Booking) => {
     setActionLoading(-1);
 
     try {
-      let bookingToSave = { ...booking };
+      const bookingToSave = { ...booking };
+      const bookingExtras = booking as Booking & {
+        customerFirstName?: string;
+        customerLastName?: string;
+      };
 
       // Handle New Customer Creation logic
       if (booking.contactType === "new" && booking.email) {
@@ -225,11 +275,11 @@ export default function BookingPage() {
           // 2. Create new customer
           // Use the explicit first/last name fields from the booking form first, fallback to first traveller
           const firstName =
-            (booking as any).customerFirstName ||
+            bookingExtras.customerFirstName ||
             booking.travellers?.[0]?.firstName ||
             "Unknown";
           const lastName =
-            (booking as any).customerLastName ||
+            bookingExtras.customerLastName ||
             booking.travellers?.[0]?.lastName ||
             "Traveller";
 
@@ -289,17 +339,17 @@ export default function BookingPage() {
           typeof bookingToSave.customer === "object" &&
           bookingToSave.customer !== null
         ) {
-          (bookingToSave.customer as any).id = customerIdToUse;
+          (bookingToSave.customer as { id?: string }).id = customerIdToUse;
         } else {
           // Fallback construction if it wasn't an object
           bookingToSave.customer = {
             id: customerIdToUse,
-            firstName: (booking as any).customerFirstName,
-            lastName: (booking as any).customerLastName,
+            firstName: bookingExtras.customerFirstName,
+            lastName: bookingExtras.customerLastName,
             email: booking.email,
             phone: booking.phone,
             country: booking.nationality,
-          } as any;
+          } as unknown as Booking["customer"];
         }
       }
 
@@ -313,7 +363,10 @@ export default function BookingPage() {
         "customerType",
         "count",
       ];
-      fieldsToRemove.forEach((field) => delete (bookingToSave as any)[field]);
+      fieldsToRemove.forEach(
+        (field) =>
+          delete (bookingToSave as unknown as Record<string, unknown>)[field],
+      );
 
       if (editingBooking?.id) {
         // Update
@@ -371,37 +424,15 @@ export default function BookingPage() {
 
       setIsModalOpen(false);
       await fetchBookings();
-    } catch (err: any) {
-      alert(err.message || "Failed to save booking");
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message?: unknown }).message || "")
+          : "";
+      alert(message || "Failed to save booking");
       console.error(err);
     } finally {
       setActionLoading(null);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "confirmed":
-        return "bg-emerald-100 text-emerald-800 border-emerald-200";
-      case "pending":
-        return "bg-amber-100 text-amber-800 border-amber-200";
-      case "cancelled":
-        return "bg-red-100 text-red-800 border-red-200";
-      default:
-        return "bg-slate-100 text-slate-800 border-slate-200";
-    }
-  };
-
-  const getStatusDotColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "confirmed":
-        return "bg-emerald-500";
-      case "pending":
-        return "bg-amber-500";
-      case "cancelled":
-        return "bg-red-500";
-      default:
-        return "bg-slate-500";
     }
   };
 
@@ -471,12 +502,81 @@ export default function BookingPage() {
             <option value="pending">Pending</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <button className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-            <span className="material-symbols-outlined text-[20px]">
-              filter_list
-            </span>
-            <span className="hidden sm:inline">More Filters</span>
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowMoreFilters((v) => !v)}
+              className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                filter_list
+              </span>
+              <span className="hidden sm:inline">More Filters</span>
+            </button>
+
+            {showMoreFilters && (
+              <div className="absolute right-0 mt-2 w-[320px] rounded-xl border border-slate-200 bg-white shadow-lg p-4 z-20">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-bold text-slate-900">Filters</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowMoreFilters(false)}
+                    className="text-slate-500 hover:text-slate-700"
+                    aria-label="Close filters"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      close
+                    </span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                      Created From
+                    </label>
+                    <input
+                      type="date"
+                      value={createdFrom}
+                      onChange={(e) => {
+                        setCreatedFrom(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                      Created To
+                    </label>
+                    <input
+                      type="date"
+                      value={createdTo}
+                      onChange={(e) => {
+                        setCreatedTo(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreatedFrom("");
+                      setCreatedTo("");
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -510,6 +610,40 @@ export default function BookingPage() {
           </div>
         </div>
       )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500 font-semibold">
+                Bookings linked to customers
+              </p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {counts ? counts.withCustomerCount.toLocaleString() : "—"}
+              </p>
+            </div>
+            <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined">link</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500 font-semibold">
+                Bookings without customer link
+              </p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {counts ? counts.withoutCustomerCount.toLocaleString() : "—"}
+              </p>
+            </div>
+            <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-700">
+              <span className="material-symbols-outlined">link_off</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Data Table Card */}
       <div className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden min-h-[400px]">
@@ -550,23 +684,6 @@ export default function BookingPage() {
                   <th
                     scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
-                    onClick={() => handleSort("travellerLastName")}
-                    aria-sort={
-                      sortConfig.key === "travellerLastName"
-                        ? sortConfig.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                  >
-                    <div className="flex items-center gap-1">
-                      T. last name
-                      {renderSortIcon("travellerLastName")}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
                     onClick={() => handleSort("travellerFirstName")}
                     aria-sort={
                       sortConfig.key === "travellerFirstName"
@@ -579,23 +696,6 @@ export default function BookingPage() {
                     <div className="flex items-center gap-1">
                       T. First Name
                       {renderSortIcon("travellerFirstName")}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
-                    onClick={() => handleSort("airlines")}
-                    aria-sort={
-                      sortConfig.key === "airlines"
-                        ? sortConfig.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                  >
-                    <div className="flex items-center gap-1">
-                      Airline
-                      {renderSortIcon("airlines")}
                     </div>
                   </th>
                   <th
@@ -652,23 +752,6 @@ export default function BookingPage() {
                   <th
                     scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
-                    onClick={() => handleSort("travelDate")}
-                    aria-sort={
-                      sortConfig.key === "travelDate"
-                        ? sortConfig.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                  >
-                    <div className="flex items-center gap-1">
-                      Travel Date
-                      {renderSortIcon("travelDate")}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
                     onClick={() => handleSort("origin")}
                     aria-sort={
                       sortConfig.key === "origin"
@@ -693,14 +776,14 @@ export default function BookingPage() {
                     className="group hover:bg-slate-50/50 transition-colors"
                   >
                     <td className="px-6 py-4 font-medium text-slate-900">
-                      {booking.id}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-slate-900 font-medium text-sm">
-                        {booking.travellers?.[0]?.lastName ||
-                          // booking.travellerLastName || // REMOVED
-                          "N/A"}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleView(booking)}
+                        className="text-primary hover:underline font-semibold"
+                        aria-label={`View booking ${booking.id}`}
+                      >
+                        {booking.id}
+                      </button>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -726,9 +809,6 @@ export default function BookingPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-slate-600">{booking.airlines}</span>
-                    </td>
-                    <td className="px-6 py-4">
                       <span className="text-slate-900 font-semibold">
                         {booking.sellingPrice || booking.buyingPrice || "0.00"}
                       </span>
@@ -742,41 +822,9 @@ export default function BookingPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        {booking.travellers && booking.travellers.length > 0 ? (
-                          booking.travellers.map((t, idx) => (
-                            <span
-                              key={idx}
-                              className="text-slate-900 font-medium text-sm"
-                            >
-                              {t.eticketNumber || "N/A"}
-                            </span>
-                          ))
-                        ) : (
-                          <></>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-slate-900 font-medium">
-                          {booking.departureDate ||
-                            booking.travelDate ||
-                            `${booking.IssueDay || ""} ${
-                              booking.issueMonth || ""
-                            } ${booking.issueYear || ""}`}
-                        </span>
-                        {booking.returnDate && (
-                          <span className="text-xs text-slate-500">
-                            to {booking.returnDate}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
                         <span className="text-slate-600 font-bold">
-                          {booking.origin}
+                          {toIata(booking.origin) || "N/A"}
                         </span>
                         <span className="material-symbols-outlined text-xs text-slate-400">
                           arrow_forward
@@ -784,7 +832,7 @@ export default function BookingPage() {
                         {booking.transit && (
                           <>
                             <span className="text-slate-600 font-bold">
-                              {booking.transit}
+                              {toIata(booking.transit)}
                             </span>
                             <span className="material-symbols-outlined text-xs text-slate-400">
                               arrow_forward
@@ -792,40 +840,18 @@ export default function BookingPage() {
                           </>
                         )}
                         <span className="text-slate-600 font-bold">
-                          {booking.destination}
+                          {toIata(booking.destination) || "N/A"}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right align-top">
                       <div className="inline-flex flex-col items-end gap-2">
-                        <div className="flex items-center justify-end gap-4">
-                          <button
-                            onClick={() => handleView(booking)}
-                            className="rounded p-2 text-slate-600 hover:bg-slate-100 hover:text-primary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                            aria-label="View booking"
-                            tabIndex={0}
-                          >
-                            <span className="material-symbols-outlined text-[18px] transition-transform duration-200 hover:scale-105">
-                              visibility
-                            </span>
-                          </button>
-                          <button
-                            onClick={() =>
-                              router.push(
-                                `/dashboard/booking/edit/${booking.id}`,
-                              )
-                            }
-                            className="rounded p-2 text-slate-600 hover:bg-slate-100 hover:text-primary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                            aria-label="Edit booking"
-                            tabIndex={0}
-                          >
-                            <span className="material-symbols-outlined text-[18px] transition-transform duration-200 hover:scale-105">
-                              edit
-                            </span>
-                          </button>
-                        </div>
                         <BookingRowMenu
                           booking={booking}
+                          onView={() => handleView(booking)}
+                          onEdit={() =>
+                            router.push(`/dashboard/booking/edit/${booking.id}`)
+                          }
                           onRefund={() =>
                             router.push(`/dashboard/manage-booking`)
                           }

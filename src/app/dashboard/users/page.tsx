@@ -294,23 +294,6 @@ export default function UsersPage() {
               </select>
             </div>
           </div>
-          <div className="mt-3">
-            <button
-              onClick={() => {
-                setQ("");
-                setRoleFilter("");
-                setStatusFilter("");
-                setVerifiedFilter("");
-                setPage(1);
-              }}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 bg-white hover:bg-slate-50 transition-colors"
-            >
-              <span className="material-symbols-outlined text-[16px]">
-                filter_alt_off
-              </span>
-              Reset filters
-            </button>
-          </div>
         </div>
 
         <div className="overflow-x-auto">

@@ -24,6 +24,13 @@ export default function BookingDetailsPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const formatDateTime = (value?: string) => {
+    if (!value) return "";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleString();
+  };
+
   useEffect(() => {
     if (!bookingId) return;
     fetchBookingDetails();
@@ -731,6 +738,11 @@ export default function BookingDetailsPage({
                 <p className="text-sm font-bold text-slate-900">
                   #{booking.id}
                 </p>
+                {booking.created_at && (
+                  <div className="mt-1 text-xs text-slate-400 font-medium">
+                    Created: {formatDateTime(booking.created_at)}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">

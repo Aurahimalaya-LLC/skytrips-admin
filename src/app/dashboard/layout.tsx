@@ -335,6 +335,7 @@ export default function DashboardLayout({
           {/* Manage Booking */}
           <Link
             href="/dashboard/manage-booking"
+            prefetch={false}
             className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname === "/dashboard/manage-booking"
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
@@ -413,9 +414,10 @@ export default function DashboardLayout({
             </p>
           </Link>
 
-          {/* User Management */}
+          {/* Users */}
           <Link
             href="/dashboard/users"
+            prefetch={false}
             className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname.startsWith("/dashboard/users")
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
@@ -437,6 +439,33 @@ export default function DashboardLayout({
               className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
             >
               Users
+            </p>
+          </Link>
+
+          {/* Services */}
+          <Link
+            href="/dashboard/services"
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
+              pathname.startsWith("/dashboard/services")
+                ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
+                : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
+            }`}
+            aria-label="Services"
+            title="Services"
+          >
+            <span
+              className={`material-symbols-outlined ${
+                pathname.startsWith("/dashboard/services")
+                  ? "active-icon"
+                  : "group-hover:text-primary transition-colors"
+              }`}
+            >
+              room_service
+            </span>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Services
             </p>
           </Link>
 

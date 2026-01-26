@@ -41,7 +41,7 @@ export default function BookingHistory({
 
           // 1. Legacy: Check Foreign Key 'customerid' (Standard relation)
           // We check both string (UUID) and number formats
-          conditions.push(`customerid.eq.${JSON.stringify(idStr)}`);
+          conditions.push(`customerid.eq.${idStr}`);
           if (!isNaN(idNum)) {
             conditions.push(`customerid.eq.${idNum}`);
           }
@@ -49,8 +49,6 @@ export default function BookingHistory({
           // 2. New: Check JSON field 'id' in 'customer' column
           // Use ->> to extract field as text (works for json/jsonb)
           conditions.push(`customer->>id.eq.${JSON.stringify(idStr)}`);
-          // 3. Legacy JSON: Check 'customer_details' column (older migration)
-          conditions.push(`customer_details->>id.eq.${JSON.stringify(idStr)}`);
 
           // Remove direct 'customer.eq' check as it causes 400 error on JSONB columns when comparing with string
           // and 'customerid' covers the legacy case anyway.
@@ -69,9 +67,6 @@ export default function BookingHistory({
 
           // Check email inside customer JSON: {"email": "..."}
           conditions.push(`customer->>email.ilike.${emailStr}`);
-
-          // Check email inside legacy customer_details JSON
-          conditions.push(`customer_details->>email.ilike.${emailStr}`);
         }
 
         const { data, error } = await supabase
@@ -82,9 +77,17 @@ export default function BookingHistory({
           .limit(100);
 
         if (error) throw error;
+        console.log("Booking history fetched:", data);
         setBookings(data || []);
-      } catch (err) {
-        console.error("Error fetching booking history:", err);
+      } catch (err: unknown) {
+        const sbError = err as { message?: string; details?: string; hint?: string; code?: string };
+        console.error("Error fetching booking history:", {
+          message: sbError?.message,
+          details: sbError?.details,
+          hint: sbError?.hint,
+          code: sbError?.code,
+          fullError: err
+        });
       } finally {
         setLoading(false);
       }

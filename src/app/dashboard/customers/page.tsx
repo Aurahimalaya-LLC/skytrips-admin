@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Customer } from "@/types";
 import CustomerForm from "@/components/CustomerForm";
+import CustomerRowMenu from "@/components/CustomerRowMenu";
 // Import functionality removed
 
 export default function CustomersPage() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,36 +24,7 @@ export default function CustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   const [sortConfig, setSortConfig] = useState<{ key: keyof Customer | 'name' | 'totalMiles' | 'totalSpend' | 'lastLogin'; direction: 'asc' | 'desc' }>({ key: 'id', direction: 'asc' });
-
-  useEffect(() => {
-    fetchCustomers();
-  }, [currentPage, pageSize, debouncedSearch, sortConfig]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setCurrentPage(1);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    const channel = supabase
-      .channel("public:customers")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "customers" },
-        () => {
-          fetchCustomers();
-        }
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -82,9 +55,8 @@ export default function CustomersPage() {
 
       if (fetchError) throw fetchError;
 
-      // Enrich data with mock metrics for display
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const enrichedData: Customer[] = (data || []).map((customer: any) => ({
+      const baseData: Customer[] = (data || []).map((customer: any) => ({
         id: customer.id,
         firstName: customer.firstName,
         lastName: customer.lastName,
@@ -103,11 +75,40 @@ export default function CustomersPage() {
         socialProvider: customer.socialProvider,
         socialId: customer.socialId,
         referralCode: customer.referralCode,
-        created_at: customer.created_at,
-        totalMiles: customer.totalMiles ?? Math.floor(Math.random() * 50000) + 1000,
-        totalSpend: customer.totalSpend ?? Math.floor(Math.random() * 10000) + 500,
-        lastLogin: customer.lastLogin ?? new Date(Date.now() - Math.floor(Math.random() * 1000000000)).toISOString()
+        created_at: customer.created_at || customer.createdAt,
+        totalMiles: 0,
+        totalSpend: 0,
+        lastLogin: undefined,
       }));
+
+      const ids = baseData.map((c) => String(c.id || "")).filter(Boolean);
+      let metrics: Record<string, { totalSpend: number; lastLogin: string | null }> = {};
+      if (ids.length > 0) {
+        const res = await fetch("/api/customers/metrics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (res.ok) {
+          metrics = (json?.metrics || {}) as Record<
+            string,
+            { totalSpend: number; lastLogin: string | null }
+          >;
+        } else {
+          console.error("Failed to fetch customer metrics", json?.error);
+        }
+      }
+
+      const enrichedData: Customer[] = baseData.map((c) => {
+        const key = String(c.id || "");
+        const m = metrics[key];
+        return {
+          ...c,
+          totalSpend: m?.totalSpend ?? 0,
+          lastLogin: m?.lastLogin ?? undefined,
+        };
+      });
 
       // Client-side sorting for new metrics
       if (['totalMiles', 'totalSpend', 'lastLogin'].includes(sortConfig.key as string)) {
@@ -132,7 +133,36 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize, debouncedSearch, sortConfig]);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("public:customers")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "customers" },
+        () => {
+          fetchCustomers();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchCustomers]);
 
   const handleSort = (key: keyof Customer | 'name' | 'totalMiles' | 'totalSpend' | 'lastLogin') => {
       setSortConfig(curr => ({ key, direction: curr.key === key && curr.direction === 'asc' ? 'desc' : 'asc' }));
@@ -163,7 +193,20 @@ export default function CustomersPage() {
     setIsFormOpen(true);
   };
 
-  const handleFormSuccess = () => {
+  const handleDelete = async (customerId: string) => {
+    const ok = confirm("Are you sure you want to delete this customer?");
+    if (!ok) return;
+
+    const { error: deleteError } = await supabase
+      .from("customers")
+      .delete()
+      .eq("id", customerId);
+
+    if (deleteError) {
+      alert(deleteError.message || "Failed to delete customer");
+      return;
+    }
+
     fetchCustomers();
   };
 
@@ -261,6 +304,30 @@ export default function CustomersPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="mb-6 bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined text-destructive mt-0.5">
+              error
+            </span>
+            <div>
+              <h3 className="text-destructive font-semibold mb-1">
+                Error Loading Customers
+              </h3>
+              <p className="text-destructive text-sm">{error}</p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={fetchCustomers}
+                  className="text-sm bg-destructive text-destructive-foreground px-4 py-2 rounded hover:bg-destructive/90 transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Data Table Card */}
       <div className="flex flex-col rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -334,22 +401,9 @@ export default function CustomersPage() {
                     />
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="size-10 rounded-full bg-cover bg-center border border-border"
-                        style={{
-                          backgroundImage: `url("https://ui-avatars.com/api/?name=${encodeURIComponent(
-                            `${customer.firstName} ${customer.lastName}`
-                            )}&background=random")`,
-                        }}
-                      ></div>
-                      <div>
-                        <div className="font-bold text-foreground text-sm">
-                            {customer.firstName} {customer.lastName}
-                        </div>
-                        <div className="text-xs text-muted-foreground font-mono">
-                            ID: #CUS-{customer.id}
-                        </div>
+                    <div>
+                      <div className="font-bold text-foreground text-sm">
+                        {customer.firstName} {customer.lastName}
                       </div>
                     </div>
                   </td>
@@ -375,30 +429,12 @@ export default function CustomersPage() {
                     {getStatusBadge(customer.isActive)}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Link 
-                        href={`/dashboard/customers/${customer.id}`}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
-                        title="View Details"
-                      >
-                        <span className="material-symbols-outlined text-[20px]">
-                          visibility
-                        </span>
-                      </Link>
-                      <button 
-                        onClick={() => handleOpenEdit(customer)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
-                      >
-                        <span className="material-symbols-outlined text-[20px]">
-                          edit
-                        </span>
-                      </button>
-                      <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all">
-                        <span className="material-symbols-outlined text-[20px]">
-                          delete
-                        </span>
-                      </button>
-                    </div>
+                    <CustomerRowMenu
+                      customerId={String(customer.id)}
+                      onView={() => router.push(`/dashboard/customers/${customer.id}`)}
+                      onEdit={() => handleOpenEdit(customer)}
+                      onDelete={() => handleDelete(String(customer.id))}
+                    />
                   </td>
                 </tr>
               ))}
