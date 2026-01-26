@@ -26,6 +26,22 @@ export default function CustomerDetailsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
 
+  // Parse JSON fields safely
+  const safeJsonParse = (value: any, fallback: any = {}) => {
+    if (typeof value === "string") {
+      try {
+        return JSON.parse(value);
+      } catch (e) {
+        console.error("JSON Parse Error:", e);
+        return fallback;
+      }
+    }
+    return value || fallback;
+  };
+
+  const address = customer ? safeJsonParse(customer.address) : {};
+  const passport = customer ? safeJsonParse(customer.passport) : {};
+
   useEffect(() => {
     fetchCustomerDetails();
   }, [customerId]);
@@ -133,6 +149,7 @@ export default function CustomerDetailsPage() {
   };
 
   const renderTabContent = () => {
+    if (!customer) return null;
     switch (activeTab) {
       case "booking-history":
         return (
@@ -471,65 +488,214 @@ export default function CustomerDetailsPage() {
             </button>
           </div>
         );
-      case "manage-booking":
+      case "customer-profile":
         return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Re-issue Section */}
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">
-                    sync_alt
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Personal Information */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="text-slate-900 text-base font-bold flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[20px]">
+                    person
                   </span>
-                  Re-issue Requests
+                  Personal Information
                 </h3>
-                <button className="text-xs font-bold text-primary border border-primary/20 px-3 py-1.5 rounded hover:bg-primary/5">
-                  + New Request
-                </button>
               </div>
-              <div className="bg-white border border-slate-200 rounded-xl p-6 text-center text-slate-500 text-sm">
-                No active re-issue requests found.
+              <div className="p-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+                  <div className="flex flex-col gap-1">
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                      First Name
+                    </p>
+                    <p className="text-slate-900 font-medium">
+                      {customer?.firstName}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                      Last Name
+                    </p>
+                    <p className="text-slate-900 font-medium">
+                      {customer?.lastName}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                      Date of Birth
+                    </p>
+                    <p className="text-slate-900 font-medium">
+                      {customer?.dateOfBirth || "N/A"}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                      Gender
+                    </p>
+                    <p className="text-slate-900 font-medium">
+                      {customer?.gender || "N/A"}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                      Phone Country Code
+                    </p>
+                    <p className="text-slate-900 font-medium flex items-center gap-2">
+                      {customer?.phoneCountryCode} ({customer?.country})
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                      Nationality
+                    </p>
+                    <p className="text-slate-900 font-medium">
+                      {customer?.country}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Refund Section */}
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-red-500">
-                    currency_exchange
+            {/* Address Details */}
+            {/* <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="text-slate-900 text-base font-bold flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[20px]">
+                    home_pin
                   </span>
-                  Refund Requests
+                  Address Details
                 </h3>
-                <button className="text-xs font-bold text-primary border border-primary/20 px-3 py-1.5 rounded hover:bg-primary/5">
-                  + New Refund
-                </button>
-              </div>
-              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-slate-100 flex justify-between items-center">
-                  <div>
-                    <p className="font-bold text-slate-900 text-sm">
-                      Refund #RF-2023-001
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Requested on Oct 15, 2023
-                    </p>
-                  </div>
-                  <span className="bg-blue-50 text-blue-600 text-xs font-bold px-2 py-1 rounded">
-                    Processing
+                <a
+                  className="text-xs font-medium text-primary hover:text-blue-600 flex items-center gap-1"
+                  href="#"
+                >
+                  Open Map{" "}
+                  <span className="material-symbols-outlined text-[14px]">
+                    open_in_new
                   </span>
-                </div>
-                <div className="p-4 bg-slate-50/50">
-                  <div className="w-full bg-slate-200 rounded-full h-2 mb-2">
+                </a>
+              </div>
+              <div className="p-0">
+                <div className="flex flex-col md:flex-row">
+                  <div className="w-full md:w-1/3 h-40 md:h-auto bg-slate-100 relative overflow-hidden border-b md:border-b-0 md:border-r border-slate-100">
                     <div
-                      className="bg-blue-500 h-2 rounded-full"
-                      style={{ width: "60%" }}
+                      className="absolute inset-0 bg-cover bg-center opacity-80"
+                      style={{
+                        backgroundImage:
+                          "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCKcaqUPfNzFUXIasZ9PxpmvmrnRmOaRp7wcxwTfHbBDGcQMoIa8AQXrOXZWfXd2O_PgoZ6HLTOvIVU4yeKQKaU3k9BwEpR36jIIcGrPzpcQDG8K_f5_ZoAdOTXi5O5xKski2M4r6LpEN04XlUjY6WVqkZzNvPmEsYP-etxNeH1nhKHxcRV5t_LXlqYTuHVFb0flVoeXI1GSORmwpXR3TCot2fP0IYXcqBXCd5j1YIQhQemb-nQBdG3R0l3PaapHtNK7GRs_y_X5-5K')",
+                      }}
                     ></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-primary text-white p-2 rounded-full shadow-lg">
+                        <span className="material-symbols-outlined text-[20px] block">
+                          location_on
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-xs text-slate-500 font-medium">
-                    <span>Initiated</span>
-                    <span className="text-blue-600">Airline Review</span>
-                    <span>Completed</span>
+                  <div className="w-full md:w-2/3 p-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+                      <div className="sm:col-span-2 flex flex-col gap-1">
+                        <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                          Street Address
+                        </p>
+                        <p className="text-slate-900 font-medium">
+                          {address.street || "N/A"}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                          City
+                        </p>
+                        <p className="text-slate-900 font-medium">
+                          {address.city || "N/A"}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                          State / Province
+                        </p>
+                        <p className="text-slate-900 font-medium">
+                          {address.state || "N/A"}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                          Postal Code
+                        </p>
+                        <p className="text-slate-900 font-medium">
+                          {address.postalCode || "N/A"}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                          Country
+                        </p>
+                        <p className="text-slate-900 font-medium">
+                          {customer?.country}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div> */}
+
+            {/* Passport Details */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="text-slate-900 text-base font-bold flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[20px]">
+                    badge
+                  </span>
+                  Passport Details
+                </h3>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300">
+                  CONFIDENTIAL
+                </span>
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-6 gap-x-8">
+                  <div className="flex flex-col gap-1">
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                      Passport Number
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-slate-900 font-mono font-bold text-lg">
+                        {passport.number || "N/A"}
+                      </p>
+                      {customer?.isVerified === "true" && (
+                        <span
+                          className="material-symbols-outlined text-green-500 text-[18px]"
+                          title="Verified"
+                        >
+                          check_circle
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                      Issue Country
+                    </p>
+                    <p className="text-slate-900 font-medium flex items-center gap-2">
+                      {passport.issueCountry || customer?.country}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
+                      Expiry Date
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-slate-900 font-medium">
+                        {passport.expiryDate || "N/A"}
+                      </p>
+                      {passport.expiryDate &&
+                        new Date(passport.expiryDate) > new Date() && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
+                            VALID
+                          </span>
+                        )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -569,22 +735,6 @@ export default function CustomerDetailsPage() {
       </div>
     );
   }
-
-  // Parse JSON fields safely
-  const safeJsonParse = (value: any, fallback: any = {}) => {
-    if (typeof value === "string") {
-      try {
-        return JSON.parse(value);
-      } catch (e) {
-        console.error("JSON Parse Error:", e);
-        return fallback;
-      }
-    }
-    return value || fallback;
-  };
-
-  const address = safeJsonParse(customer.address);
-  const passport = safeJsonParse(customer.passport);
 
   return (
     <div className="flex flex-col w-full max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
@@ -709,7 +859,7 @@ export default function CustomerDetailsPage() {
                 "booking-history",
                 "payment-due",
                 "linked-travellers",
-                "manage-booking",
+                "customer-profile",
               ].map((tab) => (
                 <button
                   key={tab}
@@ -733,214 +883,7 @@ export default function CustomerDetailsPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              {renderTabContent()}
-
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                  <h3 className="text-slate-900 text-base font-bold flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[20px]">
-                      person
-                    </span>
-                    Personal Information
-                  </h3>
-                </div>
-                <div className="p-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
-                    <div className="flex flex-col gap-1">
-                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                        First Name
-                      </p>
-                      <p className="text-slate-900 font-medium">
-                        {customer.firstName}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                        Last Name
-                      </p>
-                      <p className="text-slate-900 font-medium">
-                        {customer.lastName}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                        Date of Birth
-                      </p>
-                      <p className="text-slate-900 font-medium">
-                        {customer.dateOfBirth || "N/A"}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                        Gender
-                      </p>
-                      <p className="text-slate-900 font-medium">
-                        {customer.gender || "N/A"}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                        Phone Country Code
-                      </p>
-                      <p className="text-slate-900 font-medium flex items-center gap-2">
-                        {customer.phoneCountryCode} ({customer.country})
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                        Nationality
-                      </p>
-                      <p className="text-slate-900 font-medium">
-                        {customer.country}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                  <h3 className="text-slate-900 text-base font-bold flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[20px]">
-                      home_pin
-                    </span>
-                    Address Details
-                  </h3>
-                  <a
-                    className="text-xs font-medium text-primary hover:text-blue-600 flex items-center gap-1"
-                    href="#"
-                  >
-                    Open Map{" "}
-                    <span className="material-symbols-outlined text-[14px]">
-                      open_in_new
-                    </span>
-                  </a>
-                </div>
-                <div className="p-0">
-                  <div className="flex flex-col md:flex-row">
-                    <div className="w-full md:w-1/3 h-40 md:h-auto bg-slate-100 relative overflow-hidden border-b md:border-b-0 md:border-r border-slate-100">
-                      <div
-                        className="absolute inset-0 bg-cover bg-center opacity-80"
-                        style={{
-                          backgroundImage:
-                            "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCKcaqUPfNzFUXIasZ9PxpmvmrnRmOaRp7wcxwTfHbBDGcQMoIa8AQXrOXZWfXd2O_PgoZ6HLTOvIVU4yeKQKaU3k9BwEpR36jIIcGrPzpcQDG8K_f5_ZoAdOTXi5O5xKski2M4r6LpEN04XlUjY6WVqkZzNvPmEsYP-etxNeH1nhKHxcRV5t_LXlqYTuHVFb0flVoeXI1GSORmwpXR3TCot2fP0IYXcqBXCd5j1YIQhQemb-nQBdG3R0l3PaapHtNK7GRs_y_X5-5K')",
-                        }}
-                      ></div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="bg-primary text-white p-2 rounded-full shadow-lg">
-                          <span className="material-symbols-outlined text-[20px] block">
-                            location_on
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="w-full md:w-2/3 p-5">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
-                        <div className="sm:col-span-2 flex flex-col gap-1">
-                          <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                            Street Address
-                          </p>
-                          <p className="text-slate-900 font-medium">
-                            {address.street || "N/A"}
-                          </p>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                            City
-                          </p>
-                          <p className="text-slate-900 font-medium">
-                            {address.city || "N/A"}
-                          </p>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                            State / Province
-                          </p>
-                          <p className="text-slate-900 font-medium">
-                            {address.state || "N/A"}
-                          </p>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                            Postal Code
-                          </p>
-                          <p className="text-slate-900 font-medium">
-                            {address.postalCode || "N/A"}
-                          </p>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                            Country
-                          </p>
-                          <p className="text-slate-900 font-medium">
-                            {customer.country}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                  <h3 className="text-slate-900 text-base font-bold flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[20px]">
-                      badge
-                    </span>
-                    Passport Details
-                  </h3>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300">
-                    CONFIDENTIAL
-                  </span>
-                </div>
-                <div className="p-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-6 gap-x-8">
-                    <div className="flex flex-col gap-1">
-                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                        Passport Number
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-slate-900 font-mono font-bold text-lg">
-                          {passport.number || "N/A"}
-                        </p>
-                        {customer.isVerified === "true" && (
-                          <span
-                            className="material-symbols-outlined text-green-500 text-[18px]"
-                            title="Verified"
-                          >
-                            check_circle
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                        Issue Country
-                      </p>
-                      <p className="text-slate-900 font-medium flex items-center gap-2">
-                        {passport.issueCountry || customer.country}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">
-                        Expiry Date
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-slate-900 font-medium">
-                          {passport.expiryDate || "N/A"}
-                        </p>
-                        {passport.expiryDate &&
-                          new Date(passport.expiryDate) > new Date() && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
-                              VALID
-                            </span>
-                          )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <div className="lg:col-span-2 space-y-6">{renderTabContent()}</div>
             <div className="lg:col-span-1 space-y-6">
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">

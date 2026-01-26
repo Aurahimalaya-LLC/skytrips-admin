@@ -3331,6 +3331,10 @@
     }
   }
 
+  .text-black {
+    color: var(--color-black);
+  }
+
   .text-blue-500 {
     color: var(--color-blue-500);
   }
@@ -5731,6 +5735,12 @@
       .dark\:hover\:text-slate-300:hover {
         color: var(--color-slate-300);
       }
+    }
+  }
+
+  @media print {
+    .print\:mt-8 {
+      margin-top: calc(var(--spacing) * 8);
     }
   }
 
