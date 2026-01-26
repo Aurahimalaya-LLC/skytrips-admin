@@ -37,6 +37,14 @@ export default function BookingPage() {
     key: "created_at",
     direction: "desc",
   });
+  const [customerFilter, setCustomerFilter] = useState<
+    "all"
+    | "linked"
+    | "unlinked"
+  >("all");
+  const [selectedBookingIds, setSelectedBookingIds] = useState<number[]>([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   const [isViewOnly, setIsViewOnly] = useState(false);
 
@@ -127,6 +135,18 @@ export default function BookingPage() {
         if (endIso) query = query.lt("created_at", endIso);
       }
 
+      if (customerFilter === "linked") {
+        query = query.or(
+          "customer.neq.null,customerid.neq.00000000-0000-0000-0000-000000000000",
+        );
+      } else if (customerFilter === "unlinked") {
+        query = query
+          .or(
+            "customerid.is.null,customerid.eq.00000000-0000-0000-0000-000000000000",
+          )
+          .is("customer", null);
+      }
+
       const { data, count, error: fetchError } = await query;
 
       console.log("Query result:", { data, count, error: fetchError });
@@ -164,6 +184,7 @@ export default function BookingPage() {
     sortConfig,
     createdFrom,
     createdTo,
+    customerFilter,
   ]);
 
   const fetchCounts = useCallback(async () => {
@@ -215,6 +236,57 @@ export default function BookingPage() {
 
   const handleNextPage = () => {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const currentPageIds = bookings
+      .map((b) => b.id)
+      .filter((id): id is number => typeof id === "number");
+
+    if (e.target.checked) {
+      // Add current page IDs to selection
+      setSelectedBookingIds((prev) => {
+        const set = new Set([...prev, ...currentPageIds]);
+        return Array.from(set);
+      });
+    } else {
+      // Remove current page IDs from selection
+      setSelectedBookingIds((prev) =>
+        prev.filter((id) => !currentPageIds.includes(id)),
+      );
+    }
+  };
+
+  const handleSelectOne = (id: number) => {
+    setSelectedBookingIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = () => {
+    setIsBulkDeleteModalOpen(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    if (selectedBookingIds.length === 0) return;
+    setBulkActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from("bookings")
+        .delete()
+        .in("id", selectedBookingIds);
+
+      if (error) throw error;
+
+      await fetchBookings();
+      setSelectedBookingIds([]);
+      setIsBulkDeleteModalOpen(false);
+    } catch (err: unknown) {
+      console.error("Bulk delete error:", err);
+      alert("Failed to delete selected bookings");
+    } finally {
+      setBulkActionLoading(false);
+    }
   };
 
   const handleSort = (key: string) => {
@@ -363,12 +435,12 @@ export default function BookingPage() {
 
       // Map agency to issuedthroughagency if needed
       if (
-        (bookingToSave as any).agency &&
-        !(bookingToSave as any).issuedthroughagency
+        (bookingToSave as unknown as Record<string, unknown>).agency &&
+        !(bookingToSave as unknown as Record<string, unknown>)
+          .issuedthroughagency
       ) {
-        (bookingToSave as any).issuedthroughagency = (
-          bookingToSave as any
-        ).agency;
+        (bookingToSave as unknown as Record<string, unknown>).issuedthroughagency =
+          (bookingToSave as unknown as Record<string, unknown>).agency;
       }
 
       // Remove temporary fields not present in the bookings table
@@ -514,13 +586,26 @@ export default function BookingPage() {
             Manage and track all customer flight reservations.
           </p>
         </div>
-        <button
-          onClick={handleCreate}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all"
-        >
-          <span className="material-symbols-outlined text-[20px]">add</span>
-          <span>New Booking</span>
-        </button>
+        <div className="flex gap-2">
+          {selectedBookingIds.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 transition-all"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                delete
+              </span>
+              <span>Delete ({selectedBookingIds.length})</span>
+            </button>
+          )}
+          <button
+            onClick={handleCreate}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all"
+          >
+            <span className="material-symbols-outlined text-[20px]">add</span>
+            <span>New Booking</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters and Search Toolbar */}
@@ -654,7 +739,16 @@ export default function BookingPage() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
+        <div
+          onClick={() =>
+            setCustomerFilter((prev) => (prev === "linked" ? "all" : "linked"))
+          }
+          className={`rounded-xl border bg-white shadow-sm p-5 cursor-pointer transition-all ${
+            customerFilter === "linked"
+              ? "border-primary ring-1 ring-primary"
+              : "border-slate-200 hover:border-primary/50"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500 font-semibold">
@@ -670,7 +764,18 @@ export default function BookingPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
+        <div
+          onClick={() =>
+            setCustomerFilter((prev) =>
+              prev === "unlinked" ? "all" : "unlinked",
+            )
+          }
+          className={`rounded-xl border bg-white shadow-sm p-5 cursor-pointer transition-all ${
+            customerFilter === "unlinked"
+              ? "border-primary ring-1 ring-primary"
+              : "border-slate-200 hover:border-primary/50"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500 font-semibold">
@@ -706,6 +811,19 @@ export default function BookingPage() {
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-xs">
                 <tr>
+                  <th scope="col" className="pl-6 py-4 w-10">
+                    <input
+                      type="checkbox"
+                      className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
+                      checked={
+                        bookings.length > 0 &&
+                        bookings.every(
+                          (b) => b.id && selectedBookingIds.includes(b.id),
+                        )
+                      }
+                      onChange={handleSelectAll}
+                    />
+                  </th>
                   <th
                     scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
@@ -817,6 +935,18 @@ export default function BookingPage() {
                     key={booking.id}
                     className="group hover:bg-slate-50/50 transition-colors"
                   >
+                    <td className="pl-6 py-4">
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
+                        checked={
+                          !!booking.id && selectedBookingIds.includes(booking.id)
+                        }
+                        onChange={() =>
+                          booking.id && handleSelectOne(booking.id)
+                        }
+                      />
+                    </td>
                     <td className="px-6 py-4 font-medium text-slate-900">
                       <button
                         type="button"
@@ -999,6 +1129,18 @@ export default function BookingPage() {
         onClose={() => !actionLoading && setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
         isDeleting={!!actionLoading && actionLoading === bookingToDelete}
+      />
+
+      <DeleteConfirmModal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => !bulkActionLoading && setIsBulkDeleteModalOpen(false)}
+        onConfirm={confirmBulkDelete}
+        isDeleting={bulkActionLoading}
+        title="Delete Selected Bookings"
+        message={`Are you sure you want to delete ${selectedBookingIds.length} selected booking(s)? This action cannot be undone.`}
+        confirmText={`Delete ${selectedBookingIds.length} Booking${
+          selectedBookingIds.length !== 1 ? "s" : ""
+        }`}
       />
     </div>
   );
