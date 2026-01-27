@@ -16,9 +16,9 @@ export default function DashboardPage() {
   return (
     <div className="max-w-[1200px] mx-auto flex flex-col gap-6">
       {/* Date Picker / Quick Actions Row */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h3 className="text-slate-900 dark:text-slate-100 text-base font-bold">Key Metrics</h3>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <DateRangeFilter
             onRangeChange={setDateRange}
             initialRange={dateRange}
