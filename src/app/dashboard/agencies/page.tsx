@@ -294,8 +294,8 @@ export default function AgenciesPage() {
             </tbody>
           </table>
         </div>
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
-          <div className="text-sm text-slate-500">
+        <div className="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-sm text-slate-500 w-full sm:w-auto text-center sm:text-left">
             Showing <span className="font-medium text-slate-900">{data.length > 0 ? (page - 1) * pageSize + 1 : 0}</span> to <span className="font-medium text-slate-900">{Math.min(page * pageSize, totalCount)}</span> of <span className="font-medium text-slate-900">{totalCount}</span> agencies
           </div>
           <div className="flex items-center gap-2">
