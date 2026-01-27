@@ -64,11 +64,11 @@ export default function TravellersPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this traveller?")) return;
+  const confirmDelete = async () => {
+    if (!travellerToDelete) return;
 
     try {
-      const res = await fetch(`/api/travellers/${id}`, {
+      const res = await fetch(`/api/travellers/${travellerToDelete}`, {
         method: "DELETE",
       });
       const data = await res.json();
@@ -76,7 +76,15 @@ export default function TravellersPage() {
       fetchTravellers(page, limit);
     } catch (error) {
       console.error("Error deleting traveller:", error);
+    } finally {
+      setIsDeleteModalOpen(false);
+      setTravellerToDelete(null);
     }
+  };
+
+  const openDeleteModal = (id: string) => {
+    setTravellerToDelete(id);
+    setIsDeleteModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -230,7 +238,7 @@ export default function TravellersPage() {
                           </span>
                         </button>
                         <button
-                          onClick={() => handleDelete(traveller.id)}
+                          onClick={() => openDeleteModal(traveller.id)}
                           className="p-1 text-red-600 hover:bg-red-50 rounded"
                         >
                           <span className="material-symbols-outlined text-[16px]">
