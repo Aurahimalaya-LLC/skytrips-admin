@@ -387,6 +387,33 @@ export default function DashboardLayout({
             </p>
           </Link>
 
+          {/* Airlines Management */}
+          <Link
+            href="/dashboard/airlines"
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
+              pathname === "/dashboard/airlines"
+                ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
+                : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
+            }`}
+            aria-label="Airlines Management"
+            title="Airlines Management"
+          >
+            <span
+              className={`material-symbols-outlined ${
+                pathname === "/dashboard/airlines"
+                  ? "active-icon"
+                  : "group-hover:text-primary transition-colors"
+              }`}
+            >
+              airlines
+            </span>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Airlines
+            </p>
+          </Link>
+
           {/* Agency */}
           <Link
             href="/dashboard/agencies"
