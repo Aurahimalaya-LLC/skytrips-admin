@@ -562,8 +562,8 @@ export default function AirlinesPage() {
         </div>
       </div>
 
-      <div className="flex justify-between items-center gap-4">
-        <div className="text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="text-sm text-muted-foreground text-center sm:text-left">
           Showing {(page - 1) * limit + 1} to{" "}
           {Math.min(page * limit, totalCount)} of {totalCount} entries
         </div>

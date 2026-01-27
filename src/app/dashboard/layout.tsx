@@ -17,10 +17,16 @@ export default function DashboardLayout({
   const [isLoading, setIsLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
   }, [router]);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     try {
@@ -105,12 +111,20 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="bg-background font-display text-foreground h-screen overflow-hidden flex w-full transition-colors duration-300">
+    <div className="bg-background font-display text-foreground h-screen overflow-hidden flex w-full transition-colors duration-300 relative">
+      {/* Mobile Backdrop */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Side Navigation */}
       <aside
-        className={`${
-          sidebarCollapsed ? "w-20" : "w-64"
-        } bg-sidebar border-r border-sidebar-border flex-col hidden md:flex h-full flex-shrink-0 z-20 transition-[width,background,color] duration-300 ease-in-out`}
+        className={`fixed md:static inset-y-0 left-0 h-full bg-sidebar border-r border-sidebar-border flex flex-col flex-shrink-0 z-50 transition-all duration-300 ease-in-out ${
+          sidebarCollapsed ? "md:w-20" : "md:w-64"
+        } ${isMobileMenuOpen ? "w-64 translate-x-0 shadow-xl" : "w-64 -translate-x-full md:translate-x-0 shadow-none"}`}
         aria-label="Sidebar navigation"
       >
         <div className={`p-6 pb-2 ${sidebarCollapsed ? "px-4" : ""}`}>
@@ -414,6 +428,33 @@ export default function DashboardLayout({
             </p>
           </Link>
 
+          {/* Airports Management */}
+          <Link
+            href="/dashboard/airports"
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
+              pathname === "/dashboard/airports"
+                ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
+                : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
+            }`}
+            aria-label="Airports Management"
+            title="Airports Management"
+          >
+            <span
+              className={`material-symbols-outlined ${
+                pathname === "/dashboard/airports"
+                  ? "active-icon"
+                  : "group-hover:text-primary transition-colors"
+              }`}
+            >
+              flight_takeoff
+            </span>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Airports
+            </p>
+          </Link>
+
           {/* Agency */}
           <Link
             href="/dashboard/agencies"
@@ -548,8 +589,9 @@ export default function DashboardLayout({
           <div className="flex items-center gap-4">
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden p-2 text-muted-foreground"
+              className="md:hidden p-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors"
               aria-label="Open menu"
+              onClick={() => setIsMobileMenuOpen(true)}
             >
               <span className="material-symbols-outlined">menu</span>
             </button>
