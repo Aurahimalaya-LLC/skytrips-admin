@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import countryData from "../../../../../libs/shared-utils/constants/country.json";
 import Link from "next/link";
 import { MediaSelectorModal } from "@/components/media/MediaSelectorModal";
 import { MediaFile } from "@/lib/media-service";
 import { generateSlug } from "@/lib/utils";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface FAQ {
   question: string;
@@ -27,6 +28,8 @@ interface AirlineFormData {
   faqs: FAQ[];
   logo_url: string;
   status: "Active" | "Inactive" | "Pending";
+  about_fleet: string;
+  in_flight_experience: string;
 }
 
 const SECTIONS = [
@@ -56,6 +59,8 @@ export default function CreateAirlinePage() {
     faqs: [],
     logo_url: "",
     status: "Active",
+    about_fleet: "",
+    in_flight_experience: "",
   });
 
   // FAQ State
@@ -63,8 +68,6 @@ export default function CreateAirlinePage() {
   const [currentFaq, setCurrentFaq] = useState<FAQ>({ question: "", answer: "" });
   const [editingFaqIndex, setEditingFaqIndex] = useState<number | null>(null);
   const [domain, setDomain] = useState("domain.com");
-
-  const descriptionEditorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -104,18 +107,6 @@ export default function CreateAirlinePage() {
       
       return newData;
     });
-  };
-
-  const handleDescriptionInput = (e: React.FormEvent<HTMLDivElement>) => {
-    const html = e.currentTarget.innerHTML;
-    setFormData((prev) => ({ ...prev, description: html }));
-  };
-
-  const applyDescriptionFormat = (command: "bold" | "italic" | "underline") => {
-    document.execCommand(command, false);
-    if (descriptionEditorRef.current) {
-      descriptionEditorRef.current.focus();
-    }
   };
 
   const handleFaqSave = () => {
@@ -335,61 +326,44 @@ export default function CreateAirlinePage() {
                 <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">
                   Airline Description
                 </label>
-                <div className="relative">
-                  <div className="absolute top-2 left-2 flex gap-1 p-1 bg-gray-800 rounded border border-gray-700">
-                    <button
-                      className="p-1 hover:bg-gray-700 rounded text-gray-400"
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        applyDescriptionFormat("bold");
-                      }}
-                    >
-                      <span className="material-symbols-outlined text-[16px]">
-                        format_bold
-                      </span>
-                    </button>
-                    <button
-                      className="p-1 hover:bg-gray-700 rounded text-gray-400"
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        applyDescriptionFormat("italic");
-                      }}
-                    >
-                      <span className="material-symbols-outlined text-[16px]">
-                        format_italic
-                      </span>
-                    </button>
-                    <button
-                      className="p-1 hover:bg-gray-700 rounded text-gray-400"
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        applyDescriptionFormat("underline");
-                      }}
-                    >
-                      <span className="material-symbols-outlined text-[16px]">
-                        format_underlined
-                      </span>
-                    </button>
-                  </div>
-                  {!formData.description && (
-                    <div className="pointer-events-none absolute left-4 right-4 top-12 text-gray-600 text-sm">
-                      Describe the airline...
-                    </div>
-                  )}
-                  <div
-                    ref={descriptionEditorRef}
-                    contentEditable
-                    suppressContentEditableWarning
-                    onInput={handleDescriptionInput}
-                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 pt-12 pb-2.5 text-sm text-white focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 outline-none transition-all min-h-[160px] whitespace-pre-wrap"
-                    dangerouslySetInnerHTML={{
-                      __html: formData.description || "",
-                    }}
-                  />
-                </div>
+                <RichTextEditor
+                  value={formData.description}
+                  onChange={(value) =>
+                    setFormData((prev) => ({ ...prev, description: value }))
+                  }
+                  placeholder="Describe the airline..."
+                />
+              </div>
+
+              {/* About the Fleet */}
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">
+                  About the Fleet
+                </label>
+                <RichTextEditor
+                  value={formData.about_fleet}
+                  onChange={(value) =>
+                    setFormData((prev) => ({ ...prev, about_fleet: value }))
+                  }
+                  placeholder="Describe the fleet..."
+                />
+              </div>
+
+              {/* In-Flight Experience */}
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">
+                  In-Flight Experience
+                </label>
+                <RichTextEditor
+                  value={formData.in_flight_experience}
+                  onChange={(value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      in_flight_experience: value,
+                    }))
+                  }
+                  placeholder="Describe the in-flight experience..."
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
