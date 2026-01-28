@@ -24,6 +24,7 @@ interface AirlineFormData {
   destinations_count: number;
   seo_title: string;
   meta_description: string;
+  seo_image_url: string;
   slug: string;
   faqs: FAQ[];
   logo_url: string;
@@ -36,8 +37,8 @@ const SECTIONS = [
   { id: "general", label: "General Information", icon: "info" },
   { id: "identity", label: "Airline Identity", icon: "badge" },
   { id: "profile", label: "Airline Profile", icon: "travel_explore" },
-  { id: "seo", label: "SEO & Metadata", icon: "search" },
   { id: "faqs", label: "FAQs", icon: "help" },
+  { id: "seo", label: "SEO & Metadata", icon: "search" },
 ];
 
 export default function EditAirlinePage() {
@@ -47,6 +48,7 @@ export default function EditAirlinePage() {
   const [saving, setSaving] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [isMediaOpen, setIsMediaOpen] = useState(false);
+  const [activeMediaField, setActiveMediaField] = useState<"logo" | "seo_image">("logo");
   const [formData, setFormData] = useState<AirlineFormData>({
     name: "",
     iata_code: "",
@@ -57,6 +59,7 @@ export default function EditAirlinePage() {
     destinations_count: 0,
     seo_title: "",
     meta_description: "",
+    seo_image_url: "",
     slug: "",
     faqs: [],
     logo_url: "",
@@ -101,6 +104,7 @@ export default function EditAirlinePage() {
           destinations_count: data.destinations_count || 0,
           seo_title: data.seo_title || "",
           meta_description: data.meta_description || "",
+          seo_image_url: data.seo_image_url || "",
           slug: data.slug || "",
           faqs: data.faqs || [],
           logo_url: data.logo_url || "",
@@ -175,13 +179,21 @@ export default function EditAirlinePage() {
     setFormData((prev) => ({ ...prev, faqs: newFaqs }));
   };
 
-  const handleLogoSelect = (file: MediaFile | MediaFile[]) => {
+  const handleMediaSelect = (file: MediaFile | MediaFile[]) => {
     const selected = Array.isArray(file) ? file[0] : file;
     if (!selected) return;
-    setFormData((prev) => ({
-      ...prev,
-      logo_url: selected.url || "",
-    }));
+    
+    if (activeMediaField === "logo") {
+      setFormData((prev) => ({
+        ...prev,
+        logo_url: selected.url || "",
+      }));
+    } else if (activeMediaField === "seo_image") {
+      setFormData((prev) => ({
+        ...prev,
+        seo_image_url: selected.url || "",
+      }));
+    }
     setIsMediaOpen(false);
   };
 
@@ -336,7 +348,10 @@ export default function EditAirlinePage() {
                   />
                   <button
                     type="button"
-                    onClick={() => setIsMediaOpen(true)}
+                    onClick={() => {
+                      setActiveMediaField("logo");
+                      setIsMediaOpen(true);
+                    }}
                     className="px-3 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-xs font-medium flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-[18px]">
@@ -496,87 +511,6 @@ export default function EditAirlinePage() {
             </div>
           </section>
 
-          {/* SEO Section */}
-          <section
-            id="seo"
-            className="bg-card border border-border rounded-xl p-6 scroll-mt-6"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <span className="material-symbols-outlined text-blue-400">
-                  search
-                </span>
-              </div>
-              <h2 className="text-lg font-bold">SEO Settings</h2>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <div className="flex justify-between mb-1.5">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    SEO Title
-                  </label>
-                  <span className="text-xs text-muted-foreground">
-                    {formData.seo_title.length} / 60
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  name="seo_title"
-                  value={formData.seo_title}
-                  onChange={handleInputChange}
-                  maxLength={60}
-                  className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
-                  placeholder="e.g. SkyLink International | Global Air Carrier"
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-1.5">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Meta Description
-                  </label>
-                  <span className="text-xs text-muted-foreground">
-                    {formData.meta_description.length} / 160
-                  </span>
-                </div>
-                <textarea
-                  name="meta_description"
-                  rows={3}
-                  value={formData.meta_description}
-                  onChange={handleInputChange}
-                  maxLength={160}
-                  className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all resize-none"
-                  placeholder="Brief description for search results..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wider">
-                  URL Slug
-                </label>
-                <div className="flex">
-                  <div className="bg-muted border border-r-0 border-input rounded-l-lg px-3 py-2.5 text-muted-foreground text-sm flex items-center">
-                    {domain}/airline/
-                  </div>
-                  <input
-                    type="text"
-                    name="slug"
-                    value={formData.slug}
-                    onChange={handleInputChange}
-                    className="flex-1 bg-background border border-input rounded-r-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
-                    placeholder="skylink-international"
-                  />
-                </div>
-                {formData.slug && (
-                  <p className="mt-2 text-xs text-primary">
-                    Preview: https://{domain}/airline/{formData.slug}
-                  </p>
-                )}
-              </div>
-            </div>
-          </section>
-
           {/* FAQs Section */}
           <section
             id="faqs"
@@ -654,6 +588,116 @@ export default function EditAirlinePage() {
               )}
             </div>
           </section>
+
+          {/* SEO Section */}
+          <section
+            id="seo"
+            className="bg-card border border-border rounded-xl p-6 scroll-mt-6"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <span className="material-symbols-outlined text-blue-400">
+                  search
+                </span>
+              </div>
+              <h2 className="text-lg font-bold">SEO Settings</h2>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <div className="flex justify-between mb-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    SEO Title
+                  </label>
+                  <span className="text-xs text-muted-foreground">
+                    {formData.seo_title.length} / 60
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  name="seo_title"
+                  value={formData.seo_title}
+                  onChange={handleInputChange}
+                  maxLength={60}
+                  className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
+                  placeholder="e.g. SkyLink International | Global Air Carrier"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between mb-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Meta Description
+                  </label>
+                  <span className="text-xs text-muted-foreground">
+                    {formData.meta_description.length} / 160
+                  </span>
+                </div>
+                <textarea
+                  name="meta_description"
+                  rows={3}
+                  value={formData.meta_description}
+                  onChange={handleInputChange}
+                  maxLength={160}
+                  className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all resize-none"
+                  placeholder="Brief description for search results..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wider">
+                  SEO Image
+                </label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    name="seo_image_url"
+                    value={formData.seo_image_url}
+                    onChange={handleInputChange}
+                    className="flex-1 bg-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all placeholder:text-muted-foreground"
+                    placeholder="https://example.com/seo-image.png"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveMediaField("seo_image");
+                      setIsMediaOpen(true);
+                    }}
+                    className="px-3 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-xs font-medium flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      photo_library
+                    </span>
+                    Library
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wider">
+                  URL Slug
+                </label>
+                <div className="flex">
+                  <div className="bg-muted border border-r-0 border-input rounded-l-lg px-3 py-2.5 text-muted-foreground text-sm flex items-center">
+                    {domain}/airline/
+                  </div>
+                  <input
+                    type="text"
+                    name="slug"
+                    value={formData.slug}
+                    onChange={handleInputChange}
+                    className="flex-1 bg-background border border-input rounded-r-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
+                    placeholder="skylink-international"
+                  />
+                </div>
+                {formData.slug && (
+                  <p className="mt-2 text-xs text-primary">
+                    Preview: https://{domain}/airline/{formData.slug}
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
         </div>
       </div>
 
@@ -724,7 +768,7 @@ export default function EditAirlinePage() {
         isOpen={isMediaOpen}
         onClose={() => setIsMediaOpen(false)}
         multiple={false}
-        onSelect={handleLogoSelect}
+        onSelect={handleMediaSelect}
       />
     </div>
   );
