@@ -31,6 +31,13 @@ interface AirlineFormData {
   status: "Active" | "Inactive" | "Pending";
   about_fleet: string;
   in_flight_experience: string;
+  no_index: boolean;
+  no_follow: boolean;
+  no_archive: boolean;
+  no_image_index: boolean;
+  no_snippet: boolean;
+  canonical_url: string;
+  schema_markup: string;
 }
 
 const SECTIONS = [
@@ -66,6 +73,13 @@ export default function EditAirlinePage() {
     status: "Active",
     about_fleet: "",
     in_flight_experience: "",
+    no_index: false,
+    no_follow: false,
+    no_archive: false,
+    no_image_index: false,
+    no_snippet: false,
+    canonical_url: "",
+    schema_markup: "",
   });
 
   // FAQ State
@@ -111,6 +125,13 @@ export default function EditAirlinePage() {
           status: data.status || "Active",
           about_fleet: data.about_fleet || "",
           in_flight_experience: data.in_flight_experience || "",
+          no_index: data.no_index || false,
+          no_follow: data.no_follow || false,
+          no_archive: data.no_archive || false,
+          no_image_index: data.no_image_index || false,
+          no_snippet: data.no_snippet || false,
+          canonical_url: data.canonical_url || "",
+          schema_markup: data.schema_markup || "",
         });
       } catch (error) {
         console.warn("Error fetching airline:", error);
@@ -138,23 +159,25 @@ export default function EditAirlinePage() {
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
-    const { name, value } = e.target;
-    
+    const target = e.target as HTMLInputElement;
+    const value = target.type === "checkbox" ? target.checked : target.value;
+    const name = target.name;
+
     setFormData((prev) => {
       const newData = { ...prev, [name]: value };
-      
+
       // Auto-generate slug if name changes and slug was either empty or matched the old name
       if (name === "name") {
         const oldSlug = prev.slug;
         const oldNameSlug = generateSlug(prev.name);
-        
+
         // If slug was never set, or if it matched the auto-generated version of the old name
         // (meaning the user hadn't manually customized it to something else)
         if (!oldSlug || oldSlug === oldNameSlug) {
-          newData.slug = generateSlug(value);
+          newData.slug = generateSlug(value as string);
         }
       }
-      
+
       return newData;
     });
   };
@@ -268,7 +291,7 @@ export default function EditAirlinePage() {
 
       <div className="flex gap-8 max-w-7xl mx-auto w-full">
         {/* Sidebar Navigation */}
-        <div className="w-64 flex-shrink-0 hidden lg:block">
+        <div className="w-48 flex-shrink-0 hidden lg:block">
           <div className="sticky top-6 space-y-1">
             {SECTIONS.map((section) => (
               <button
@@ -695,6 +718,99 @@ export default function EditAirlinePage() {
                     Preview: https://{domain}/airline/{formData.slug}
                   </p>
                 )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wider">
+                  Canonical URL
+                </label>
+                <input
+                  type="text"
+                  name="canonical_url"
+                  value={formData.canonical_url}
+                  onChange={handleInputChange}
+                  className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all placeholder:text-muted-foreground"
+                  placeholder="https://example.com/canonical-page"
+                />
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Specify the preferred URL for this page to avoid duplicate
+                  content issues
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wider">
+                  Schema Markup (JSON-LD)
+                </label>
+                <textarea
+                  name="schema_markup"
+                  rows={4}
+                  value={formData.schema_markup}
+                  onChange={handleInputChange}
+                  className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all resize-none font-mono text-sm"
+                  placeholder='{"@context": "https://schema.org", "@type": "WebPage", "name": "Page Title"}'
+                />
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Add structured data in JSON-LD format for rich search results
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-border">
+                <label className="block text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">
+                  Robots Meta Tag Settings
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    {
+                      key: "no_index",
+                      label: "No Index",
+                      desc: "Prevent indexing",
+                    },
+                    {
+                      key: "no_follow",
+                      label: "No Follow",
+                      desc: "Prevent following links",
+                    },
+                    {
+                      key: "no_archive",
+                      label: "No Archive",
+                      desc: "Prevent caching",
+                    },
+                    {
+                      key: "no_image_index",
+                      label: "No Image Index",
+                      desc: "Prevent image indexing",
+                    },
+                    {
+                      key: "no_snippet",
+                      label: "No Snippet",
+                      desc: "Prevent snippet display",
+                    },
+                  ].map((option) => (
+                    <label
+                      key={option.key}
+                      className="flex items-start gap-3 p-3 rounded-lg bg-background border border-border cursor-pointer hover:bg-muted transition-colors"
+                    >
+                      <div className="relative flex items-center mt-0.5">
+                        <input
+                          type="checkbox"
+                          name={option.key}
+                          checked={formData[option.key as keyof AirlineFormData] as boolean}
+                          onChange={handleInputChange}
+                          className="h-4 w-4 rounded border-input bg-background text-primary focus:ring-primary/50 focus:ring-offset-0"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-foreground block">
+                          {option.label}
+                        </span>
+                        <span className="text-xs text-muted-foreground block mt-0.5">
+                          {option.desc}
+                        </span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
