@@ -123,6 +123,13 @@ export async function GET(request: NextRequest) {
       longitude: row.longitude_deg || null,
       timezone: row.timezone || null,
       active: row.published_status ?? false,
+      featured_image_url: row.featured_image_url,
+      description: row.description,
+      fast_facts: row.fast_facts,
+      top_airlines: row.top_airlines,
+      gallery_urls: row.gallery_urls,
+      faqs: row.faqs,
+      map_embed_code: row.map_embed_code,
     }));
 
     return NextResponse.json({
@@ -191,7 +198,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { iata_code, name, city, country, latitude, longitude, timezone, active } = body as CreateAirportDTO;
+    const { 
+      iata_code, name, city, country, latitude, longitude, timezone, active,
+      featured_image_url, description, fast_facts, top_airlines, gallery_urls, faqs, map_embed_code
+    } = body as CreateAirportDTO;
 
     // Validation
     if (!iata_code || !name || !city || !country) {
@@ -234,6 +244,13 @@ export async function POST(request: NextRequest) {
         longitude_deg: longitude,
         timezone: timezone,
         published_status: active !== undefined ? active : true, // Default to true if not provided
+        featured_image_url,
+        description,
+        fast_facts,
+        top_airlines,
+        gallery_urls,
+        faqs,
+        map_embed_code,
       })
       .select()
       .single();
@@ -256,6 +273,13 @@ export async function POST(request: NextRequest) {
       longitude: data.longitude_deg || null,
       timezone: data.timezone || null,
       active: data.published_status ?? false,
+      featured_image_url: data.featured_image_url,
+      description: data.description,
+      fast_facts: data.fast_facts,
+      top_airlines: data.top_airlines,
+      gallery_urls: data.gallery_urls,
+      faqs: data.faqs,
+      map_embed_code: data.map_embed_code,
     };
 
     return NextResponse.json({ data: newAirport }, { status: 201 });
