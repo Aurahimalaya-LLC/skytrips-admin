@@ -15,11 +15,12 @@ interface AirlineAutocompleteProps {
   name: string;
   value: string;
   onChange: (e: any) => void;
+  onSelect?: (value: string) => void;
   disabled?: boolean;
   icon: string;
 }
 
-const AirlineAutocomplete = ({ label, name, value, onChange, disabled, icon }: AirlineAutocompleteProps) => {
+const AirlineAutocomplete = ({ label, name, value, onChange, onSelect, disabled, icon }: AirlineAutocompleteProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [filteredOptions, setFilteredOptions] = useState<Airline[]>([]);
   const [activeIndex, setActiveIndex] = useState<number>(-1);

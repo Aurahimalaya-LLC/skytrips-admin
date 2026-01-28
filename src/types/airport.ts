@@ -1,3 +1,13 @@
+export interface FAQ {
+  question: string;
+  answer: string;
+}
+
+export interface FastFact {
+  label: string;
+  value: string;
+}
+
 export interface Airport {
   id: number;
   iata_code: string;
@@ -8,6 +18,13 @@ export interface Airport {
   longitude: number | null;
   timezone: string | null;
   active: boolean;
+  featured_image_url?: string;
+  description?: string;
+  fast_facts?: FastFact[];
+  top_airlines?: string[];
+  gallery_urls?: string[];
+  faqs?: FAQ[];
+  map_embed_code?: string;
 }
 
 export interface AirportDBRow {
@@ -21,6 +38,13 @@ export interface AirportDBRow {
   timezone: string | null;
   popularity?: number;
   published_status?: boolean;
+  featured_image_url?: string;
+  description?: string;
+  fast_facts?: FastFact[] | null;
+  top_airlines?: string[] | null;
+  gallery_urls?: string[];
+  faqs?: FAQ[] | null;
+  map_embed_code?: string;
 }
 
 export interface CreateAirportDTO {
@@ -32,6 +56,13 @@ export interface CreateAirportDTO {
   longitude?: number;
   timezone?: string;
   active?: boolean;
+  featured_image_url?: string;
+  description?: string;
+  fast_facts?: FastFact[];
+  top_airlines?: string[];
+  gallery_urls?: string[];
+  faqs?: FAQ[];
+  map_embed_code?: string;
 }
 
 export interface UpdateAirportDTO extends Partial<CreateAirportDTO> {}

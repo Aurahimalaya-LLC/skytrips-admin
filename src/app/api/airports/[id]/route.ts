@@ -60,6 +60,13 @@ export async function GET(
       longitude: row.longitude_deg || null,
       timezone: row.timezone || null,
       active: row.published_status ?? false,
+      featured_image_url: row.featured_image_url,
+      description: row.description,
+      fast_facts: row.fast_facts,
+      top_airlines: row.top_airlines,
+      gallery_urls: row.gallery_urls,
+      faqs: row.faqs,
+      map_embed_code: row.map_embed_code,
     };
 
     return NextResponse.json({ data: airport });
@@ -119,7 +126,10 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { iata_code, name, city, country, latitude, longitude, timezone, active } = body as UpdateAirportDTO & { active?: boolean };
+    const { 
+      iata_code, name, city, country, latitude, longitude, timezone, active,
+      featured_image_url, description, fast_facts, top_airlines, gallery_urls, faqs, map_embed_code
+    } = body as UpdateAirportDTO & { active?: boolean };
 
     // Build update object
     const updateData: Partial<AirportDBRow> = {};
@@ -131,6 +141,13 @@ export async function PUT(
     if (longitude !== undefined) updateData.longitude_deg = longitude;
     if (timezone) updateData.timezone = timezone;
     if (active !== undefined) updateData.published_status = active;
+    if (featured_image_url !== undefined) updateData.featured_image_url = featured_image_url;
+    if (description !== undefined) updateData.description = description;
+    if (fast_facts !== undefined) updateData.fast_facts = fast_facts;
+    if (top_airlines !== undefined) updateData.top_airlines = top_airlines;
+    if (gallery_urls !== undefined) updateData.gallery_urls = gallery_urls;
+    if (faqs !== undefined) updateData.faqs = faqs;
+    if (map_embed_code !== undefined) updateData.map_embed_code = map_embed_code;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
@@ -170,6 +187,13 @@ export async function PUT(
       longitude: data.longitude_deg || null,
       timezone: data.timezone || null,
       active: data.published_status ?? false,
+      featured_image_url: data.featured_image_url,
+      description: data.description,
+      fast_facts: data.fast_facts,
+      top_airlines: data.top_airlines,
+      gallery_urls: data.gallery_urls,
+      faqs: data.faqs,
+      map_embed_code: data.map_embed_code,
     };
 
     return NextResponse.json({ data: updatedAirport });
