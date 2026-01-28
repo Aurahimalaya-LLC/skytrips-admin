@@ -21,7 +21,7 @@ export default function AirportsPage() {
   const [airportToDelete, setAirportToDelete] = useState<string | number | null>(null);
   
   // Bulk Actions
-  const [selectedAirports, setSelectedAirports] = useState<number[]>([]);
+  const [selectedAirports, setSelectedAirports] = useState<string[]>([]);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
   // Use debounced values for fetching
@@ -80,7 +80,7 @@ export default function AirportsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       fetchAirports();
-      setSelectedAirports((prev) => prev.filter(id => id !== Number(airportToDelete)));
+      setSelectedAirports((prev) => prev.filter(id => id !== String(airportToDelete)));
     } catch (error) {
       // console.error("Error deleting airport:", error);
     } finally {
@@ -97,7 +97,7 @@ export default function AirportsPage() {
     }
   };
 
-  const toggleSelectAirport = (id: number) => {
+  const toggleSelectAirport = (id: string) => {
     setSelectedAirports(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
