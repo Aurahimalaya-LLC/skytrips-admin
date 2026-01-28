@@ -7,6 +7,7 @@ export async function GET(request: Request) {
   const limit = parseInt(searchParams.get("limit") || "10");
   const offset = (page - 1) * limit;
   const status = searchParams.get("status");
+  const search = searchParams.get("search");
 
   const supabase = getAdminClient();
   if (!supabase) {
@@ -19,6 +20,10 @@ export async function GET(request: Request) {
 
   if (status && status !== "all") {
     query = query.eq('status', status);
+  }
+
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,iata_code.ilike.%${search}%,country.ilike.%${search}%`);
   }
 
   const { data, error, count } = await query

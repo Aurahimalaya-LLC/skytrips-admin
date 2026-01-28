@@ -40,9 +40,16 @@ export default function AirlinesPage() {
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   useEffect(() => {
-    fetchAirlines(page, limit, statusFilter);
+    const timer = setTimeout(() => {
+      fetchAirlines(page, limit, statusFilter, searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [page, limit, statusFilter, searchTerm]);
+
+  useEffect(() => {
     fetchStats();
-  }, [page, limit, statusFilter]);
+  }, []);
 
   const fetchStats = async () => {
     try {
@@ -59,7 +66,8 @@ export default function AirlinesPage() {
   const fetchAirlines = async (
     p: number,
     l: number,
-    status: "all" | "Active" | "Inactive" | "Pending" = statusFilter
+    status: "all" | "Active" | "Inactive" | "Pending" = statusFilter,
+    search: string = searchTerm
   ) => {
     try {
       const params = new URLSearchParams({
@@ -69,6 +77,10 @@ export default function AirlinesPage() {
 
       if (status && status !== "all") {
         params.set("status", status);
+      }
+
+      if (search) {
+        params.set("search", search);
       }
 
       const res = await fetch(`/api/airlines?${params.toString()}`);
@@ -102,13 +114,7 @@ export default function AirlinesPage() {
     }
   };
 
-  const filteredAirlines = airlines.filter((a) => {
-    const matchesSearch =
-      a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.iata_code?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    return matchesSearch;
-  });
+  const filteredAirlines = airlines;
 
   const totalPages = Math.max(1, Math.ceil(totalCount / limit));
   const visiblePageNumbers = (() => {
