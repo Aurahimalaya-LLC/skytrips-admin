@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     if (!email) {
       return NextResponse.json({ ok: true, warning: "no_email" });
     }
-    const hasMailgun = !!process.env.NEXT_PUBLIC_MAILGUN_API_KEY && !!process.env.NEXT_PUBLIC_MAILGUN_DOMAIN;
+    const hasMailgun = !!(process.env.MAILGUN_API_KEY || process.env.NEXT_PUBLIC_MAILGUN_API_KEY) && !!(process.env.MAILGUN_DOMAIN || process.env.NEXT_PUBLIC_MAILGUN_DOMAIN);
     if (!hasMailgun) {
       return NextResponse.json({ ok: true, warning: "mail_not_configured" });
     }

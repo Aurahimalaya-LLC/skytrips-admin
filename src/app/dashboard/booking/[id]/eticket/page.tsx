@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import Image from "next/image";
 import { useRouter, notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Booking } from "@/types";
+import { Booking, Traveller } from "@/types";
 import { getCustomerName } from "@/lib/booking-helpers";
 import { CompanyProfile } from "@/types/company";
 import SendEmailModal from "@/components/booking-management/SendEmailModal";
@@ -51,7 +51,7 @@ export default function ETicketPage({
       }
     };
     fetchSettings();
-  }, [selectedCompanyId]);
+  }, []); // Run only on mount
 
   useEffect(() => {
     if (!bookingId) return;
@@ -196,7 +196,7 @@ export default function ETicketPage({
   // Pricing Breakdown
   const sellingPrice = Number(booking.sellingPrice) || 0;
   // Try to use stored prices or fall back to mock
-  const prices = booking.prices as Record<string, any> | undefined;
+  const prices = booking.prices as Record<string, string | number> | undefined;
   const baseFare = prices?.baseFare
     ? Number(prices.baseFare)
     : sellingPrice * 0.85;
@@ -215,6 +215,9 @@ export default function ETicketPage({
     template: string;
   }) => {
     if (!booking) return;
+    if (!booking.email || !String(booking.email).trim()) {
+      throw new Error("Recipient email is missing");
+    }
     try {
       const element = document.getElementById("eticket-content");
       if (!element) throw new Error("Ticket content not found");
@@ -293,7 +296,10 @@ export default function ETicketPage({
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || "Failed to send email");
+        const errorMessage = errData.details
+          ? `${errData.error}: ${errData.details}`
+          : errData.error || "Failed to send email";
+        throw new Error(errorMessage);
       }
     } catch (err) {
       console.error("Error sending ticket:", err);
@@ -302,7 +308,7 @@ export default function ETicketPage({
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-6 md:p-12 print:p-0 print:bg-white font-display">
+    <div className="min-h-screen bg-slate-100 p-2 md:p-4 print:p-0 print:bg-white font-display">
       {booking && (
         <SendEmailModal
           isOpen={isEmailModalOpen}
@@ -316,23 +322,23 @@ export default function ETicketPage({
                   }`,
             email: booking.email || "",
             phone: booking.phone,
-            organization: (booking as any).companyName || "Individual",
+            organization: (booking as Booking & { companyName?: string }).companyName || "Individual",
             pnr: booking.PNR,
           }}
           onSend={handleSendEmail}
         />
       )}
       {/* Navigation / Actions - Hidden in Print */}
-      <div className="max-w-6xl mx-auto mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
+      <div className="max-w-6xl mx-auto mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <nav className="flex text-sm text-slate-500">
           <button
             onClick={() => router.back()}
             className="hover:text-slate-800 transition-colors flex items-center gap-1"
+            title="Back to Booking"
           >
             <span className="material-symbols-outlined text-[18px]">
               arrow_back
             </span>
-            Back to Booking
           </button>
           <span className="mx-2 text-slate-300">/</span>
           <span className="text-primary font-bold">E-Ticket</span>
@@ -341,12 +347,12 @@ export default function ETicketPage({
           {companyProfiles.length > 0 && (
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-500">
-                Company profile
+                Profile
               </span>
               <select
                 value={selectedCompanyId || ""}
                 onChange={(e) => setSelectedCompanyId(e.target.value || null)}
-                className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                className="px-2 py-1 text-xs border border-slate-200 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary max-w-[150px]"
               >
                 {companyProfiles.map((profile) => (
                   <option key={profile.id} value={profile.id}>
@@ -823,7 +829,7 @@ export default function ETicketPage({
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {booking.travellers && booking.travellers.length > 0 ? (
-                    booking.travellers.map((traveller: any, index: number) => (
+                    booking.travellers.map((traveller: Traveller, index: number) => (
                       <tr key={index}>
                         <td className="px-6 py-4 font-bold text-slate-900">
                           {traveller.firstName} {traveller.lastName}

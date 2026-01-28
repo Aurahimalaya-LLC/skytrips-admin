@@ -98,6 +98,10 @@ export default function SendEmailModal({
   }, [selectedTemplate, activeTemplates, mode, recipient]);
 
   const handleAction = async () => {
+    if (!recipient.email || !recipient.email.trim()) {
+      setError("Recipient email is required.");
+      return;
+    }
     if (!message.trim()) {
       setError("Message content cannot be empty.");
       return;
