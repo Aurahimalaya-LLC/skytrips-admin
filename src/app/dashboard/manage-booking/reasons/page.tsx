@@ -11,10 +11,130 @@ export default function ReasonManagementPage() {
   const [reasons, setReasons] = useState<Reason[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingReason, setEditingReason] = useState<Reason | null>(null);
+  const [stats, setStats] = useState({
+    mostUsed: "Loading...",
+    recentActivity: 0,
+  });
+  const [chartData, setChartData] = useState<
+    { label: string; fullLabel: string; value: number; percentage: number }[]
+  >([]);
+  const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d" | "all">("30d");
+  const [isRangeDropdownOpen, setIsRangeDropdownOpen] = useState(false);
 
   useEffect(() => {
     fetchReasons();
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchStats(controller.signal);
+    return () => controller.abort();
+  }, [dateRange]);
+
+  const fetchStats = async (signal?: AbortSignal) => {
+    try {
+      // Calculate start date based on range
+      let startDate: Date | null = new Date();
+      if (dateRange === "7d") {
+        startDate.setDate(startDate.getDate() - 7);
+      } else if (dateRange === "30d") {
+        startDate.setDate(startDate.getDate() - 30);
+      } else if (dateRange === "90d") {
+        startDate.setDate(startDate.getDate() - 90);
+      } else {
+        startDate = null; // All time
+      }
+
+      // Base query
+      let query = supabase
+        .from("manage_booking")
+        .select("uid", { count: "exact", head: true })
+        .not("reason", "is", null);
+
+      if (signal) {
+        query = query.abortSignal(signal);
+      }
+
+      if (startDate) {
+        query = query.gte("created_at", startDate.toISOString());
+      }
+
+      // Count all bookings created in selected range that have a reason
+      const { count: activityCount, error: countError } = await query;
+
+      if (countError) throw countError;
+
+      // Fetch most used reason (analyze last 1000 records for performance within range)
+      let reasonsQuery = supabase
+        .from("manage_booking")
+        .select("reason")
+        .not("reason", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1000);
+
+      if (signal) {
+        reasonsQuery = reasonsQuery.abortSignal(signal);
+      }
+
+      if (startDate) {
+        reasonsQuery = reasonsQuery.gte("created_at", startDate.toISOString());
+      }
+
+      const { data: reasonsData, error: reasonsError } = await reasonsQuery;
+
+      if (reasonsError) throw reasonsError;
+
+      // Process reasons data
+      const counts: Record<string, number> = {};
+      (reasonsData || []).forEach((item) => {
+        if (item.reason) {
+          counts[item.reason] = (counts[item.reason] || 0) + 1;
+        }
+      });
+
+      let mostUsed = "N/A";
+      let maxCount = 0;
+
+      Object.entries(counts).forEach(([reason, count]) => {
+        if (count > maxCount) {
+          maxCount = count;
+          mostUsed = reason;
+        }
+      });
+
+      setStats({
+        mostUsed,
+        recentActivity: activityCount || 0,
+      });
+
+      // Prepare Chart Data (Top 6)
+      const sortedReasons = Object.entries(counts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 6);
+
+      const maxValue = sortedReasons.length > 0 ? sortedReasons[0][1] : 1;
+
+      const newChartData = sortedReasons.map(([label, value]) => ({
+        label: label.length > 10 ? label.substring(0, 10) + "..." : label,
+        fullLabel: label,
+        value,
+        percentage: maxValue > 0 ? Math.round((value / maxValue) * 100) : 0,
+      }));
+
+      setChartData(newChartData);
+    } catch (error) {
+      if (
+        (error as { name?: string }).name === "AbortError" ||
+        (error as { code?: number }).code === 20
+      ) {
+        // Ignore abort errors
+        return;
+      }
+      console.error("Error fetching stats:", error);
+      // Only reset stats if it's a real error, not just an abort
+      // setStats({ mostUsed: "N/A", recentActivity: 0 });
+    }
+  };
 
   const fetchReasons = async () => {
     setLoading(true);
@@ -48,10 +168,28 @@ export default function ReasonManagementPage() {
         if (error) throw error;
       } else {
         // Create new
-        // Generate a random code for now, similar to mock logic
-        const code = `REF-${Math.floor(Math.random() * 1000)
-          .toString()
-          .padStart(3, "0")}`;
+        // Fetch existing codes to generate a sequential UID
+        const { data: existingReasons, error: fetchError } = await supabase
+          .from("reasons")
+          .select("code");
+
+        if (fetchError) throw fetchError;
+
+        let nextNum = 1;
+        if (existingReasons && existingReasons.length > 0) {
+          const maxNum = existingReasons.reduce((max, r) => {
+            const match = r.code.match(/REF-(\d+)/);
+            if (match) {
+              const num = parseInt(match[1], 10);
+              return num > max ? num : max;
+            }
+            return max;
+          }, 0);
+          nextNum = maxNum + 1;
+        }
+
+        const code = `REF-${nextNum.toString().padStart(3, "0")}`;
+
         const { error } = await supabase
           .from("reasons")
           .insert([{ code, title: data.title, description: data.description }]);
@@ -156,13 +294,15 @@ export default function ReasonManagementPage() {
 
         {/* Card 2 */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-          <div>
+          <div className="flex-1 min-w-0 mr-4">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
               MOST USED REASON
             </p>
-            <p className="text-3xl font-bold text-slate-900">Weather</p>
+            <p className="text-3xl font-bold text-slate-900 truncate" title={stats.mostUsed}>
+              {stats.mostUsed}
+            </p>
           </div>
-          <div className="size-10 bg-teal-50 rounded-lg flex items-center justify-center text-teal-500">
+          <div className="size-10 bg-teal-50 rounded-lg flex items-center justify-center text-teal-500 shrink-0">
             <span className="material-symbols-outlined">trending_up</span>
           </div>
         </div>
@@ -173,7 +313,9 @@ export default function ReasonManagementPage() {
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
               RECENT ACTIVITY COUNT
             </p>
-            <p className="text-3xl font-bold text-slate-900">142</p>
+            <p className="text-3xl font-bold text-slate-900">
+              {stats.recentActivity}
+            </p>
           </div>
           <div className="size-10 bg-teal-50 rounded-lg flex items-center justify-center text-teal-500">
             <span className="material-symbols-outlined">analytics</span>
@@ -323,35 +465,133 @@ export default function ReasonManagementPage() {
               Frequency of Reasons
             </h2>
             <p className="text-sm text-slate-500 mt-1">
-              Distribution of refund and reissue selections (Last 30 days)
+              Distribution of refund and reissue selections
+              {dateRange === "7d"
+                ? " (Last 7 days)"
+                : dateRange === "30d"
+                ? " (Last 30 days)"
+                : dateRange === "90d"
+                ? " (Last 90 days)"
+                : " (All time)"}
             </p>
           </div>
-          <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors bg-white">
-            Monthly
-            <span className="material-symbols-outlined text-[18px]">
-              expand_more
-            </span>
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setIsRangeDropdownOpen(!isRangeDropdownOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors bg-white"
+            >
+              {dateRange === "7d"
+                ? "Last 7 Days"
+                : dateRange === "30d"
+                ? "Last 30 Days"
+                : dateRange === "90d"
+                ? "Last 90 Days"
+                : "All Time"}
+              <span className="material-symbols-outlined text-[18px]">
+                expand_more
+              </span>
+            </button>
+            {isRangeDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsRangeDropdownOpen(false)}
+                />
+                <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-lg shadow-lg border border-slate-100 py-1 z-20">
+                  <button
+                    onClick={() => {
+                      setDateRange("7d");
+                      setIsRangeDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                      dateRange === "7d"
+                        ? "text-teal-600 font-bold"
+                        : "text-slate-700"
+                    }`}
+                  >
+                    Last 7 Days
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDateRange("30d");
+                      setIsRangeDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                      dateRange === "30d"
+                        ? "text-teal-600 font-bold"
+                        : "text-slate-700"
+                    }`}
+                  >
+                    Last 30 Days
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDateRange("90d");
+                      setIsRangeDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                      dateRange === "90d"
+                        ? "text-teal-600 font-bold"
+                        : "text-slate-700"
+                    }`}
+                  >
+                    Last 90 Days
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDateRange("all");
+                      setIsRangeDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                      dateRange === "all"
+                        ? "text-teal-600 font-bold"
+                        : "text-slate-700"
+                    }`}
+                  >
+                    All Time
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Chart Placeholder Area */}
-        <div className="h-64 w-full relative">
-          <div className="absolute inset-0 flex items-end justify-between px-4 sm:px-12">
-            {[
-              "WEATHER",
-              "MEDICAL",
-              "SCHEDULE",
-              "CUSTOMER",
-              "PRICING",
-              "GUIDE",
-            ].map((label) => (
-              <span
-                key={label}
-                className="text-xs font-bold text-slate-400 uppercase tracking-wider"
-              >
-                {label}
-              </span>
-            ))}
+        <div className="h-64 w-full relative mt-4">
+          <div className="absolute inset-0 flex items-end justify-between px-4 sm:px-12 pb-2">
+            {chartData.length > 0 ? (
+              chartData.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col items-center gap-3 group w-1/6 relative"
+                >
+                  {/* Tooltip */}
+                  <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 bg-slate-800 text-white text-xs rounded py-1 px-2 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                    {item.fullLabel}: {item.value}
+                  </div>
+
+                  {/* Bar */}
+                  <div className="w-full flex items-end justify-center h-48">
+                    <div
+                      className="w-8 sm:w-12 bg-teal-400 rounded-t-lg transition-all duration-500 hover:bg-teal-500 relative"
+                      style={{ height: `${Math.max(item.percentage, 5)}%` }}
+                    ></div>
+                  </div>
+
+                  {/* Label */}
+                  <span
+                    className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider text-center truncate w-full px-1"
+                    title={item.fullLabel}
+                  >
+                    {item.label}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-slate-400">
+                No data available for chart
+              </div>
+            )}
           </div>
         </div>
       </div>

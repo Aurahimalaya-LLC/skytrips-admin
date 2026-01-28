@@ -17,13 +17,11 @@ export function AddReasonModal({ isOpen, onClose, onSubmit, initialData }: AddRe
 
   useEffect(() => {
     if (isOpen) {
-      if (initialData) {
-        setTitle(initialData.title);
-        setDescription(initialData.description);
-      } else {
-        setTitle("");
-        setDescription("");
-      }
+      const targetTitle = initialData?.title || "";
+      const targetDescription = initialData?.description || "";
+      
+      setTitle(prev => prev !== targetTitle ? targetTitle : prev);
+      setDescription(prev => prev !== targetDescription ? targetDescription : prev);
     }
   }, [isOpen, initialData]);
 
@@ -118,7 +116,7 @@ export function AddReasonModal({ isOpen, onClose, onSubmit, initialData }: AddRe
             <div className="relative">
               <input
                 type="text"
-                value={initialData?.uid || "REF-025"}
+                value={initialData?.uid || "Auto-generated"}
                 readOnly
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none cursor-not-allowed"
               />
