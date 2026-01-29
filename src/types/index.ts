@@ -44,6 +44,8 @@ export interface Booking {
   customerType?: string;
   contactType?: string;
   addons?: Addons;
+  last_invoice_sent_at?: string;
+  last_eticket_sent_at?: string;
   created_at?: string;
   updated_at?: string;
   itineraries?: FlightItinerary[];

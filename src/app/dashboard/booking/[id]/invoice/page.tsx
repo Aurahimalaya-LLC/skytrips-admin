@@ -278,6 +278,21 @@ export default function InvoicePage({
           : errData.error || "Failed to send email";
         throw new Error(errorMessage);
       }
+
+      // Update last_invoice_sent_at in database
+      const now = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from("bookings")
+        .update({ last_invoice_sent_at: now })
+        .eq("id", booking.id);
+
+      if (updateError) {
+        console.error("Failed to update last_invoice_sent_at:", updateError);
+      } else {
+        setBooking((prev) =>
+          prev ? { ...prev, last_invoice_sent_at: now } : null,
+        );
+      }
     } catch (err) {
       console.error("Error sending invoice:", err);
       throw err;
@@ -296,6 +311,7 @@ export default function InvoicePage({
             phone: booking.phone,
             organization: (booking as Booking & { companyName?: string }).companyName || "Individual",
           }}
+          lastEmailSent={booking.last_invoice_sent_at}
           onSend={handleSendEmail}
         />
       )}
@@ -368,24 +384,24 @@ export default function InvoicePage({
         style={{ colorScheme: "only light" }}
       >
         {/* Header Section */}
-        <div className="p-8 md:p-12 border-b border-slate-100">
-          <div className="flex flex-row justify-between items-center gap-8">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center text-white font-black text-2xl">
+        <div className="p-6 md:p-8 border-b border-slate-100">
+          <div className="flex flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center text-white font-black text-2xl">
                 {settingsLogoUrl ? (
                   <Image
                     src={settingsLogoUrl}
                     alt={settingsCompanyName || "Company Logo"}
-                    width={48}
-                    height={48}
-                    className="w-12 h-12 object-cover"
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 object-cover"
                   />
                 ) : (
                   "S"
                 )}
               </div>
               <div>
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                <h1 className="text-xl font-black text-slate-900 tracking-tight">
                   {settingsCompanyName ||
                     (selectedCompany && selectedCompany.name) ||
                     (booking as BookingWithAgency).issuedthroughagency ||
@@ -398,23 +414,23 @@ export default function InvoicePage({
               </div>
             </div>
             <div className="text-left md:text-right">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-1">
                 INVOICE
               </h2>
-              <p className="text-lg font-bold text-slate-500">
+              <p className="text-base font-bold text-slate-500">
                 #{invoiceNumber}
               </p>
-              <div className="mt-2 inline-block px-3 py-1 bg-amber-100 text-amber-700 text-xs font-black rounded-full border border-amber-200 uppercase tracking-wide print:border-slate-300 print:bg-transparent print:text-slate-900">
+              <div className="mt-1 inline-block px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full border border-amber-200 uppercase tracking-wide print:border-slate-300 print:bg-transparent print:text-slate-900">
                 {booking.paymentStatus || "PENDING"}
               </div>
             </div>
           </div>
 
-          <div className="mt-12">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+          <div className="mt-6">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
               Company Information
             </h3>
-            <address className="not-italic text-sm text-slate-600 space-y-1">
+            <address className="not-italic text-sm text-slate-600 space-y-0.5">
               <p className="font-bold text-slate-900">
                 {selectedCompany?.name ||
                   (booking as BookingWithAgency).issuedthroughagency ||
@@ -462,18 +478,18 @@ export default function InvoicePage({
         </div>
 
         {/* Bill To & Invoice Details Section */}
-        <div className="p-8 md:p-12 bg-slate-50/50 border-b border-slate-100">
-          <div className="flex flex-col md:flex-row justify-between gap-12">
+        <div className="p-6 md:p-8 bg-slate-50/50 border-b border-slate-100">
+          <div className="flex flex-col md:flex-row justify-between gap-8">
             {/* Billed To */}
             <div className="flex-1">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
                 BILLED TO
               </h3>
-              <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-                <h4 className="text-xl font-bold text-slate-900 mb-3">
+              <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+                <h4 className="text-lg font-bold text-slate-900 mb-2">
                   {displayTravellerName}
                 </h4>
-                <div className="space-y-2 text-sm text-slate-600">
+                <div className="space-y-1.5 text-sm text-slate-600">
                   <p className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-[18px] text-slate-400">
                       email
@@ -501,36 +517,36 @@ export default function InvoicePage({
 
             {/* Invoice Details Grid */}
             <div className="flex-1">
-              <div className="grid grid-cols-2 gap-x-8 gap-y-10">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-6">
                 <div>
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
                     ISSUE DATE
                   </h3>
-                  <p className="text-base font-bold text-slate-900">
+                  <p className="text-sm font-bold text-slate-900">
                     {issueDate}
                   </p>
                 </div>
                 <div>
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
                     PAYMENT DUE DATE
                   </h3>
-                  <p className="text-base font-bold text-slate-900">
+                  <p className="text-sm font-bold text-slate-900">
                     {dueDate}
                   </p>
                 </div>
                 <div>
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
                     BOOKING REFERENCE
                   </h3>
-                  <p className="text-base font-bold text-slate-900">
+                  <p className="text-sm font-bold text-slate-900">
                     {booking.id}
                   </p>
                 </div>
                 <div>
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
                     PNR
                   </h3>
-                  <span className="inline-block px-3 py-1 bg-slate-100 text-slate-900 text-sm font-bold rounded-lg border border-slate-200 uppercase font-mono tracking-wider">
+                  <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-900 text-xs font-bold rounded-lg border border-slate-200 uppercase font-mono tracking-wider">
                     {booking.PNR}
                   </span>
                 </div>
@@ -540,21 +556,21 @@ export default function InvoicePage({
         </div>
 
         {/* Items Table */}
-        <div className="p-8 md:p-12">
+        <div className="p-6 md:p-8">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b-2 border-slate-100">
-                  <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest w-1/2">
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="py-3 pl-4 text-xs font-bold text-slate-700 uppercase tracking-wider w-1/2 rounded-l-lg">
                     Description
                   </th>
-                  <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">
+                  <th className="py-3 text-xs font-bold text-slate-700 uppercase tracking-wider text-right">
                     Unit Price
                   </th>
-                  <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-center">
+                  <th className="py-3 text-xs font-bold text-slate-700 uppercase tracking-wider text-center">
                     Qty
                   </th>
-                  <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">
+                  <th className="py-3 pr-4 text-xs font-bold text-slate-700 uppercase tracking-wider text-right rounded-r-lg">
                     Total
                   </th>
                 </tr>
@@ -562,22 +578,22 @@ export default function InvoicePage({
               <tbody className="text-sm">
                 {/* Main Flight Item */}
                 <tr className="border-b border-slate-50 group">
-                  <td className="py-4 pr-4">
+                  <td className="py-3 pr-4">
                     <p className="font-bold text-slate-900">
                       Flight: {booking.origin} to {booking.destination}
                     </p>
-                    <p className="text-slate-500 text-xs mt-1">
+                    <p className="text-slate-500 text-xs mt-0.5">
                       {booking.airlines} ({booking.flightNumber}) -{" "}
                       {booking.flightClass} Class
                     </p>
                   </td>
-                  <td className="py-4 text-right font-medium text-slate-600">
+                  <td className="py-3 text-right font-medium text-slate-600">
                     ${sellingPrice.toFixed(2)}
                   </td>
-                  <td className="py-4 text-center font-medium text-slate-600">
+                  <td className="py-3 text-center font-medium text-slate-600">
                     1
                   </td>
-                  <td className="py-4 text-right font-bold text-slate-900">
+                  <td className="py-3 text-right font-bold text-slate-900">
                     ${sellingPrice.toFixed(2)}
                   </td>
                 </tr>
@@ -585,19 +601,19 @@ export default function InvoicePage({
                 {/* Add-ons */}
                 {addons.map((addon, index) => (
                   <tr key={index} className="border-b border-slate-50 group">
-                    <td className="py-4 pr-4">
+                    <td className="py-3 pr-4">
                       <p className="font-bold text-slate-900">{addon.name}</p>
-                      <p className="text-slate-500 text-xs mt-1">
+                      <p className="text-slate-500 text-xs mt-0.5">
                         Additional Service
                       </p>
                     </td>
-                    <td className="py-4 text-right font-medium text-slate-600">
+                    <td className="py-3 text-right font-medium text-slate-600">
                       ${addon.price.toFixed(2)}
                     </td>
-                    <td className="py-4 text-center font-medium text-slate-600">
+                    <td className="py-3 text-center font-medium text-slate-600">
                       1
                     </td>
-                    <td className="py-4 text-right font-bold text-slate-900">
+                    <td className="py-3 text-right font-bold text-slate-900">
                       ${addon.price.toFixed(2)}
                     </td>
                   </tr>
@@ -607,8 +623,8 @@ export default function InvoicePage({
           </div>
 
           {/* Summary */}
-          <div className="mt-8 flex flex-col md:flex-row justify-end">
-            <div className="w-full md:w-1/3 space-y-3">
+          <div className="mt-6 flex flex-col md:flex-row justify-end">
+            <div className="w-full md:w-1/3 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="font-bold text-slate-500">Subtotal</span>
                 <span className="font-bold text-slate-900">
@@ -627,27 +643,27 @@ export default function InvoicePage({
                   -${discount.toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between text-xl pt-4 border-t-2 border-slate-100">
+              <div className="flex justify-between text-xl pt-3 border-t-2 border-slate-100">
                 <span className="font-black text-slate-900">Grand Total</span>
                 <span className="font-black text-primary">
                   ${grandTotal.toFixed(2)}
                 </span>
               </div>
-              <div className="text-right text-xs text-slate-400 mt-2">
+              <div className="text-right text-xs text-slate-400 mt-1">
                 All prices are in USD
               </div>
             </div>
           </div>
 
           {/* Customer Support Section */}
-          <div className="bg-white border border-slate-200 rounded-xl p-8 mt-12 print:mt-8 print:border-slate-300">
-            <h4 className="text-sm font-bold text-black uppercase tracking-widest mb-6 flex items-center gap-2">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 mt-8 print:mt-6 print:border-slate-300">
+            <h4 className="text-sm font-bold text-black uppercase tracking-widest mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">
                 support_agent
               </span>
               Customer Support
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <div className="text-xs font-bold text-slate-400 uppercase mb-1">
                   24/7 Support Line
@@ -695,20 +711,10 @@ export default function InvoicePage({
         </div>
 
         {/* Footer */}
-        <div className="p-8 md:p-12 bg-slate-50 border-t border-slate-100 text-center">
-          <h4 className="font-bold text-slate-900 mb-2">
-            Thank you for booking with{" "}
-            {selectedCompany?.name ||
-              (booking as BookingWithAgency).issuedthroughagency ||
-              booking.agency ||
-              "Skytrips"}
-            !
-          </h4>
-          <p className="text-sm text-slate-500 max-w-2xl mx-auto">
+        <div className="p-6 md:p-8 bg-slate-50 border-t border-slate-100 text-center">
+          <p className="text-xs text-slate-500 max-w-2xl mx-auto">
             Please note that this invoice is computer generated and is valid
-            without a signature. For any billing inquiries, please contact our
-            support team at {supportEmail} or call {supportPhone} within 7 days
-            of receiving this invoice.
+            without a signature.
           </p>
         </div>
       </div>

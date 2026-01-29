@@ -4,7 +4,7 @@ import { sendEmail } from "@/lib/mail";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { to, subject, message, html, attachment } = body;
+    const { to, subject, message, html, attachment, attachments } = body;
 
     if (!to || !subject || (!message && !html)) {
       return NextResponse.json(
@@ -23,29 +23,45 @@ export async function POST(req: Request) {
       );
     }
 
-    let mailAttachment = undefined;
+    const mailAttachments = [];
+
+    // Process single attachment (legacy support)
     if (attachment && attachment.content && attachment.filename) {
-      // content is expected to be a base64 string
-      // Check if it has data URI prefix and strip it, otherwise use as is
       let base64Data = attachment.content;
       if (base64Data.includes(",")) {
         base64Data = base64Data.split(",")[1];
       }
-
       const buffer = Buffer.from(base64Data, "base64");
-
-      mailAttachment = {
+      mailAttachments.push({
         filename: attachment.filename,
         content: buffer,
-        contentType: "application/pdf",
-      };
+        contentType: attachment.contentType || "application/pdf",
+      });
+    }
+
+    // Process multiple attachments
+    if (Array.isArray(attachments)) {
+      for (const att of attachments) {
+        if (att.content && att.filename) {
+          let base64Data = att.content;
+          if (base64Data.includes(",")) {
+            base64Data = base64Data.split(",")[1];
+          }
+          const buffer = Buffer.from(base64Data, "base64");
+          mailAttachments.push({
+            filename: att.filename,
+            content: buffer,
+            contentType: att.contentType || "application/octet-stream",
+          });
+        }
+      }
     }
 
     await sendEmail({
       to,
       subject,
       html: html || message.replace(/\n/g, "<br>"),
-      attachment: mailAttachment,
+      attachment: mailAttachments.length > 0 ? mailAttachments : undefined,
     });
 
     return NextResponse.json({ success: true });

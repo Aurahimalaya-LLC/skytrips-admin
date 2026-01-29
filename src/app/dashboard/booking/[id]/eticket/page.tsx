@@ -209,6 +209,92 @@ export default function ETicketPage({
     selectedCompany?.emails[0]?.value || "support@skyhigh.com";
   const supportHours = "24/7 Support"; // Could be added to company profile later
 
+  // Support Information
+  const generateICSContent = (booking: Booking) => {
+    const events: string[] = [];
+    const pnr = booking.PNR || "Booking";
+    const customerName = getCustomerName(booking);
+
+    const formatToICSDate = (dateStr?: string) => {
+      if (!dateStr) return "";
+      try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return "";
+        return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+      } catch (e) {
+        return "";
+      }
+    };
+
+    booking.itineraries?.forEach((itinerary, itineraryIndex) => {
+      itinerary.segments.forEach((segment, segmentIndex) => {
+        const start = formatToICSDate(segment.departure.at);
+        const end = formatToICSDate(segment.arrival.at);
+        if (!start || !end) return;
+
+        const summary = `Flight ${segment.carrierCode}${segment.number}: ${segment.departure.iataCode} to ${segment.arrival.iataCode}`;
+        const description = `Flight: ${segment.carrierCode} ${segment.number}\\nPNR: ${pnr}\\nPassenger: ${customerName}\\nClass: ${booking.flightClass || "Economy"}`;
+        const location = `${segment.departure.iataCode}${
+          segment.departure.terminal ? ` Terminal ${segment.departure.terminal}` : ""
+        }`;
+        const uid = `${pnr}-${itineraryIndex}-${segmentIndex}@skytrips.com.au`;
+
+        events.push(`BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z
+DTSTART:${start}
+DTEND:${end}
+SUMMARY:${summary}
+DESCRIPTION:${description}
+LOCATION:${location}
+END:VEVENT`);
+      });
+    });
+
+    // Fallback for bookings without itineraries
+    if (events.length === 0) {
+      const depDate = booking.travelDate || booking.departureDate;
+      if (depDate) {
+        const start = formatToICSDate(depDate);
+        if (start) {
+          const arrDate = booking.arrivalDate;
+          let end = formatToICSDate(arrDate);
+          if (!end) {
+            // Assume 2 hour flight if arrival is missing
+            const startDate = new Date(depDate);
+            end = formatToICSDate(
+              new Date(startDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+            );
+          }
+
+          const summary = `Flight ${booking.airlines} ${
+            booking.flightNumber || ""
+          }: ${booking.origin} to ${booking.destination}`;
+          const description = `PNR: ${pnr}\\nPassenger: ${customerName}\\nClass: ${
+            booking.flightClass || "Economy"
+          }`;
+          const uid = `${pnr}-legacy@skytrips.com.au`;
+
+          events.push(`BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z
+DTSTART:${start}
+DTEND:${end}
+SUMMARY:${summary}
+DESCRIPTION:${description}
+LOCATION:${booking.origin}
+END:VEVENT`);
+        }
+      }
+    }
+
+    return `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//SkyTrips//Flight Itinerary//EN
+${events.join("\n")}
+END:VCALENDAR`;
+  };
+
   const handleSendEmail = async (data: {
     subject: string;
     message: string;
@@ -273,6 +359,10 @@ export default function ETicketPage({
 
       const pdfBase64 = pdf.output("datauristring");
 
+      // Generate ICS
+      const icsContent = generateICSContent(booking);
+      const icsBase64 = btoa(icsContent);
+
       const res = await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -287,10 +377,18 @@ export default function ETicketPage({
             .replace("{DEPARTURE_DATE}", booking.travelDate || "")
             .replace("{FLIGHT_NUMBER}", booking.flightNumber || "")
             .replace("{AMOUNT}", booking.sellingPrice?.toString() || ""),
-          attachment: {
-            filename: `Eticket-${booking.PNR || "Booking"}.pdf`,
-            content: pdfBase64,
-          },
+          attachments: [
+            {
+              filename: `Eticket-${booking.PNR || "Booking"}.pdf`,
+              content: pdfBase64,
+              contentType: "application/pdf",
+            },
+            {
+              filename: `Flight-Itinerary-${booking.PNR || "Booking"}.ics`,
+              content: icsBase64,
+              contentType: "text/calendar",
+            },
+          ],
         }),
       });
 
@@ -300,6 +398,21 @@ export default function ETicketPage({
           ? `${errData.error}: ${errData.details}`
           : errData.error || "Failed to send email";
         throw new Error(errorMessage);
+      }
+
+      // Update last_eticket_sent_at in database
+      const now = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from("bookings")
+        .update({ last_eticket_sent_at: now })
+        .eq("id", booking.id);
+
+      if (updateError) {
+        console.error("Error updating last_eticket_sent_at:", updateError);
+      } else {
+        setBooking((prev) =>
+          prev ? { ...prev, last_eticket_sent_at: now } : null
+        );
       }
     } catch (err) {
       console.error("Error sending ticket:", err);
@@ -313,6 +426,7 @@ export default function ETicketPage({
         <SendEmailModal
           isOpen={isEmailModalOpen}
           onClose={() => setIsEmailModalOpen(false)}
+          lastEmailSent={booking.last_eticket_sent_at}
           recipient={{
             name:
               booking.customer && typeof booking.customer === "object"

@@ -137,14 +137,14 @@ export default function BookingPage() {
 
       if (customerFilter === "linked") {
         query = query.or(
-          "customer.neq.null,customerid.neq.00000000-0000-0000-0000-000000000000",
+          "customer.neq.{},customerid.neq.00000000-0000-0000-0000-000000000000",
         );
       } else if (customerFilter === "unlinked") {
         query = query
           .or(
             "customerid.is.null,customerid.eq.00000000-0000-0000-0000-000000000000",
           )
-          .is("customer", null);
+          .or("customer.is.null,customer.eq.{}");
       }
 
       const { data, count, error: fetchError } = await query;
