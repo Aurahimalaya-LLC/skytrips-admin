@@ -9,8 +9,9 @@ import FlightDetailsCard from "@/components/booking-management/FlightDetailsCard
 import ProcessingTab from "@/components/booking-management/tabs/ProcessingTab";
 import FlightDetailsTab from "@/components/booking-management/tabs/FlightDetailsTab";
 import FinancialSummaryTab from "@/components/booking-management/tabs/FinancialSummaryTab";
+import RefundedTab from "@/components/booking-management/tabs/RefundedTab";
 
-type TabType = "processing" | "flight-details" | "financial-summary";
+type TabType = "request" | "processing" | "financial-summary" | "refunded";
 
 export default function EditBookingPage() {
   const params = useParams();
@@ -24,7 +25,7 @@ export default function EditBookingPage() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [processing, setProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>(
-    initialTab && ["processing", "flight-details", "financial-summary"].includes(initialTab)
+    initialTab && ["request", "processing", "financial-summary", "refunded"].includes(initialTab)
       ? initialTab
       : "processing"
   );
@@ -94,6 +95,20 @@ export default function EditBookingPage() {
         setBooking(data.booking_details as Booking);
       }
 
+      // Fetch dynamic agency name from bookings table
+      let agencyName = (data.booking_details as Booking)?.agency || "Travel World Inc.";
+      if (data.booking_id) {
+        const { data: realBookingData } = await supabase
+          .from("bookings")
+          .select("issuedthroughagency")
+          .eq("id", data.booking_id)
+          .single();
+        
+        if (realBookingData?.issuedthroughagency) {
+          agencyName = realBookingData.issuedthroughagency;
+        }
+      }
+
       if (data.user_id) {
         const { data: userData } = await supabase
           .from("users")
@@ -108,7 +123,7 @@ export default function EditBookingPage() {
           setRequester({
             name: fullName || "Unknown",
             email: userData.email || "",
-            agency: "Travel World Inc.", // Placeholder
+            agency: agencyName,
           });
         }
       }
@@ -135,7 +150,7 @@ export default function EditBookingPage() {
       if (error) throw error;
 
       // Navigate to next tab
-      setActiveTab("flight-details");
+      setActiveTab("financial-summary");
     } catch (err) {
       console.error("Error updating record:", err);
       alert("Failed to update booking. Please try again.");
@@ -276,8 +291,10 @@ export default function EditBookingPage() {
     switch (activeTab) {
       case "financial-summary":
         return "Flight Financial Summary";
-      case "flight-details":
+      case "request":
         return "Flight Booking Details";
+      case "refunded":
+        return "Refund Completed";
       default:
         return "Process Request";
     }
@@ -287,8 +304,10 @@ export default function EditBookingPage() {
     switch (activeTab) {
       case "financial-summary":
         return `Review detailed breakdown and finalize refund for booking #BK-${record.booking_id}.`;
-      case "flight-details":
+      case "request":
         return `Detailed view of booking #BK-${record.booking_id} and its history.`;
+      case "refunded":
+        return `Booking #BK-${record.booking_id} has been fully refunded.`;
       default:
         return "Review details and select passengers for refund/changes.";
     }
@@ -332,13 +351,24 @@ export default function EditBookingPage() {
               <p className="mt-1 text-sm text-slate-500">{getPageSubtitle()}</p>
             </div>
             <div className="flex items-center gap-3">
+              {activeTab === "request" && (
+                 <button
+                   onClick={() => setActiveTab("processing")}
+                   className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-hover"
+                 >
+                   Next Step
+                   <span className="material-symbols-outlined text-[18px]">
+                     arrow_forward
+                   </span>
+                 </button>
+              )}
               {activeTab === "processing" && (
                 <>
                   <button
-                    onClick={() => router.back()}
+                    onClick={() => setActiveTab("request")}
                     className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
                   >
-                    Cancel
+                    Back
                   </button>
                   <button
                     onClick={handleUpdate}
@@ -361,18 +391,10 @@ export default function EditBookingPage() {
                   </button>
                 </>
               )}
-              {activeTab === "flight-details" && (
-                <button
-                  onClick={() => setActiveTab("processing")}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
-                >
-                  Back
-                </button>
-              )}
               {activeTab === "financial-summary" && (
                 <>
                   <button
-                    onClick={() => setActiveTab("flight-details")}
+                    onClick={() => setActiveTab("processing")}
                     className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-[#f6f7f8]"
                   >
                     <span className="material-symbols-outlined text-[18px]">
@@ -400,6 +422,21 @@ export default function EditBookingPage() {
           </div>
         </div>
 
+        {/* Unified FlightDetailsCard */}
+        <FlightDetailsCard
+          booking={booking}
+          record={record}
+          title="Flight Details"
+          showRouteVisuals={true}
+          showFinancials={activeTab !== "financial-summary"}
+          financials={{
+            sellingPrice,
+            costPrice,
+            profit,
+            profitPercent: profitMargin,
+          }}
+        />
+
         {/* Progress Steps (Tabs) */}
         <div className="w-full px-4 sm:px-0">
           <div className="relative">
@@ -413,25 +450,23 @@ export default function EditBookingPage() {
                   id: "01",
                   name: "Request",
                   status:
-                    record.status === "PENDING" &&
-                    record.refund_status !== "Processing"
+                    activeTab === "request"
                       ? "current"
-                      : "complete",
-                  // Keep as link for external page
-                  href: `/dashboard/manage-booking/view/${record.uid}`,
-                  isLink: true,
+                      : ["processing", "financial-summary", "refunded"].includes(activeTab)
+                        ? "complete"
+                        : "upcoming",
+                  onClick: () => setActiveTab("request"),
                 },
                 {
                   id: "02",
                   name: "Processing",
                   status:
-                    activeTab === "processing" || activeTab === "flight-details"
+                    activeTab === "processing"
                       ? "current"
-                      : activeTab === "financial-summary"
+                      : ["financial-summary", "refunded"].includes(activeTab)
                         ? "complete"
                         : "upcoming",
                   onClick: () => setActiveTab("processing"),
-                  isLink: false,
                 },
                 {
                   id: "03",
@@ -439,107 +474,57 @@ export default function EditBookingPage() {
                   status:
                     activeTab === "financial-summary"
                       ? "current"
-                      : record.status === "SEND" || record.status === "REFUNDED"
+                      : ["refunded"].includes(activeTab)
                         ? "complete"
                         : "upcoming",
                   onClick: () => setActiveTab("financial-summary"),
-                  isLink: false,
                 },
                 {
                   id: "04",
                   name: "Refunded",
                   status:
-                    record.status === "REFUNDED" ? "current" : "upcoming",
-                  href: `/dashboard/manage-booking/view/${record.uid}`,
-                  isLink: true,
+                    activeTab === "refunded" ? "current" : "upcoming",
+                  onClick: () => setActiveTab("refunded"),
                 },
               ].map((step) => (
                 <li
                   key={step.name}
                   className="flex flex-col items-center relative bg-transparent z-10"
                 >
-                  {step.isLink ? (
-                    <Link
-                      href={step.href || "#"}
-                      className="flex flex-col items-center group"
+                  <button
+                    onClick={step.onClick}
+                    className="flex flex-col items-center group"
+                  >
+                    <div
+                      className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all ${
+                        step.status === "current"
+                          ? "border-primary bg-primary text-white group-hover:bg-primary-hover"
+                          : "border-slate-300 bg-white text-slate-500 group-hover:border-slate-400 group-hover:text-slate-600"
+                      }`}
                     >
-                      <div
-                        className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all ${
-                          step.status === "current"
-                            ? "border-primary bg-primary text-white group-hover:bg-primary-hover"
-                            : "border-slate-300 bg-white text-slate-500 group-hover:border-slate-400 group-hover:text-slate-600"
-                        }`}
-                      >
-                        {step.status === "complete" ? (
-                          <span className="material-symbols-outlined text-[16px]">
-                            check
-                          </span>
-                        ) : (
-                          <span className="text-xs font-bold">{step.id}</span>
-                        )}
-                      </div>
-                      <span
-                        className={`mt-2 text-xs font-medium transition-colors ${
-                          step.status === "current"
-                            ? "text-primary group-hover:text-primary-hover"
-                            : "text-slate-500 group-hover:text-slate-600"
-                        }`}
-                      >
-                        {step.name}
-                      </span>
-                    </Link>
-                  ) : (
-                    <button
-                      onClick={step.onClick}
-                      className="flex flex-col items-center group"
+                      {step.status === "complete" ? (
+                        <span className="material-symbols-outlined text-[16px]">
+                          check
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold">{step.id}</span>
+                      )}
+                    </div>
+                    <span
+                      className={`mt-2 text-xs font-medium transition-colors ${
+                        step.status === "current"
+                          ? "text-primary group-hover:text-primary-hover"
+                          : "text-slate-500 group-hover:text-slate-600"
+                      }`}
                     >
-                      <div
-                        className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all ${
-                          step.status === "current"
-                            ? "border-primary bg-primary text-white group-hover:bg-primary-hover"
-                            : "border-slate-300 bg-white text-slate-500 group-hover:border-slate-400 group-hover:text-slate-600"
-                        }`}
-                      >
-                        {step.status === "complete" ? (
-                          <span className="material-symbols-outlined text-[16px]">
-                            check
-                          </span>
-                        ) : (
-                          <span className="text-xs font-bold">{step.id}</span>
-                        )}
-                      </div>
-                      <span
-                        className={`mt-2 text-xs font-medium transition-colors ${
-                          step.status === "current"
-                            ? "text-primary group-hover:text-primary-hover"
-                            : "text-slate-500 group-hover:text-slate-600"
-                        }`}
-                      >
-                        {step.name}
-                      </span>
-                    </button>
-                  )}
+                      {step.name}
+                    </span>
+                  </button>
                 </li>
               ))}
             </ul>
           </div>
         </div>
-
-        {/* Unified FlightDetailsCard */}
-        <div className="lg:col-span-2 space-y-6">
-          <FlightDetailsCard
-            booking={booking}
-            record={record}
-            title="Flight Details"
-            showRouteVisuals={true}
-            showFinancials={activeTab !== "financial-summary"}
-            financials={{
-              sellingPrice,
-              costPrice,
-              profit,
-              profitPercent: profitMargin,
-            }}
-          />
 
           {/* Tab Content */}
           {activeTab === "processing" && (
@@ -553,12 +538,11 @@ export default function EditBookingPage() {
             />
           )}
 
-          {activeTab === "flight-details" && (
+          {activeTab === "request" && (
             <FlightDetailsTab
               booking={booking}
               record={record}
               requester={requester}
-              onNext={() => setActiveTab("financial-summary")}
               calculations={{
                 sellingPrice,
                 costPrice,
@@ -577,7 +561,10 @@ export default function EditBookingPage() {
               calculations={calculations}
             />
           )}
-        </div>
+
+          {activeTab === "refunded" && (
+            <RefundedTab booking={booking} record={record} />
+          )}
       </div>
     </div>
   );
