@@ -8,10 +8,18 @@ import { MediaSelectorModal } from "@/components/media/MediaSelectorModal";
 import { MediaFile } from "@/lib/media-service";
 import { generateSlug } from "@/lib/utils";
 import RichTextEditor from "@/components/RichTextEditor";
+import { AirlineMultiSelect } from "@/components/AirlineMultiSelect";
 
 interface FAQ {
   question: string;
   answer: string;
+}
+
+interface OtherAirline {
+  id: string;
+  name: string;
+  iata_code: string;
+  country: string;
 }
 
 interface AirlineFormData {
@@ -29,8 +37,13 @@ interface AirlineFormData {
   faqs: FAQ[];
   logo_url: string;
   status: "Active" | "Inactive" | "Pending";
+  fleet_size?: number;
+  year_established?: number;
   about_fleet: string;
   in_flight_experience: string;
+  other_popular_airlines: OtherAirline[];
+  hero_headline: string;
+  hero_subtitle: string;
   no_index: boolean;
   no_follow: boolean;
   no_archive: boolean;
@@ -71,8 +84,13 @@ export default function EditAirlinePage() {
     faqs: [],
     logo_url: "",
     status: "Active",
+    fleet_size: undefined,
+    year_established: undefined,
     about_fleet: "",
     in_flight_experience: "",
+    other_popular_airlines: [],
+    hero_headline: "",
+    hero_subtitle: "",
     no_index: false,
     no_follow: false,
     no_archive: false,
@@ -123,8 +141,13 @@ export default function EditAirlinePage() {
           faqs: data.faqs || [],
           logo_url: data.logo_url || "",
           status: data.status || "Active",
+          fleet_size: data.fleet_size || undefined,
+          year_established: data.year_established || undefined,
           about_fleet: data.about_fleet || "",
           in_flight_experience: data.in_flight_experience || "",
+          other_popular_airlines: data.other_popular_airlines || [],
+          hero_headline: data.hero_headline || "",
+          hero_subtitle: data.hero_subtitle || "",
           no_index: data.no_index || false,
           no_follow: data.no_follow || false,
           no_archive: data.no_archive || false,
@@ -259,10 +282,20 @@ export default function EditAirlinePage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8 max-w-7xl mx-auto w-full">
         <div>
-          <h1 className="text-2xl font-bold">Edit Airline</h1>
+          <h1 className="text-2xl font-bold">
+            {formData.name || "Edit Airline"}
+          </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Update airline profile, identity, SEO and customer support
-            information.
+            {formData.iata_code ? (
+              <>
+                <span className="font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs mr-2">
+                  {formData.iata_code}
+                </span>
+                {formData.airline_type} • {formData.country}
+              </>
+            ) : (
+              "Update airline profile, identity, SEO and customer support information."
+            )}
           </p>
         </div>
         <div className="flex gap-3">
@@ -314,6 +347,59 @@ export default function EditAirlinePage() {
 
         {/* Main Content Form */}
         <div className="flex-1 space-y-6 pb-20">
+          {/* General Section */}
+          <section
+            id="general"
+            className="bg-card border border-border rounded-xl p-6 scroll-mt-6"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <span className="material-symbols-outlined text-blue-400">
+                  info
+                </span>
+              </div>
+              <h2 className="text-lg font-bold">General Information</h2>
+            </div>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wider">
+                    Hero Headline
+                  </label>
+                  <input
+                    type="text"
+                    name="hero_headline"
+                    value={formData.hero_headline}
+                    onChange={handleInputChange}
+                    className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all placeholder:text-muted-foreground"
+                    placeholder="e.g. Experience Luxury in the Sky"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Displays as the main title on the airline landing page.
+                  </p>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wider">
+                    Hero Subtitle
+                  </label>
+                  <input
+                    type="text"
+                    name="hero_subtitle"
+                    value={formData.hero_subtitle}
+                    onChange={handleInputChange}
+                    className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all placeholder:text-muted-foreground"
+                    placeholder="e.g. Fly to over 150 destinations worldwide with award-winning service"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Displays below the headline on the airline landing page.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* Identity Section */}
           <section
             id="identity"
@@ -399,6 +485,35 @@ export default function EditAirlinePage() {
                   <option value="Pending">Pending</option>
                 </select>
               </div>
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wider">
+                  Fleet Size
+                </label>
+                <input
+                  type="number"
+                  name="fleet_size"
+                  value={formData.fleet_size || ""}
+                  onChange={handleInputChange}
+                  className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all placeholder:text-muted-foreground"
+                  placeholder="e.g. 150"
+                  min="0"
+                />
+              </div>
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wider">
+                  Year Established
+                </label>
+                <input
+                  type="number"
+                  name="year_established"
+                  value={formData.year_established || ""}
+                  onChange={handleInputChange}
+                  className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all placeholder:text-muted-foreground"
+                  placeholder="e.g. 1985"
+                  min="1900"
+                  max={new Date().getFullYear()}
+                />
+              </div>
             </div>
           </section>
 
@@ -413,7 +528,9 @@ export default function EditAirlinePage() {
                   travel_explore
                 </span>
               </div>
-              <h2 className="text-lg font-bold">Airline Profile</h2>
+              <h2 className="text-lg font-bold">
+                {formData.name ? `${formData.name} Profile` : "Airline Profile"}
+              </h2>
             </div>
 
             <div className="space-y-6">
@@ -458,6 +575,19 @@ export default function EditAirlinePage() {
                     }))
                   }
                   placeholder="Describe the in-flight experience..."
+                />
+              </div>
+
+              {/* Other Popular Airlines */}
+              <div className="border-t border-border pt-6">
+                <AirlineMultiSelect
+                  label="Other Popular Airlines"
+                  value={formData.other_popular_airlines}
+                  onChange={(airlines) =>
+                    setFormData((prev) => ({ ...prev, other_popular_airlines: airlines }))
+                  }
+                  placeholder="Search and select other popular airlines..."
+                  excludeIds={[params.id as string]}
                 />
               </div>
 
