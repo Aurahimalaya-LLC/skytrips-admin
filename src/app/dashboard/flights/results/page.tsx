@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import FlightFilterSidebar from "@/components/dashboard/flights/FlightFilterSidebar";
-import FlightResultCard from "@/components/dashboard/flights/FlightResultCard";
+import FlightFilterSidebar from "@/components/dashboard/routes/FlightFilterSidebar";
+import FlightResultCard from "@/components/dashboard/routes/FlightResultCard";
 import { FlightOffer } from "@/types/flight-search";
 
 interface RawSegment {

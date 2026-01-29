@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import PassengerForm from "@/components/dashboard/flights/booking/PassengerForm";
-import BookingSummary from "@/components/dashboard/flights/booking/BookingSummary";
+import PassengerForm from "@/components/dashboard/routes/booking/PassengerForm";
+import BookingSummary from "@/components/dashboard/routes/booking/BookingSummary";
 import { FlightOffer } from "@/types/flight-search";
 
 export default function FlightBookingPage() {
