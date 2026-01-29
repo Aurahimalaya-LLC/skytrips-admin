@@ -88,6 +88,10 @@ export async function sendEmail(input: SendEmailInput) {
 
     } catch (error) {
       console.error("Mailgun API failed, falling back to SMTP:", error);
+      if (error && typeof error === 'object' && 'details' in error) {
+         // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         console.error("Mailgun Error Details:", (error as any).details);
+      }
       // Fallback to SMTP below
     }
   } else {
