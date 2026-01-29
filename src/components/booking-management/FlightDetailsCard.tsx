@@ -78,12 +78,9 @@ export default function FlightDetailsCard({
           {showRouteVisuals && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
               <div className="flex items-center gap-4 w-full sm:w-auto">
-                <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-slate-500 shadow-sm border border-slate-100">
-                  <span className="font-bold text-xs">{originCode}</span>
-                </div>
                 <div className="flex flex-col">
                   <span className="text-lg font-bold text-slate-900">
-                    {origin}
+                    {originCode}
                   </span>
                   <span className="text-xs text-slate-500">
                     {departureDate || `${booking.IssueDay} ${booking.issueMonth} ${booking.issueYear}`}
@@ -92,7 +89,6 @@ export default function FlightDetailsCard({
               </div>
 
               <div className="flex flex-col items-center flex-1 px-4 min-w-[100px] w-full sm:w-auto">
-                <span className="text-xs text-slate-400 mb-1">Duration: {duration}</span>
                 <div className="w-full h-px bg-slate-300 relative flex items-center justify-center">
                   <span className="absolute h-2 w-2 rounded-full bg-slate-300 left-0"></span>
                   <span
@@ -103,20 +99,16 @@ export default function FlightDetailsCard({
                   </span>
                   <span className="absolute h-2 w-2 rounded-full bg-slate-300 right-0"></span>
                 </div>
-                <span className="text-xs text-slate-400 mt-1">{flightStatus}</span>
               </div>
 
               <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
                 <div className="flex flex-col text-right">
                   <span className="text-lg font-bold text-slate-900">
-                    {destination}
+                    {destinationCode}
                   </span>
                   <span className="text-xs text-slate-500">
                     {arrivalDate || booking.arrivalDate || "Arrival Date N/A"}
                   </span>
-                </div>
-                <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-slate-500 shadow-sm border border-slate-100">
-                  <span className="font-bold text-xs">{destinationCode}</span>
                 </div>
               </div>
             </div>
@@ -157,24 +149,7 @@ export default function FlightDetailsCard({
               </div>
             </div>
 
-            <div>
-              <div className="text-xs font-medium uppercase text-slate-500 mb-1">
-                Agency
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="material-symbols-outlined text-slate-400"
-                  style={{ fontSize: "16px" }}
-                >
-                  business
-                </span>
-                <div className="text-sm font-semibold text-slate-900 truncate">
-                  {booking.agency || "Skyline Travels"}
-                </div>
-              </div>
-            </div>
-
-            <div>
+            <div className="col-span-2">
               <div className="text-xs font-medium uppercase text-slate-500 mb-1">
                 Passenger
               </div>
