@@ -20,13 +20,16 @@ export async function GET() {
     return NextResponse.json({ error: totalError.message }, { status: 500 });
   }
 
-  // Count unlinked bookings: No customerid AND No customer JSON data
-  // This is faster than querying for linked bookings with JSONB filters
-  const { count: withoutCustomerCount, error: withoutCustomerError } = await supabase
-    .from("bookings")
-    .select("id", { count: "exact", head: true })
-    .or("customerid.is.null,customerid.eq.00000000-0000-0000-0000-000000000000")
-    .is("customer", null);
+  // Get count of bookings WITHOUT customer link
+  // Unlinked if: (customerid is null OR empty) AND (customer is null OR empty object {})
+  const { count: withoutCustomerCount, error: withoutCustomerError } =
+    await supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .or(
+        "customerid.is.null,customerid.eq.00000000-0000-0000-0000-000000000000",
+      )
+      .or("customer.is.null,customer.eq.{}");
 
   if (withoutCustomerError) {
     return NextResponse.json(
