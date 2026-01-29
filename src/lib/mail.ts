@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
-import FormData from "form-data";
-import Mailgun from "mailgun.js";
+// Removed: import FormData from "form-data";
+// Removed: import Mailgun from "mailgun.js";
 
 type SendEmailInput = {
   to: string | string[];
@@ -19,25 +19,9 @@ type SendEmailInput = {
   }>;
 };
 
-// Configure Mailgun Client
+// Configure Mailgun
 const mailgunApiKey = process.env.MAILGUN_API_KEY || process.env.NEXT_PUBLIC_MAILGUN_API_KEY;
 const mailgunDomain = process.env.MAILGUN_DOMAIN || process.env.NEXT_PUBLIC_MAILGUN_DOMAIN;
-
-console.log("Mail Config Debug:", {
-  hasMailgunKey: !!mailgunApiKey,
-  hasMailgunDomain: !!mailgunDomain,
-  mailgunKeyPrefix: mailgunApiKey ? mailgunApiKey.substring(0, 5) + "..." : "N/A",
-  smtpHost: process.env.SMTP_HOST || process.env.SUPABASE_SMTP_HOST,
-  smtpUser: process.env.SMTP_USER || process.env.SUPABASE_SMTP_USER,
-});
-
-const mailgun = new Mailgun(FormData);
-const mgClient = mailgunApiKey
-  ? mailgun.client({
-      username: "api",
-      key: mailgunApiKey,
-    })
-  : null;
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || process.env.SUPABASE_SMTP_HOST || "smtp.mailgun.org",
@@ -55,45 +39,53 @@ export async function sendEmail(input: SendEmailInput) {
     process.env.NEXT_PUBLIC_MAIL_SENDER ||
     '"SkyTrips Admin" <no-reply@skytrips.com>';
 
-  // Try Mailgun API first if available
-  if (mgClient && mailgunDomain) {
+  // Try Mailgun API (via native fetch) first if available
+  if (mailgunApiKey && mailgunDomain) {
     try {
-      console.log(`Attempting to send email via Mailgun to ${Array.isArray(input.to) ? input.to.join(", ") : input.to}`);
-      const mgData: {
-        from: string;
-        to: string[];
-        subject: string;
-        text?: string;
-        html?: string;
-        attachment?: Array<{
-          filename: string;
-          data: Buffer | string;
-          contentType?: string;
-        }>;
-      } = {
-        from: input.from || defaultFrom,
-        to: Array.isArray(input.to) ? input.to : [input.to],
-        subject: input.subject,
-        text: input.text,
-        html: input.html,
-      };
-
+      console.log(`Attempting to send email via Mailgun API (fetch) to ${Array.isArray(input.to) ? input.to.join(", ") : input.to}`);
+      
+      const formData = new FormData();
+      formData.append("from", input.from || defaultFrom);
+      
+      const recipients = Array.isArray(input.to) ? input.to : [input.to];
+      recipients.forEach(to => formData.append("to", to));
+      
+      formData.append("subject", input.subject);
+      if (input.text) formData.append("text", input.text);
+      if (input.html) formData.append("html", input.html);
+      
       if (input.attachment) {
         const attachments = Array.isArray(input.attachment) ? input.attachment : [input.attachment];
-        mgData.attachment = attachments.map((att) => {
-          return {
-            filename: att.filename,
-            data: att.content, // mailgun.js handles Buffer
-            contentType: att.contentType,
-          };
+        attachments.forEach(att => {
+          // Native FormData in Node/Edge can take Blob or File. 
+          // If content is Buffer (Node), we might need to wrap it.
+          // However, in Edge runtime, Buffer might not exist. 
+          // Assuming Node runtime as per route config.
+          const blob = new Blob([att.content as unknown as BlobPart], { type: att.contentType || 'application/octet-stream' });
+          formData.append("attachment", blob, att.filename);
         });
       }
 
-      console.log("Sending email via Mailgun API...");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const msg = await mgClient.messages.create(mailgunDomain, mgData as any);
-      console.log("Mailgun API Message sent: %s", msg.id);
-      return { messageId: msg.id };
+      const auth = Buffer.from(`api:${mailgunApiKey}`).toString('base64');
+      
+      const resp = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${auth}`,
+          // Content-Type is set automatically by fetch with boundary for FormData
+        },
+        body: formData,
+      });
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(`Mailgun API Error: ${resp.status} ${resp.statusText} - ${errText}`);
+      }
+
+      const respData = await resp.json();
+      console.log("Mailgun API Message sent:", respData.id);
+      return { messageId: respData.id };
+
     } catch (error) {
       console.error("Mailgun API failed, falling back to SMTP:", error);
       if (error && typeof error === 'object' && 'details' in error) {
@@ -103,7 +95,7 @@ export async function sendEmail(input: SendEmailInput) {
       // Fallback to SMTP below
     }
   } else {
-     console.log("Mailgun client not configured or domain missing. Skipping Mailgun.");
+     console.log("Mailgun configuration missing (Key or Domain). Skipping Mailgun API.");
   }
 
   console.log("Sending email via SMTP...");
