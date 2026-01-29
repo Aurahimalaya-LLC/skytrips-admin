@@ -1,13 +1,9 @@
 import { Booking, ManageBooking } from "@/types";
 import FlightDetailsCard from "@/components/booking-management/FlightDetailsCard";
-import SendEmailModal from "@/components/booking-management/SendEmailModal";
-import { useState } from "react";
-import { DEFAULT_EMAIL_TEMPLATES } from "@/lib/email-templates";
 
 interface FlightDetailsTabProps {
   booking: Booking;
   record: ManageBooking;
-  onNext: () => void;
   calculations: {
     sellingPrice: number;
     costPrice: number;
@@ -24,12 +20,9 @@ interface FlightDetailsTabProps {
 export default function FlightDetailsTab({
   booking,
   record,
-  onNext,
   calculations,
   requester,
 }: FlightDetailsTabProps) {
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-
   // Note: Requester fetching was in the page. 
   // Ideally, we should fetch this in the parent or reuse the booking user info if available.
   // For now, I'll rely on what's available or we might need to fetch user details in the parent.
@@ -72,21 +65,12 @@ export default function FlightDetailsTab({
   const flightStatus =
     segments.length > 1 ? `${segments.length - 1} Stop(s)` : "Direct";
 
-  const handleSendEmail = async (data: {
-    subject: string;
-    message: string;
-    template: string;
-  }) => {
-    console.log("Sending email:", data);
-    setIsEmailModalOpen(false);
-  };
-
   const { sellingPrice, costPrice, profit, profitPercent } = calculations;
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 flex flex-col gap-6">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-orange-50/50">
               <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
@@ -95,9 +79,6 @@ export default function FlightDetailsTab({
                 </span>
                 Refund Request Summary
               </h3>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1 text-sm font-medium text-orange-700 ring-1 ring-inset ring-orange-600/20">
-                Waiting Response from Agency
-              </span>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
               <div>
@@ -129,7 +110,7 @@ export default function FlightDetailsTab({
                   Handling Agency
                 </div>
                 <div className="text-sm text-slate-900 font-medium">
-                  {requester?.agency || "Global Travels Inc."}
+                  {requester?.agency || "Travel World Inc."}
                 </div>
               </div>
               <div className="md:col-span-2">
@@ -145,76 +126,7 @@ export default function FlightDetailsTab({
           </div>
 
         </div>
-
-        <div className="flex flex-col gap-6">
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 px-6 py-4">
-              <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-slate-400">
-                  history
-                </span>
-                Communication Log
-              </h3>
-            </div>
-            <div className="p-6">
-              <ol className="relative border-l border-slate-200 ml-2">
-                <li className="mb-8 ml-6">
-                  <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-orange-100 ring-4 ring-white">
-                    <span
-                      className="material-symbols-outlined text-orange-600"
-                      style={{ fontSize: "14px" }}
-                    >
-                      hourglass_empty
-                    </span>
-                  </span>
-                  <h3 className="flex items-center mb-1 text-sm font-semibold text-slate-900">
-                    Waiting for Agency Response
-                  </h3>
-                  <time className="block mb-2 text-xs font-normal leading-none text-slate-400">
-                    Current Status
-                  </time>
-                  <p className="mb-2 text-sm font-normal text-slate-500">
-                    Refund request has been sent to the partner agency. Awaiting
-                    their confirmation on waiver policy.
-                  </p>
-                </li>
-              </ol>
-            </div>
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 rounded-b-xl">
-                <div className="flex gap-3">
-                    <button
-                        onClick={() => setIsEmailModalOpen(true)}
-                        className="flex-1 inline-flex justify-center items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">send</span>
-                        Email
-                    </button>
-                    <button
-                        onClick={onNext}
-                        className="flex-1 inline-flex justify-center items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-hover"
-                    >
-                        Next
-                        <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                    </button>
-                </div>
-            </div>
-          </div>
-        </div>
       </div>
-      
-      <SendEmailModal
-        isOpen={isEmailModalOpen}
-        onClose={() => setIsEmailModalOpen(false)}
-        onSend={handleSendEmail}
-        initialTemplateId="ticket_confirmation"
-        recipient={{
-          name: booking.travellers?.[0]
-            ? `${booking.travellers[0].firstName} ${booking.travellers[0].lastName}`
-            : "Customer",
-          email: booking.email || "",
-          pnr: booking.PNR
-        }}
-      />
     </div>
   );
 }
