@@ -20,11 +20,14 @@ type SendEmailInput = {
 };
 
 // Configure Mailgun Client
+const mailgunApiKey = process.env.MAILGUN_API_KEY || process.env.NEXT_PUBLIC_MAILGUN_API_KEY;
+const mailgunDomain = process.env.MAILGUN_DOMAIN || process.env.NEXT_PUBLIC_MAILGUN_DOMAIN;
+
 const mailgun = new Mailgun(FormData);
-const mgClient = process.env.MAILGUN_API_KEY
+const mgClient = mailgunApiKey
   ? mailgun.client({
       username: "api",
-      key: process.env.MAILGUN_API_KEY,
+      key: mailgunApiKey,
     })
   : null;
 
@@ -34,7 +37,7 @@ const transporter = nodemailer.createTransport({
   secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_USER || process.env.SUPABASE_SMTP_USER,
-    pass: process.env.SMTP_PASS || process.env.SUPABASE_SMTP_PASS || process.env.MAILGUN_API_KEY,
+    pass: process.env.SMTP_PASS || process.env.SUPABASE_SMTP_PASS || mailgunApiKey,
   },
 });
 
@@ -45,9 +48,20 @@ export async function sendEmail(input: SendEmailInput) {
     '"SkyTrips Admin" <no-reply@skytrips.com>';
 
   // Try Mailgun API first if available
-  if (mgClient && process.env.MAILGUN_DOMAIN) {
+  if (mgClient && mailgunDomain) {
     try {
-      const mgData: any = {
+      const mgData: {
+        from: string;
+        to: string[];
+        subject: string;
+        text?: string;
+        html?: string;
+        attachment?: Array<{
+          filename: string;
+          data: Buffer | string;
+          contentType?: string;
+        }>;
+      } = {
         from: input.from || defaultFrom,
         to: Array.isArray(input.to) ? input.to : [input.to],
         subject: input.subject,
@@ -67,7 +81,8 @@ export async function sendEmail(input: SendEmailInput) {
       }
 
       console.log("Sending email via Mailgun API...");
-      const msg = await mgClient.messages.create(process.env.MAILGUN_DOMAIN, mgData);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const msg = await mgClient.messages.create(mailgunDomain, mgData as any);
       console.log("Mailgun API Message sent: %s", msg.id);
       return { messageId: msg.id };
     } catch (error) {
