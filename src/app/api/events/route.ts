@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { sendWelcomeUser } from "@/lib/mail";
 import { EmailEventType } from "@/types/email-event";
+import { getAdminClient } from "@/lib/supabase-server";
+import { signSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -35,8 +37,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, warning: "mail_not_configured" });
     }
     try {
+      const supabase = getAdminClient();
+      let acceptUrl = "";
+      if (supabase) {
+        const { data: userRecord } = await supabase
+          .from("users")
+          .select("id")
+          .eq("email", email)
+          .maybeSingle();
+        if (userRecord?.id) {
+          const token = signSession({ id: userRecord.id, email });
+          const base = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_PUBLIC_APP_URL || "";
+          if (base) {
+            acceptUrl = `${base}/api/users/invite/accept?token=${encodeURIComponent(token)}`;
+          }
+        }
+      }
       console.log("Calling sendWelcomeUser...");
-      const mailRes = await sendWelcomeUser({ email, fullName, role, readablePassword });
+      const mailRes = await sendWelcomeUser({ email, fullName, role, readablePassword, acceptUrl });
       console.log("sendWelcomeUser result:", mailRes);
       return NextResponse.json({ ok: true, mailgun: mailRes });
     } catch(e) {

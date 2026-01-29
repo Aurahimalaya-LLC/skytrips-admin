@@ -112,7 +112,7 @@ export async function sendEmail(input: SendEmailInput) {
   return info;
 }
 
-export async function sendWelcomeUser(data: { email: string; fullName?: string; role?: string; readablePassword?: string }) {
+export async function sendWelcomeUser(data: { email: string; fullName?: string; role?: string; readablePassword?: string; acceptUrl?: string }) {
   const name = data.fullName || "New User";
   const roleLabel = data.role
     ? data.role
@@ -155,6 +155,11 @@ export async function sendWelcomeUser(data: { email: string; fullName?: string; 
               For security, change your password after first login.
             </div>
           </div>
+          ${data.acceptUrl ? `
+          <div style="margin-top:12px;">
+            <a href="${data.acceptUrl}" class="btn" style="display:inline-block; background:#059669; color:#ffffff; text-decoration:none; font-weight:700; padding:10px 16px; border-radius:10px;">Accept Invitation</a>
+          </div>
+          ` : ``}
           ${appUrl ? `
           <div style="margin-top:12px;">
             <a href="${appUrl}" class="btn" style="display:inline-block; background:#2563eb; color:#ffffff; text-decoration:none; font-weight:700; padding:10px 16px; border-radius:10px;">Open Admin</a>

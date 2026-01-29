@@ -18,8 +18,19 @@ type UserRow = {
   last_login_at?: string | null;
 };
 
+type UIUser = UserRow & {
+  role_key: string;
+  role: string;
+  status: "active" | "inactive";
+  last_login: string;
+  displayId: string;
+  username?: string;
+};
+
+type RoleKey = "super_admin" | "manager" | "agent";
+
 export default function UsersPage() {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<UIUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -27,9 +38,9 @@ export default function UsersPage() {
   const pageSize = 10;
   const [totalCount, setTotalCount] = useState(0);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [editingUser, setEditingUser] = useState<UIUser | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UIUser | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -62,7 +73,7 @@ export default function UsersPage() {
       }
       const { data: rows, count, error: fetchError } = await query;
       if (fetchError) throw fetchError;
-      const normalized = (rows || []).map((u: UserRow) => {
+      const normalized: UIUser[] = (rows || []).map((u: UserRow) => {
         const roleKey = u.role || "";
         const roleDisplay = roleKey
           ? roleKey
@@ -73,11 +84,11 @@ export default function UsersPage() {
         return {
           ...u,
           role: roleDisplay,
-          role_key: roleKey,
-          status: u.is_active ? "active" : "inactive",
+          role_key: roleKey as RoleKey,
+          status: (u.is_active ? "active" : "inactive") as "active" | "inactive",
           last_login: u.last_login_at || "",
           displayId: `#USR-${String(u.id).substring(0, 4)}`,
-        };
+        } as UIUser;
       });
       setData(normalized);
       setTotalCount(count || 0);
@@ -127,7 +138,28 @@ export default function UsersPage() {
   };
   const pageButtons = getPageButtons(page, totalPages);
 
-  const handleInviteUser = async (payload: any) => {
+  const [reinvitingId, setReinvitingId] = useState<string | null>(null);
+  const handleReinvite = async (u: UIUser) => {
+    if (!u?.email) return;
+    setReinvitingId(u.id);
+    try {
+      const fullName = [u.first_name, u.last_name].filter(Boolean).join(" ");
+      const res = await fetch("/api/users/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: u.email, fullName, role: u.role_key }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Failed to send invitation");
+      alert("Re-invitation email sent successfully");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to send invitation");
+    } finally {
+      setReinvitingId(null);
+    }
+  };
+
+  const handleInviteUser = async (payload: { id?: string; fullName?: string; email?: string; role?: RoleKey }) => {
     const fullName: string = payload?.fullName || "";
     const email: string = (payload?.email || "").trim();
     const role: string = payload?.role || "agent";
@@ -196,7 +228,7 @@ export default function UsersPage() {
                   .filter(Boolean)
                   .join(" "),
                 email: editingUser.email,
-                role: editingUser.role_key || "agent",
+                role: (editingUser.role_key || "agent") as RoleKey,
               }
             : undefined
         }
@@ -437,6 +469,16 @@ export default function UsersPage() {
                         >
                           <span className="material-symbols-outlined text-[18px]">
                             edit
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => handleReinvite(u)}
+                          disabled={reinvitingId === u.id}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                          title="Re-invite"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">
+                            forward_to_inbox
                           </span>
                         </button>
                         <button
