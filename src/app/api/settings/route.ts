@@ -3,6 +3,59 @@ import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 import { CompanyProfile } from "@/types/company";
 
+import type { Address, ContactMethod, PhoneNumber } from "@/types/company";
+
+type CompanyRow = {
+  id: string;
+  name: string;
+  address?: Partial<Address> | string | null;
+  emails?: Array<string | ContactMethod> | null;
+  phones?: Array<string | PhoneNumber> | null;
+  website?: string;
+  is_headquarters?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+};
+
+function normalizeAddress(addr: CompanyRow["address"]): Address {
+  if (addr && typeof addr === "object") {
+    return {
+      street: addr.street || "",
+      city: addr.city || "",
+      state: addr.state || "",
+      postalCode: addr.postalCode || "",
+      country: addr.country || "",
+      additionalInfo: addr.additionalInfo,
+    };
+  }
+  return {
+    street: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "",
+  };
+}
+
+function normalizeEmails(arr: CompanyRow["emails"]): ContactMethod[] {
+  if (!Array.isArray(arr)) return [];
+  return arr.map((e, idx) =>
+    typeof e === "string"
+      ? { id: String(idx), label: "email", value: e }
+      : e
+  );
+}
+
+function normalizePhones(arr: CompanyRow["phones"]): PhoneNumber[] {
+  if (!Array.isArray(arr)) return [];
+  return arr.map((p, idx) =>
+    typeof p === "string"
+      ? { id: String(idx), label: "phone", value: p }
+      : p
+  );
+}
+
 const supabaseAdmin = createClient(
   env.supabase.url,
   env.supabase.serviceRoleKey || env.supabase.anonKey,
@@ -40,17 +93,17 @@ export async function GET() {
 
     // Map companies to CompanyProfile
     const liveCompanyProfiles: CompanyProfile[] = (companiesData || []).map(
-      (item: any) => ({
+      (item: CompanyRow) => ({
         id: item.id,
         name: item.name,
-        address: item.address,
-        emails: item.emails || [],
-        phones: item.phones || [],
+        address: normalizeAddress(item.address),
+        emails: normalizeEmails(item.emails),
+        phones: normalizePhones(item.phones),
         website: item.website,
         isHeadquarters: item.is_headquarters,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
-        deletedAt: item.deleted_at,
+        deletedAt: item.deleted_at || undefined,
       }),
     );
 
@@ -65,6 +118,12 @@ export async function GET() {
         notifications: true,
         logo_url: "",
         favicon_url: "",
+        hero_headline: "",
+        hero_subtitle: "",
+        featured_image: "",
+        seo_title: "",
+        meta_description: "",
+        faqs: [],
         company_profiles: liveCompanyProfiles,
       });
     }
@@ -72,10 +131,17 @@ export async function GET() {
     // Return settings with live companies
     return NextResponse.json({
       ...settingsData,
+      hero_headline: settingsData.hero_headline || "",
+      hero_subtitle: settingsData.hero_subtitle || "",
+      featured_image: settingsData.featured_image || "",
+      seo_title: settingsData.seo_title || "",
+      meta_description: settingsData.meta_description || "",
+      faqs: Array.isArray(settingsData.faqs) ? settingsData.faqs : [],
       company_profiles: liveCompanyProfiles,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -100,17 +166,17 @@ export async function POST(request: Request) {
 
     // Map to CompanyProfile
     const companyProfiles: CompanyProfile[] = (companiesData || []).map(
-      (item: any) => ({
+      (item: CompanyRow) => ({
         id: item.id,
         name: item.name,
-        address: item.address,
-        emails: item.emails || [],
-        phones: item.phones || [],
+        address: normalizeAddress(item.address),
+        emails: normalizeEmails(item.emails),
+        phones: normalizePhones(item.phones),
         website: item.website,
         isHeadquarters: item.is_headquarters,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
-        deletedAt: item.deleted_at,
+        deletedAt: item.deleted_at || undefined,
       }),
     );
 
@@ -152,8 +218,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(result.data);
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
     console.error("Error in POST /api/settings:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

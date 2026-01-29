@@ -1,0 +1,12 @@
+ALTER TABLE settings
+ADD COLUMN IF NOT EXISTS hero_headline TEXT;
+ALTER TABLE settings
+ADD COLUMN IF NOT EXISTS hero_subtitle TEXT;
+ALTER TABLE settings
+ADD COLUMN IF NOT EXISTS featured_image TEXT;
+ALTER TABLE settings
+ADD COLUMN IF NOT EXISTS seo_title TEXT;
+ALTER TABLE settings
+ADD COLUMN IF NOT EXISTS meta_description TEXT;
+ALTER TABLE settings
+ADD COLUMN IF NOT EXISTS faqs JSONB DEFAULT '[]'::jsonb;
