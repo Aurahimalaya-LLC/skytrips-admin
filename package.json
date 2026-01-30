@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "packageManager": "yarn@1.22.19",
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
     "@vercel/speed-insights": "^1.3.1",

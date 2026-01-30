@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       formOfPayments?: unknown;
       companyAttributes?: unknown;
     } | null;
-    
+
     if (!body || !Array.isArray(body.travelers) || !Array.isArray(body.flightOffers)) {
       return NextResponse.json({ ok: false, error: "invalid_body" }, { status: 400 });
     }
@@ -23,14 +23,14 @@ export async function POST(req: Request) {
         flightOffers: body.flightOffers,
         travelers: body.travelers,
         ...(body.formOfPayments ? { formOfPayments: body.formOfPayments } : {}),
-        ...(body.companyAttributes ? body.companyAttributes : {}),
+        ...(body.companyAttributes ? (body.companyAttributes as any) : {}),
       },
     });
 
     return NextResponse.json({ ok: true, raw: response.result });
   } catch (err: unknown) {
     console.error("Amadeus Booking Error:", JSON.stringify(err, null, 2));
-    
+
     // Extract Amadeus-specific error details
     let message = "Unknown error";
     let details = null;
@@ -52,11 +52,11 @@ export async function POST(req: Request) {
       message = err.message;
     }
 
-    return NextResponse.json({ 
-      ok: false, 
-      error: "server_error", 
+    return NextResponse.json({
+      ok: false,
+      error: "server_error",
       message,
-      details 
+      details
     }, { status: 500 });
   }
 }
