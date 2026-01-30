@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Customer, Booking } from "@/types";
 import countriesData from "@/data/countries.json";
 import locationsData from "@/data/locations.json";
+import { getCountryCallingCode, CountryCode } from "libphonenumber-js";
 
 interface CustomerFormProps {
   isOpen: boolean;
@@ -25,12 +26,33 @@ export default function CustomerForm({
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
 
+  // Generate country phone options
+  const countryPhoneOptions = useMemo(() => {
+    return countriesData
+      .map((c) => {
+        try {
+          const callingCode = getCountryCallingCode(c.code as CountryCode);
+          return {
+            iso: c.code,
+            name: c.name,
+            callingCode: `+${callingCode}`,
+            display: `${c.name} (+${callingCode})`,
+          };
+        } catch (error) {
+          return null;
+        }
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, []);
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
     phoneCountryCode: "+1",
+    phoneIso: "US",
     dateOfBirth: "",
     gender: "",
     country: "",
@@ -62,12 +84,22 @@ export default function CustomerForm({
           ? JSON.parse(customerToEdit.passport)
           : customerToEdit.passport || {};
 
+      const pCode = customerToEdit.phoneCountryCode || "+1";
+      // Find ISO based on code and country
+      let pIso = "US";
+      const matches = countryPhoneOptions.filter((c) => c.callingCode === pCode);
+      if (matches.length > 0) {
+        const match = matches.find((c) => c.name === customerToEdit.country);
+        pIso = match ? match.iso : matches[0].iso;
+      }
+
       setFormData({
         firstName: customerToEdit.firstName || "",
         lastName: customerToEdit.lastName || "",
         email: customerToEdit.email || "",
         phone: customerToEdit.phone || "",
-        phoneCountryCode: customerToEdit.phoneCountryCode || "+1",
+        phoneCountryCode: pCode,
+        phoneIso: pIso,
         dateOfBirth: customerToEdit.dateOfBirth || "",
         gender: customerToEdit.gender || "",
         country: customerToEdit.country || "",
@@ -94,10 +126,24 @@ export default function CustomerForm({
       const fetchBookings = async () => {
         setBookingsLoading(true);
         try {
+          const idStr = String(customerToEdit.id);
+          const idNum = Number(customerToEdit.id);
+          const conditions = [];
+
+          // 1. Legacy: Check Foreign Key 'customerid'
+          conditions.push(`customerid.eq.${idStr}`);
+          if (!isNaN(idNum) && idStr.trim() !== "") {
+            conditions.push(`customerid.eq.${idNum}`);
+          }
+
+          // 2. New: Check JSON field 'id' in 'customer' column
+          // JSON.stringify ensures the value is properly quoted for PostgREST
+          conditions.push(`customer->>id.eq.${JSON.stringify(idStr)}`);
+
           const { data, error } = await supabase
             .from("bookings")
             .select("*")
-            .eq("customer", customerToEdit.id)
+            .or(conditions.join(","))
             .order("created_at", { ascending: false });
 
           if (error) throw error;
@@ -118,6 +164,7 @@ export default function CustomerForm({
         email: "",
         phone: "",
         phoneCountryCode: "+1",
+        phoneIso: "US",
         dateOfBirth: "",
         gender: "",
         country: "",
@@ -135,7 +182,7 @@ export default function CustomerForm({
       setBookings([]);
     }
     setErrors({});
-  }, [customerToEdit, isOpen]);
+  }, [customerToEdit, isOpen, countryPhoneOptions]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -352,41 +399,42 @@ export default function CustomerForm({
                     <p className="text-xs text-red-500 mt-1">{errors.email}</p>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Country Code
-                  </label>
-                  <select
-                    value={formData.phoneCountryCode}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        phoneCountryCode: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white"
-                  >
-                    <option value="">Select Code</option>
-                    {countriesData.map((country) => (
-                      <option key={country.code} value={country.code}>
-                        {country.name} ({country.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Phone Number *
                   </label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none transition-all ${errors.phone ? "border-red-300" : "border-slate-200"}`}
-                    placeholder="(555) 123-4567"
-                  />
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.phoneIso}
+                      onChange={(e) => {
+                        const iso = e.target.value;
+                        const option = countryPhoneOptions.find(
+                          (c) => c.iso === iso
+                        );
+                        setFormData({
+                          ...formData,
+                          phoneIso: iso,
+                          phoneCountryCode: option ? option.callingCode : "+1",
+                        });
+                      }}
+                      className="w-32 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all bg-white"
+                    >
+                      {countryPhoneOptions.map((option) => (
+                        <option key={option.iso} value={option.iso}>
+                          {option.display}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                      className={`flex-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${errors.phone ? "border-red-300" : "border-slate-200"}`}
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
                   {errors.phone && (
                     <p className="text-xs text-red-500 mt-1">{errors.phone}</p>
                   )}
@@ -431,18 +479,40 @@ export default function CustomerForm({
                   </label>
                   <select
                     value={formData.country}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const selectedCountryName = e.target.value;
+                      let newPhoneCode = formData.phoneCountryCode;
+                      let newPhoneIso = formData.phoneIso;
+
+                      // Auto-fill phone code
+                      const selectedCountry = countriesData.find(
+                        (c) => c.name === selectedCountryName
+                      );
+                      if (selectedCountry?.code) {
+                        try {
+                          const callingCode = getCountryCallingCode(
+                            selectedCountry.code as CountryCode
+                          );
+                          newPhoneCode = `+${callingCode}`;
+                          newPhoneIso = selectedCountry.code;
+                        } catch (error) {
+                          console.error("Error getting calling code:", error);
+                        }
+                      }
+
                       setFormData({
                         ...formData,
-                        country: e.target.value,
+                        country: selectedCountryName,
+                        phoneCountryCode: newPhoneCode,
+                        phoneIso: newPhoneIso,
                         address: {
                           ...formData.address,
-                          country: e.target.value,
-                          state: "", // Reset state/city when country changes
+                          country: selectedCountryName,
+                          state: "",
                           city: "",
                         },
-                      })
-                    }
+                      });
+                    }}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none transition-all bg-white ${errors.country ? "border-red-300" : "border-slate-200"}`}
                   >
                     <option value="">Select Country</option>
