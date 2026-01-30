@@ -62,7 +62,9 @@ export default function ManageBookingViewPage() {
           });
         }
       }
-    } catch (err) {
+    } catch (err: any) {
+      // Ignore record not found error as it is handled by the UI state (record will be null)
+      if (err?.code === 'PGRST116') return;
       console.error("Error fetching record:", err);
     } finally {
       setLoading(false);

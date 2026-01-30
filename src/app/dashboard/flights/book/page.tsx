@@ -119,21 +119,15 @@ export default function FlightBookingPage() {
         setCreating(false);
         return;
       }
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://dev-api.skytrips.com.au/";
-      const clientRef = process.env.NEXT_PUBLIC_SKYTRIPS_CLIENT_REF || "1223";
-      const priceUrl = new URL("flight-price", baseUrl);
-      priceUrl.searchParams.set("page", "1");
-      priceUrl.searchParams.set("limit", "10");
-      const priceBody = rawPayload;
-      const priceRes = await fetch(priceUrl.toString(), {
+      // Use local API for pricing
+      const priceRes = await fetch("/api/amadeus/price", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "ama-client-ref": clientRef,
-          accept: "application/json",
         },
-        body: JSON.stringify(priceBody),
+        body: JSON.stringify({ flightOffer: rawPayload }),
       });
+
       if (!priceRes.ok) {
         let msg = "Price request failed";
         try {
@@ -145,7 +139,14 @@ export default function FlightBookingPage() {
         return;
       }
       const priceJson = await priceRes.json();
-      const first = Array.isArray(priceJson?.data) ? priceJson.data[0] : undefined;
+      const rawData = priceJson.raw || {};
+      const first = Array.isArray(rawData.data) ? rawData.data[0] : (rawData.data?.flightOffers?.[0] || rawData.data);
+      if (!first) {
+         setError("Pricing returned no valid offer");
+         setCreating(false);
+         return;
+      }
+
       const priceObj = first?.price || {};
       const base = typeof priceObj?.base === "string" ? parseFloat(priceObj.base) : Number(priceObj?.base || 0);
       const total = typeof priceObj?.grandTotal === "string" ? parseFloat(priceObj.grandTotal) : (typeof priceObj?.total === "string" ? parseFloat(priceObj.total) : Number(priceObj?.grandTotal ?? priceObj?.total ?? 0));
@@ -167,6 +168,26 @@ export default function FlightBookingPage() {
         return out;
       })();
 
+      // Helper to map full country names to ISO 2-letter codes
+      // This is a minimal map; in production use a library or full list
+      const getIsoCountry = (name: string) => {
+        const map: Record<string, string> = {
+          "Nepal": "NP",
+          "India": "IN",
+          "Australia": "AU",
+          "United States": "US",
+          "United Kingdom": "GB",
+          "China": "CN",
+          "Japan": "JP",
+          "France": "FR",
+          "Germany": "DE",
+          "Canada": "CA"
+        };
+        // If it's already 2 chars, assume code
+        if (name.length === 2) return name.toUpperCase();
+        return map[name] || "NP"; // Default fallback
+      };
+
       const passengerInput = passengers.map((id, idx) => {
         const f = (typeof document !== "undefined" ? document.getElementById(`fname-${id}`) : null) as HTMLInputElement | null;
         const l = (typeof document !== "undefined" ? document.getElementById(`lname-${id}`) : null) as HTMLInputElement | null;
@@ -181,8 +202,10 @@ export default function FlightBookingPage() {
         const passportNumber = (p?.value || "").trim();
         const gender = (genderEl?.value || "UNSPECIFIED").trim() || "UNSPECIFIED";
         const dob = (dobEl?.value || "").trim();
-        const country = (countryEl?.value || "").trim();
-        const passportCountry = (passportCountryEl?.value || "").trim();
+        const rawCountry = (countryEl?.value || "").trim();
+        const rawPassportCountry = (passportCountryEl?.value || "").trim();
+        const country = getIsoCountry(rawCountry);
+        const passportCountry = getIsoCountry(rawPassportCountry);
         const passportExpiryDate = (passportExpiryEl?.value || "").trim();
         const passengerType =
           idx < adults ? "ADULT" : idx < adults + children ? "CHILD" : "INFANT";
@@ -211,34 +234,79 @@ export default function FlightBookingPage() {
           phoneDeviceType,
         };
       });
-      const travelClassParam = (searchParams.get("class") || "ECONOMY").toUpperCase().replace(/\s+/g, "_");
-      const typeParam = searchParams.get("type") || "One Way";
-      const tripTypeParam = typeParam === "One Way" ? "ONE_WAY" : typeParam === "Round Trip" ? "ROUND_TRIP" : "MULTI_CITY";
+      
+      // Transform to Amadeus Travelers
+      const travelers = passengerInput.map(p => {
+        const traveler: {
+          id: string;
+          dateOfBirth: string;
+          name: { firstName: string; lastName: string };
+          gender: string;
+          contact: { emailAddress: string; phones: Array<{ deviceType: string; countryCallingCode: string; number: string }> };
+          documents?: Array<{
+            documentType: string;
+            birthPlace: string;
+            issuanceLocation: string;
+            issuanceDate: string;
+            number: string;
+            expiryDate: string;
+            issuanceCountry: string;
+            validityCountry: string;
+            nationality: string;
+            holder: boolean;
+          }>;
+        } = {
+          id: p.travelerId,
+          dateOfBirth: p.dob,
+          name: {
+            firstName: p.firstName.toUpperCase(),
+            lastName: p.lastName.toUpperCase()
+          },
+          gender: p.gender,
+          contact: {
+            emailAddress: "info@skytrips.com.au",
+            phones: [{
+              deviceType: "MOBILE",
+              countryCallingCode: "61",
+              number: "400000000"
+            }]
+          }
+        };
 
-      const bookingUrl = new URL("flight-booking", baseUrl);
+        if (p.passportNumber && p.passportCountry && p.passportExpiryDate) {
+          traveler.documents = [{
+            documentType: "PASSPORT",
+            birthPlace: p.country || p.passportCountry,
+            issuanceLocation: p.passportCountry, 
+            issuanceDate: "2015-01-01", // Default to a safe past date
+            number: p.passportNumber,
+            expiryDate: p.passportExpiryDate,
+            issuanceCountry: p.passportCountry,
+            validityCountry: p.passportCountry,
+            nationality: p.passportCountry,
+            holder: true
+          }];
+        }
+
+        return traveler;
+      });
+
       const bookingPayload = {
-        priceParam: first,
-        userInput: { email: "info@skytrips.com.au" },
-        passengerInput,
-        travelClass: travelClassParam,
-        tripType: tripTypeParam,
-        bookingType: "ONLINE",
-        origin: offer.departure.code,
-        destination: offer.arrival.code,
-        bookingTicketRefundableStatus: "REFUNDABLE",
+        flightOffers: [first],
+        travelers
       };
-      const bookingRes = await fetch(bookingUrl.toString(), {
+      
+      const bookingRes = await fetch("/api/amadeus/book", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "ama-client-ref": clientRef,
-          accept: "*/*",
         },
         body: JSON.stringify(bookingPayload),
       }).catch(() => null);
       const bookingJson = bookingRes ? await bookingRes.json().catch(() => null) : null;
 
-      if (bookingRes && bookingRes.ok) {
+      if (bookingRes && bookingRes.ok && bookingJson?.ok) {
+
         setSuccess(true);
         setSuccessData({
           base,

@@ -13,7 +13,7 @@ export default function NavigationMenu({
     { label: "Airlines", href: "/dashboard/airlines", icon: "airlines", id: "airlines" },
     { label: "Airports", href: "/dashboard/airports", icon: "flight_takeoff", id: "airports" },
     { label: "Agency", href: "/dashboard/agencies", icon: "domain", id: "agency" },
-    { label: "Settings", href: "/dashboard/admin#settings", icon: "settings", id: "settings" },
+    { label: "Setting", href: "/dashboard/settings", icon: "settings", id: "settings" },
     { label: "Users", href: "/dashboard/users", icon: "group", id: "users" },
   ],
   activeId,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Customer, Booking, Address, Passport, Traveller } from "@/types";
@@ -34,6 +34,26 @@ export default function CustomerDetailsPage() {
   const router = useRouter();
   const customerId = params.id as string;
 
+  // Generate country phone options
+  const countryPhoneOptions = useMemo(() => {
+    return countriesData
+      .map((c) => {
+        try {
+          const callingCode = getCountryCallingCode(c.code as CountryCode);
+          return {
+            iso: c.code,
+            name: c.name,
+            callingCode: `+${callingCode}`,
+            display: `${c.name} (+${callingCode})`,
+          };
+        } catch (error) {
+          return null;
+        }
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, []);
+
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [identities, setIdentities] = useState<Identity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +73,17 @@ export default function CustomerDetailsPage() {
   const [editState, setEditState] = useState("");
   const [editCity, setEditCity] = useState("");
   const [editPhoneCountryCode, setEditPhoneCountryCode] = useState("");
+  const [editPhoneIso, setEditPhoneIso] = useState("US");
+
+  // Editable Fields State
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editStreet, setEditStreet] = useState("");
+  const [editPostalCode, setEditPostalCode] = useState("");
+  const [editGender, setEditGender] = useState("");
+  const [editDob, setEditDob] = useState("");
 
   // Booking History State
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -118,6 +149,42 @@ export default function CustomerDetailsPage() {
       setShowDisableModal(false);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to update status");
+    }
+  };
+
+  const handleUpdateCustomer = async () => {
+    try {
+      const updatedAddress = {
+        street: editStreet,
+        city: editCity,
+        state: editState,
+        postalCode: editPostalCode,
+        country: editCountry,
+      };
+
+      const { error } = await supabase
+        .from("customers")
+        .update({
+          firstName: editFirstName,
+          lastName: editLastName,
+          email: editEmail,
+          phone: editPhone,
+          phoneCountryCode: editPhoneCountryCode,
+          dateOfBirth: editDob,
+          gender: editGender,
+          country: editCountry,
+          address: JSON.stringify(updatedAddress),
+        })
+        .eq("id", customerId);
+
+      if (error) throw error;
+
+      await fetchCustomerDetails();
+      setShowEditModal(false);
+      alert("Customer updated successfully!");
+    } catch (err) {
+      console.error("Error updating customer:", err);
+      alert("Failed to update customer details");
     }
   };
 
@@ -717,7 +784,12 @@ export default function CustomerDetailsPage() {
                       </span>
                     </div>
                     <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
-                      <button className="text-xs font-bold text-slate-600 hover:text-primary px-3 py-1.5 rounded hover:bg-slate-50">
+                      <button
+                        className="text-xs font-bold text-slate-600 hover:text-primary px-3 py-1.5 rounded hover:bg-slate-50"
+                        onClick={() =>
+                          router.push(`/dashboard/booking/${booking.id}`)
+                        }
+                      >
                         View Details
                       </button>
                       {status !== "Cancelled" && booking.id && (
@@ -929,14 +1001,37 @@ export default function CustomerDetailsPage() {
             <button
               aria-label="Edit"
               onClick={() => {
+                setEditFirstName(customer?.firstName || "");
+                setEditLastName(customer?.lastName || "");
+                setEditEmail(customer?.email || "");
+                setEditPhone(customer?.phone || "");
+                setEditDob(customer?.dateOfBirth || "");
+                setEditGender(customer?.gender || "");
                 setEditCountry(customer?.country || "");
+                
                 const addr = safeJsonParse<Partial<Address>>(
                   customer?.address,
                   {},
                 );
+                setEditStreet(addr.street || "");
                 setEditState(addr.state || "");
                 setEditCity(addr.city || "");
-                setEditPhoneCountryCode(customer?.phoneCountryCode || "");
+                setEditPostalCode(addr.postalCode || "");
+                
+                const pCode = customer?.phoneCountryCode || "";
+                setEditPhoneCountryCode(pCode);
+
+                // Find ISO based on code and country
+                let pIso = "US";
+                if (pCode) {
+                   const matches = countryPhoneOptions.filter((c) => c.callingCode === pCode);
+                   if (matches.length > 0) {
+                     const match = matches.find((c) => c.name === customer?.country);
+                     pIso = match ? match.iso : matches[0].iso;
+                   }
+                }
+                setEditPhoneIso(pIso);
+
                 setShowEditModal(true);
               }}
               className="flex items-center justify-center h-9 w-9 rounded-full hover:bg-slate-100 transition-colors text-slate-500"
@@ -1306,7 +1401,8 @@ export default function CustomerDetailsPage() {
                       </label>
                       <input
                         type="text"
-                        defaultValue={customer?.firstName}
+                        value={editFirstName}
+                        onChange={(e) => setEditFirstName(e.target.value)}
                         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                       />
                     </div>
@@ -1316,7 +1412,8 @@ export default function CustomerDetailsPage() {
                       </label>
                       <input
                         type="text"
-                        defaultValue={customer?.lastName}
+                        value={editLastName}
+                        onChange={(e) => setEditLastName(e.target.value)}
                         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                       />
                     </div>
@@ -1328,7 +1425,8 @@ export default function CustomerDetailsPage() {
                       </label>
                       <input
                         type="date"
-                        defaultValue={customer?.dateOfBirth || ""}
+                        value={editDob}
+                        onChange={(e) => setEditDob(e.target.value)}
                         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                       />
                     </div>
@@ -1337,7 +1435,8 @@ export default function CustomerDetailsPage() {
                         Gender
                       </label>
                       <select
-                        defaultValue={customer?.gender || ""}
+                        value={editGender}
+                        onChange={(e) => setEditGender(e.target.value)}
                         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white"
                       >
                         <option value="">Select Gender</option>
@@ -1354,7 +1453,8 @@ export default function CustomerDetailsPage() {
                   </label>
                   <input
                     type="email"
-                    defaultValue={customer?.email}
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                   />
                 </div>
@@ -1363,16 +1463,30 @@ export default function CustomerDetailsPage() {
                     Phone
                   </label>
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={editPhoneCountryCode}
-                      placeholder="+1"
-                      className="w-20 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                      onChange={(e) => setEditPhoneCountryCode(e.target.value)}
-                    />
+                    <select
+                      value={editPhoneIso}
+                      onChange={(e) => {
+                        const iso = e.target.value;
+                        setEditPhoneIso(iso);
+                        const option = countryPhoneOptions.find(
+                          (c) => c.iso === iso
+                        );
+                        if (option) {
+                          setEditPhoneCountryCode(option.callingCode);
+                        }
+                      }}
+                      className="w-32 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white"
+                    >
+                      {countryPhoneOptions.map((option) => (
+                        <option key={option.iso} value={option.iso}>
+                          {option.display}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       type="tel"
-                      defaultValue={customer?.phone || ""}
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
                       className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                     />
                   </div>
@@ -1391,7 +1505,8 @@ export default function CustomerDetailsPage() {
                       </label>
                       <input
                         type="text"
-                        defaultValue={address.street}
+                        value={editStreet}
+                        onChange={(e) => setEditStreet(e.target.value)}
                         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                       />
                     </div>
@@ -1402,11 +1517,13 @@ export default function CustomerDetailsPage() {
                       <select
                         value={editCountry}
                         onChange={(e) => {
-                          setEditCountry(e.target.value);
+                          const val = e.target.value;
+                          setEditCountry(val);
                           setEditState("");
                           setEditCity("");
+                          
                           const selected = countriesData.find(
-                            (c) => c.name === e.target.value,
+                            (c) => c.name === val,
                           );
                           if (selected?.code) {
                             try {
@@ -1414,15 +1531,10 @@ export default function CustomerDetailsPage() {
                                 selected.code as CountryCode,
                               );
                               setEditPhoneCountryCode("+" + cc);
-                            } catch {
-                              setEditPhoneCountryCode(
-                                customer?.phoneCountryCode || "",
-                              );
+                              setEditPhoneIso(selected.code);
+                            } catch (err) {
+                              console.error(err);
                             }
-                          } else {
-                            setEditPhoneCountryCode(
-                              customer?.phoneCountryCode || "",
-                            );
                           }
                         }}
                         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white"
@@ -1485,7 +1597,8 @@ export default function CustomerDetailsPage() {
                       </label>
                       <input
                         type="text"
-                        defaultValue={address.postalCode}
+                        value={editPostalCode}
+                        onChange={(e) => setEditPostalCode(e.target.value)}
                         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                       />
                     </div>
@@ -1500,7 +1613,10 @@ export default function CustomerDetailsPage() {
               >
                 Cancel
               </button>
-              <button className="px-4 py-2 text-sm font-bold text-white bg-primary hover:bg-blue-600 rounded-lg shadow-sm transition-colors">
+              <button
+                onClick={handleUpdateCustomer}
+                className="px-4 py-2 text-sm font-bold text-white bg-primary hover:bg-blue-600 rounded-lg shadow-sm transition-colors"
+              >
                 Save Changes
               </button>
             </div>

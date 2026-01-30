@@ -4,12 +4,17 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Booking, ManageBooking } from "@/types";
 import { useRouter } from "next/navigation";
+import SendSMSModal from "@/components/booking-management/SendSMSModal";
 
 export default function ManageBookingPage() {
   const router = useRouter();
   const [manageRows, setManageRows] = useState<ManageBooking[]>([]);
   const [manageLoading, setManageLoading] = useState(false);
   const [manageError, setManageError] = useState<string | null>(null);
+  const [smsRecipient, setSmsRecipient] = useState<{
+    name: string;
+    phone: string;
+  } | null>(null);
 
   const [actionStates, setActionStates] = useState<
     Record<string, "select_booking" | "cancel_booking">
@@ -139,8 +144,26 @@ export default function ManageBookingPage() {
       </div>
     );
   };
+    
+    const handleSendSMS = async (message: string) => {
+      if (!smsRecipient?.phone) return;
+      
+      const response = await fetch("/api/send-sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: smsRecipient.phone,
+          message,
+        }),
+      });
 
-  return (
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to send SMS");
+      }
+    };
+
+    return (
     <div className="max-w-7xl mx-auto w-full font-display">
       {/* Breadcrumbs */}
       <nav className="flex mb-4 text-sm text-slate-500">
@@ -372,6 +395,27 @@ export default function ManageBookingPage() {
                         </span>
                       </button>
                       <button
+                        className="text-indigo-600 hover:text-indigo-800 transition-colors p-1 rounded-full hover:bg-indigo-50"
+                        title="Send SMS"
+                        onClick={() => {
+                          const details = row.booking_details as Booking;
+                          const phone = details?.phone || "";
+                          const name =
+                            details?.travellers?.[0]?.firstName ||
+                            details?.email ||
+                            "Customer";
+                          if (phone) {
+                            setSmsRecipient({ name, phone });
+                          } else {
+                            alert("No phone number available for this booking");
+                          }
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-[20px]">
+                          sms
+                        </span>
+                      </button>
+                      <button
                         className="text-red-600 hover:text-red-800 transition-colors p-1 rounded-full hover:bg-red-50"
                         title="Void"
                       >
@@ -399,6 +443,14 @@ export default function ManageBookingPage() {
       </div>
 
       {/* Results Section Container - Removed per request */}
+      {smsRecipient && (
+        <SendSMSModal
+          isOpen={!!smsRecipient}
+          onClose={() => setSmsRecipient(null)}
+          recipient={smsRecipient}
+          onSend={handleSendSMS}
+        />
+      )}
     </div>
   );
 }

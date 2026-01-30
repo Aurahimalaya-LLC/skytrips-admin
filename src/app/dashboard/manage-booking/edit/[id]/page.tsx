@@ -159,7 +159,9 @@ export default function EditBookingPage() {
           });
         }
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
+      // Ignore record not found error as it is handled by the UI state
+      if (err?.code === 'PGRST116') return;
       console.error("Error fetching record:", err);
     } finally {
       setLoading(false);
