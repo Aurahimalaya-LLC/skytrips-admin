@@ -17,14 +17,6 @@ type Agency = {
   status: string;
 };
 
-type UserRow = {
-  id: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  username?: string | null;
-  email?: string | null;
-};
-
 type TravellerRow = {
   first_name?: string | null;
   last_name?: string | null;
@@ -98,60 +90,14 @@ export default function EditBookingPage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
+  const [showStopover, setShowStopover] = useState(false);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [agenciesLoading, setAgenciesLoading] = useState(false);
-  const [users, setUsers] = useState<UserRow[]>([]);
-  const [usersLoading, setUsersLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [servicesLoading, setServicesLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
 
-  // Fetch current user
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      let currentUserData: any = null;
-
-      // 1. Try localStorage
-      if (typeof window !== "undefined") {
-        try {
-          const stored = localStorage.getItem("sky_admin_user");
-          if (stored) {
-            currentUserData = JSON.parse(stored);
-          }
-        } catch (e) {
-          console.error("Error parsing local user", e);
-        }
-      }
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        if (!currentUserData) currentUserData = { email: user.email };
-
-        const { data: userData } = await supabase
-          .from("users")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-
-        if (userData) {
-          currentUserData = { ...currentUserData, ...userData };
-        }
-      }
-
-      if (currentUserData) {
-        setCurrentUser(currentUserData);
-      }
-    };
-    fetchCurrentUser();
-  }, []);
   const [isMealModalOpen, setIsMealModalOpen] = useState(false);
-  const [showStopover, setShowStopover] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
-  const [existingTravelerSelected, setExistingTravelerSelected] =
-    useState(false);
   const [existingContactSelected, setExistingContactSelected] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<
     string | number | undefined
@@ -215,25 +161,6 @@ export default function EditBookingPage({
       }
     };
     loadAgencies();
-  }, []);
-
-  useEffect(() => {
-    const loadUsers = async () => {
-      setUsersLoading(true);
-      try {
-        const { data, error } = await supabase.from("users").select("*");
-        if (error) {
-          console.error("Failed to load users", error);
-          return;
-        }
-        setUsers(((data || []) as unknown as UserRow[]) || []);
-      } catch (e) {
-        console.error("Failed to load users", e);
-      } finally {
-        setUsersLoading(false);
-      }
-    };
-    loadUsers();
   }, []);
 
   useEffect(() => {
@@ -810,12 +737,60 @@ export default function EditBookingPage({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      const firstErrorField = document.querySelector(".error-field");
-      if (firstErrorField) {
-        firstErrorField.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Auto-detect Draft status if details are missing
+    const requiredFields = [
+      "pnr",
+      "airlines",
+      "origin",
+      "destination",
+      "travelDate",
+      "tripType",
+      "flightClass",
+      "flightNumber",
+    ];
+
+    let hasMissingFields = requiredFields.some((field) => {
+      const val = formData[field as keyof FormData];
+      return !val || (typeof val === "string" && val.trim() === "");
+    });
+
+    // Conditional check for Round Trip
+    if (formData.tripType === "Round Trip") {
+      if (!formData.returnDate || formData.returnDate.trim() === "") {
+        hasMissingFields = true;
       }
-      return;
+    }
+
+    const hasValidTraveller =
+      formData.travellers.length > 0 &&
+      formData.travellers.every(
+        (t) =>
+          t.firstName &&
+          t.firstName.trim() !== "" &&
+          t.lastName &&
+          t.lastName.trim() !== "",
+      );
+
+    let finalStatus = formData.status;
+
+    if (
+      (hasMissingFields || !hasValidTraveller) &&
+      finalStatus !== "Cancelled"
+    ) {
+      finalStatus = "Draft";
+    }
+
+    if (finalStatus !== "Draft" && finalStatus !== "Cancelled") {
+      if (!validateForm()) {
+        const firstErrorField = document.querySelector(".error-field");
+        if (firstErrorField) {
+          firstErrorField.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+        return;
+      }
     }
 
     setSaving(true);
@@ -963,7 +938,7 @@ export default function EditBookingPage({
         PNR: formData.pnr,
         agency: formData.agency,
         handledBy: formData.handledBy,
-        status: formData.status,
+        status: finalStatus,
         paymentStatus: formData.paymentStatus,
         // paymentMethod: formData.paymentMethod,
         // transactionId: formData.transactionId,
@@ -1799,14 +1774,14 @@ export default function EditBookingPage({
                   Route & Trip Details
                 </h3>
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="p-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
                       Trip Type
                     </label>
                     <select
-                      className="block w-full h-10 rounded-lg border-slate-200 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3"
+                      className="block w-full h-10 rounded-lg border-slate-300 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3"
                       name="tripType"
                       value={formData.tripType}
                       onChange={handleChange}
@@ -1818,11 +1793,11 @@ export default function EditBookingPage({
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
                         Departure Date
                       </label>
                       <input
-                        className="block w-full h-10 rounded-lg border-slate-200 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3"
+                        className="block w-full h-10 rounded-lg border-slate-300 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3"
                         name="travelDate"
                         type="date"
                         value={formData.travelDate}
@@ -1831,11 +1806,11 @@ export default function EditBookingPage({
                     </div>
                     {formData.tripType === "Round Trip" && (
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
                           Return Date
                         </label>
                         <input
-                          className="block w-full h-10 rounded-lg border-slate-200 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3"
+                          className="block w-full h-10 rounded-lg border-slate-300 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3"
                           name="returnDate"
                           type="date"
                           value={formData.returnDate}
@@ -1851,6 +1826,7 @@ export default function EditBookingPage({
                       value={formData.origin}
                       onChange={handleChange}
                       icon="flight_takeoff"
+                      className="block w-full h-10 pl-12 pr-10 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
                     />
                   </div>
                   <div>
@@ -1860,18 +1836,19 @@ export default function EditBookingPage({
                       value={formData.destination}
                       onChange={handleChange}
                       icon="flight_land"
+                      className="block w-full h-10 pl-12 pr-10 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
                     />
                   </div>
                 </div>
 
                 {/* Detailed Itinerary Segments */}
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {formData.itineraries?.map((itinerary, itinIndex) => (
                     <div
                       key={itinIndex}
-                      className="bg-slate-50 border border-slate-200 rounded-xl p-6"
+                      className="bg-slate-50 border border-slate-200 rounded-xl p-4"
                     >
-                      <div className="flex justify-between items-center mb-4">
+                      <div className="flex justify-between items-center mb-3">
                         <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
                           {itinIndex === 0
                             ? "Outbound Flight Segments"
@@ -1879,11 +1856,11 @@ export default function EditBookingPage({
                         </h4>
                       </div>
 
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {itinerary.segments.map((segment, segIndex) => (
                           <div
                             key={segIndex}
-                            className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative group"
+                            className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm relative group"
                           >
                             <button
                               type="button"
@@ -1895,7 +1872,7 @@ export default function EditBookingPage({
                               </span>
                             </button>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                               {/* Departure */}
                               <div className="col-span-1 md:col-span-2">
                                 <label className="text-xs font-bold text-slate-500 uppercase">
@@ -1904,7 +1881,7 @@ export default function EditBookingPage({
                                 <div className="grid grid-cols-3 gap-2 mt-1">
                                   <input
                                     placeholder="IATA"
-                                    className="block w-full rounded-md border-slate-200 text-sm"
+                                    className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
                                     value={segment.departure?.iataCode}
                                     onChange={(e) =>
                                       handleSegmentChange(
@@ -1918,7 +1895,7 @@ export default function EditBookingPage({
                                   />
                                   <input
                                     placeholder="Terminal"
-                                    className="block w-full rounded-md border-slate-200 text-sm"
+                                    className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
                                     value={segment.departure?.terminal}
                                     onChange={(e) =>
                                       handleSegmentChange(
@@ -1932,7 +1909,7 @@ export default function EditBookingPage({
                                   />
                                   <input
                                     type="datetime-local"
-                                    className="block w-full rounded-md border-slate-200 text-sm"
+                                    className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
                                     value={segment.departure?.at}
                                     onChange={(e) =>
                                       handleSegmentChange(
@@ -1955,7 +1932,7 @@ export default function EditBookingPage({
                                 <div className="grid grid-cols-3 gap-2 mt-1">
                                   <input
                                     placeholder="IATA"
-                                    className="block w-full rounded-md border-slate-200 text-sm"
+                                    className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
                                     value={segment.arrival?.iataCode}
                                     onChange={(e) =>
                                       handleSegmentChange(
@@ -1969,7 +1946,7 @@ export default function EditBookingPage({
                                   />
                                   <input
                                     placeholder="Terminal"
-                                    className="block w-full rounded-md border-slate-200 text-sm"
+                                    className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
                                     value={segment.arrival?.terminal}
                                     onChange={(e) =>
                                       handleSegmentChange(
@@ -1983,7 +1960,7 @@ export default function EditBookingPage({
                                   />
                                   <input
                                     type="datetime-local"
-                                    className="block w-full rounded-md border-slate-200 text-sm"
+                                    className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
                                     value={segment.arrival?.at}
                                     onChange={(e) =>
                                       handleSegmentChange(
@@ -1999,14 +1976,14 @@ export default function EditBookingPage({
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                               <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase">
                                   Carrier
                                 </label>
                                 <input
                                   placeholder="Code (e.g. QF)"
-                                  className="block w-full mt-1 rounded-md border-slate-200 text-sm"
+                                  className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
                                   value={segment.carrierCode}
                                   onChange={(e) =>
                                     handleSegmentChange(
@@ -2024,7 +2001,7 @@ export default function EditBookingPage({
                                 </label>
                                 <input
                                   placeholder="Number"
-                                  className="block w-full mt-1 rounded-md border-slate-200 text-sm"
+                                  className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
                                   value={segment.number}
                                   onChange={(e) =>
                                     handleSegmentChange(
@@ -2042,7 +2019,7 @@ export default function EditBookingPage({
                                 </label>
                                 <input
                                   placeholder="Code"
-                                  className="block w-full mt-1 rounded-md border-slate-200 text-sm"
+                                  className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
                                   value={segment.aircraft?.code}
                                   onChange={(e) =>
                                     handleSegmentChange(
@@ -2061,7 +2038,7 @@ export default function EditBookingPage({
                                 </label>
                                 <input
                                   placeholder="PTxxHxxM"
-                                  className="block w-full mt-1 rounded-md border-slate-200 text-sm"
+                                  className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
                                   value={segment.duration}
                                   onChange={(e) =>
                                     handleSegmentChange(
@@ -2360,6 +2337,7 @@ export default function EditBookingPage({
                   >
                     <option value="Confirmed">Confirmed</option>
                     <option value="Pending">Pending</option>
+                    <option value="Draft">Draft</option>
                     <option value="Cancelled">Cancelled</option>
                   </select>
                 </div>

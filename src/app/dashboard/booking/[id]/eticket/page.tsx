@@ -299,6 +299,10 @@ END:VCALENDAR`;
     subject: string;
     message: string;
     template: string;
+    sms?: {
+      enabled: boolean;
+      message: string;
+    };
   }) => {
     if (!booking) return;
     if (!booking.email || !String(booking.email).trim()) {
@@ -400,6 +404,25 @@ END:VCALENDAR`;
         throw new Error(errorMessage);
       }
 
+      // Send SMS if enabled
+      if (data.sms?.enabled && booking.phone) {
+        try {
+          await fetch("/api/send-sms", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              to: booking.phone,
+              message: data.sms.message,
+            }),
+          });
+        } catch (smsError) {
+          console.error("Error sending SMS:", smsError);
+          // Continue even if SMS fails
+        }
+      }
+
       // Update last_eticket_sent_at in database
       const now = new Date().toISOString();
       const { error: updateError } = await supabase
@@ -439,6 +462,8 @@ END:VCALENDAR`;
             organization: (booking as Booking & { companyName?: string }).companyName || "Individual",
             pnr: booking.PNR,
           }}
+          enableSmsOption={!!booking.phone}
+          defaultSmsMessage={`Here is your E-Ticket for ${booking.PNR}. Check your email for details.`}
           onSend={handleSendEmail}
         />
       )}

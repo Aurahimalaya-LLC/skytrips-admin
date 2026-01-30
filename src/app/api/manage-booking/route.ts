@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     // Now we can safely insert with all columns as we defined them in migration
-    const payload: any = {
+    const payload = {
       uid,
       booking_id: String(booking.id),
       user_id,
@@ -34,18 +34,19 @@ export async function POST(req: Request) {
       selected_travellers: selected_travellers || [], // Storing selected travellers IDs
     };
 
-    const { error } = await supabase.from("manage_booking").insert([payload]);
+    const { error } = await supabase.from("manage_booking").upsert([payload]);
 
     if (error) {
-      console.error("Insert manage_booking error:", error);
+      console.error("Upsert manage_booking error:", error);
       throw error;
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Manage booking creation error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: error.message || "Failed to create manage booking record" },
+      { error: errorMessage || "Failed to create manage booking record" },
       { status: 500 },
     );
   }

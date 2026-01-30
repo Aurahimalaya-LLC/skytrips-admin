@@ -15,10 +15,15 @@ interface SendEmailModalProps {
     pnr?: string;
   };
   lastEmailSent?: string | null;
+  lastEmailStatus?: "sent" | "failed" | "pending";
   onSend?: (data: {
     subject: string;
     message: string;
     template: string;
+    sms?: {
+      enabled: boolean;
+      message: string;
+    };
   }) => Promise<void>;
   onSave?: (data: {
     id: string;
@@ -30,6 +35,11 @@ interface SendEmailModalProps {
   templates?: EmailTemplate[];
   initialTemplateId?: string;
   additionalReplacements?: Record<string, string>;
+  onSkip?: () => void;
+  skipLabel?: string;
+  enableSmsOption?: boolean;
+  defaultSmsEnabled?: boolean;
+  defaultSmsMessage?: string;
 }
 
 export default function SendEmailModal({
@@ -37,12 +47,18 @@ export default function SendEmailModal({
   onClose,
   recipient,
   lastEmailSent,
+  lastEmailStatus,
   onSend,
   onSave,
   mode = "send",
   templates,
   initialTemplateId,
   additionalReplacements,
+  onSkip,
+  skipLabel = "Skip & Continue",
+  enableSmsOption = false,
+  defaultSmsEnabled = false,
+  defaultSmsMessage = "",
 }: SendEmailModalProps) {
   const activeTemplates = templates || DEFAULT_EMAIL_TEMPLATES;
   const [selectedTemplate, setSelectedTemplate] = useState(
@@ -50,6 +66,11 @@ export default function SendEmailModal({
   );
   const [subject, setSubject] = useState(activeTemplates[0]?.subject || "");
   const [message, setMessage] = useState(activeTemplates[0]?.content || "");
+  
+  // SMS State
+  const [sendSms, setSendSms] = useState(defaultSmsEnabled);
+  const [smsMessage, setSmsMessage] = useState(defaultSmsMessage);
+
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -65,11 +86,15 @@ export default function SendEmailModal({
       setSelectedTemplate(initialTemplate?.id || "");
       setSubject(initialTemplate?.subject || "");
       setMessage(initialTemplate?.content || "");
+      
+      setSendSms(defaultSmsEnabled);
+      setSmsMessage(defaultSmsMessage);
+      
       setError(null);
       setSuccess(false);
       setIsSending(false);
     }
-  }, [isOpen, activeTemplates, initialTemplateId]);
+  }, [isOpen, activeTemplates, initialTemplateId, defaultSmsEnabled, defaultSmsMessage]);
 
   useEffect(() => {
     const template = activeTemplates.find((t) => t.id === selectedTemplate);
@@ -112,6 +137,11 @@ export default function SendEmailModal({
       return;
     }
 
+    if (enableSmsOption && sendSms && !smsMessage.trim()) {
+      setError("SMS message content cannot be empty when SMS is enabled.");
+      return;
+    }
+
     try {
       setIsSending(true);
       setError(null);
@@ -125,7 +155,17 @@ export default function SendEmailModal({
           content: message,
         });
       } else if (onSend) {
-        await onSend({ subject, message, template: selectedTemplate });
+        await onSend({
+          subject,
+          message,
+          template: selectedTemplate,
+          sms: enableSmsOption
+            ? {
+                enabled: sendSms,
+                message: smsMessage,
+              }
+            : undefined,
+        });
       }
 
       setSuccess(true);
@@ -136,9 +176,11 @@ export default function SendEmailModal({
     } catch (err) {
       console.error(err);
       setError(
-        mode === "edit"
-          ? "Failed to save template."
-          : "Failed to send email. Please try again.",
+        err instanceof Error
+          ? err.message
+          : mode === "edit"
+            ? "Failed to save template."
+            : "Failed to send email. Please try again.",
       );
     } finally {
       setIsSending(false);
@@ -217,8 +259,8 @@ export default function SendEmailModal({
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
                 History
               </h3>
-              <p className="text-xs text-slate-500">
-                Last email sent:{" "}
+              <p className="text-xs text-slate-500 flex flex-wrap items-center gap-2">
+                <span>Last email sent:</span>
                 <span className="font-bold text-slate-700">
                   {lastEmailSent
                     ? new Date(lastEmailSent).toLocaleString("en-AU", {
@@ -230,6 +272,19 @@ export default function SendEmailModal({
                       })
                     : "Never"}
                 </span>
+                {lastEmailStatus && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
+                      lastEmailStatus === "sent"
+                        ? "bg-green-100 text-green-700"
+                        : lastEmailStatus === "failed"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {lastEmailStatus}
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -302,6 +357,47 @@ export default function SendEmailModal({
                   </span>
                 </div>
               </div>
+
+              {enableSmsOption && mode === "send" && (
+                <div className="pt-4 mt-4 border-t border-slate-200">
+                  <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sendSms}
+                      onChange={(e) => setSendSms(e.target.checked)}
+                      className="rounded border-slate-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm font-bold text-slate-700">
+                      Send SMS Notification
+                    </span>
+                    {recipient.phone && (
+                      <span className="text-xs text-slate-500 font-normal">
+                        ({recipient.phone})
+                      </span>
+                    )}
+                  </label>
+
+                  {sendSms && (
+                    <div className="animate-in fade-in slide-in-from-top-2">
+                      <textarea
+                        value={smsMessage}
+                        onChange={(e) => setSmsMessage(e.target.value)}
+                        className="w-full p-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none font-mono"
+                        placeholder="Type SMS message here..."
+                        rows={3}
+                      />
+                      <div className="text-right mt-1">
+                        <span
+                          className={`text-[10px] font-bold ${smsMessage.length > 160 ? "text-amber-500" : "text-slate-400"}`}
+                        >
+                          {smsMessage.length} characters{" "}
+                          {smsMessage.length > 160 && "(Multi-part)"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Notifications */}
@@ -344,7 +440,7 @@ export default function SendEmailModal({
             </button>
             <button
               onClick={handleAction}
-              disabled={isSending || success}
+              disabled={isSending}
               className="px-6 py-2 text-sm font-bold text-white bg-primary rounded-lg hover:bg-blue-600 shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSending ? (
@@ -361,6 +457,15 @@ export default function SendEmailModal({
                 </>
               )}
             </button>
+            {onSkip && (
+              <button
+                onClick={onSkip}
+                disabled={isSending}
+                className="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                {skipLabel}
+              </button>
+            )}
           </div>
         </div>
       </div>

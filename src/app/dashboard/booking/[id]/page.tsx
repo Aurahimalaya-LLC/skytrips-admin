@@ -768,15 +768,17 @@ export default function BookingDetailsPage({
                 </label>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="size-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold">
-                    {booking.handledBy
-                      ? booking.handledBy
+                    {getCustomerName(booking)
+                      ? getCustomerName(booking)
                           .split(" ")
                           .map((n: string) => n[0])
                           .join("")
-                      : "JD"}
+                          .substring(0, 2)
+                          .toUpperCase()
+                      : "UN"}
                   </div>
                   <p className="text-sm font-bold text-slate-900">
-                    {booking.handledBy || "John Doe"}
+                    {getCustomerName(booking) || "Unknown"}
                   </p>
                 </div>
               </div>

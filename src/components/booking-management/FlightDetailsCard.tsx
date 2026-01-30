@@ -82,6 +82,9 @@ export default function FlightDetailsCard({
                   <span className="text-lg font-bold text-slate-900">
                     {originCode}
                   </span>
+                  <span className="text-xs font-medium text-slate-700">
+                    {origin}
+                  </span>
                   <span className="text-xs text-slate-500">
                     {departureDate || `${booking.IssueDay} ${booking.issueMonth} ${booking.issueYear}`}
                   </span>

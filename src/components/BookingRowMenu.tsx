@@ -66,16 +66,25 @@ export default function BookingRowMenu({
       }
 
       if (emailToCheck) {
-        // Check if user exists in the 'users' list
-        const { data } = await supabase
-          .from("users")
-          .select("email")
-          .eq("email", emailToCheck)
-          .maybeSingle();
-
-        if (data) {
-          setIsAuthorizedUser(true);
-          setLocalUser({ id: userId, email: emailToCheck });
+        // Check if user exists in the system via API to bypass RLS issues
+        try {
+          const res = await fetch("/api/verify-user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: emailToCheck }),
+          });
+          
+          if (res.ok) {
+            const result = await res.json();
+            if (result.exists) {
+              setIsAuthorizedUser(true);
+              // Use the ID from DB if available, otherwise fallback to local/auth ID
+              const confirmedId = result.user?.id || userId;
+              setLocalUser({ id: confirmedId, email: emailToCheck });
+            }
+          }
+        } catch (error) {
+          console.error("User verification error:", error);
         }
       }
     };

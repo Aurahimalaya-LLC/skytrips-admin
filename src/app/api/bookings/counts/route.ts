@@ -38,6 +38,31 @@ export async function GET() {
     );
   }
 
+  // Get status counts in parallel
+  const [
+    { count: confirmedCount },
+    { count: pendingCount },
+    { count: draftCount },
+    { count: cancelledCount },
+  ] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "Confirmed"),
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "Pending"),
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "Draft"),
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "Cancelled"),
+  ]);
+
   const withCustomerCount = Math.max(
     0,
     (totalCount || 0) - (withoutCustomerCount || 0),
@@ -46,5 +71,9 @@ export async function GET() {
   return NextResponse.json({
     withCustomerCount: withCustomerCount || 0,
     withoutCustomerCount: withoutCustomerCount || 0,
+    confirmedCount: confirmedCount || 0,
+    pendingCount: pendingCount || 0,
+    draftCount: draftCount || 0,
+    cancelledCount: cancelledCount || 0,
   });
 }

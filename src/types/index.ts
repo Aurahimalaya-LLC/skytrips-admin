@@ -83,7 +83,7 @@ export interface FlightItinerary {
   segments: FlightSegment[];
 }
 
-export type BookingStatus = "PENDING" | "SEND" | "REFUNDED";
+export type BookingStatus = "PENDING" | "SEND" | "REFUNDED" | "DRAFT";
 
 export interface ManageBooking {
   uid: string;

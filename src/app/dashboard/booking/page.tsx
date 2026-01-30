@@ -16,6 +16,10 @@ export default function BookingPage() {
   const [counts, setCounts] = useState<{
     withCustomerCount: number;
     withoutCustomerCount: number;
+    confirmedCount: number;
+    pendingCount: number;
+    draftCount: number;
+    cancelledCount: number;
   } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
@@ -42,6 +46,7 @@ export default function BookingPage() {
     | "linked"
     | "unlinked"
   >("all");
+  const [statusFilter, setStatusFilter] = useState<string>("Confirmed");
   const [selectedBookingIds, setSelectedBookingIds] = useState<number[]>([]);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
@@ -135,6 +140,10 @@ export default function BookingPage() {
         if (endIso) query = query.lt("created_at", endIso);
       }
 
+      if (statusFilter) {
+        query = query.eq("status", statusFilter);
+      }
+
       if (customerFilter === "linked") {
         query = query.or(
           "customer.neq.{},customerid.neq.00000000-0000-0000-0000-000000000000",
@@ -185,6 +194,7 @@ export default function BookingPage() {
     createdFrom,
     createdTo,
     customerFilter,
+    statusFilter,
   ]);
 
   const fetchCounts = useCallback(async () => {
@@ -198,6 +208,10 @@ export default function BookingPage() {
             ? (json as {
                 withCustomerCount?: unknown;
                 withoutCustomerCount?: unknown;
+                confirmedCount?: unknown;
+                pendingCount?: unknown;
+                draftCount?: unknown;
+                cancelledCount?: unknown;
               })
             : null;
 
@@ -210,6 +224,20 @@ export default function BookingPage() {
             withoutCustomerCount:
               typeof parsed.withoutCustomerCount === "number"
                 ? parsed.withoutCustomerCount
+                : 0,
+            confirmedCount:
+              typeof parsed.confirmedCount === "number"
+                ? parsed.confirmedCount
+                : 0,
+            pendingCount:
+              typeof parsed.pendingCount === "number"
+                ? parsed.pendingCount
+                : 0,
+            draftCount:
+              typeof parsed.draftCount === "number" ? parsed.draftCount : 0,
+            cancelledCount:
+              typeof parsed.cancelledCount === "number"
+                ? parsed.cancelledCount
                 : 0,
           });
           return;
@@ -476,7 +504,7 @@ export default function BookingPage() {
         if (createError) throw createError;
 
         // Send confirmation email
-        if (booking.email) {
+        if (booking.email && booking.status !== "Draft") {
           try {
             await fetch("/api/send-email", {
               method: "POST",
@@ -623,11 +651,19 @@ export default function BookingPage() {
           />
         </div>
         <div className="flex gap-4">
-          <select className="w-full sm:w-48 rounded-lg border border-slate-200 bg-white py-2.5 pl-3 pr-10 text-sm text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary">
+          <select
+            className="w-full sm:w-48 rounded-lg border border-slate-200 bg-white py-2.5 pl-3 pr-10 text-sm text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary"
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+          >
             <option value="">All Statuses</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="pending">Pending</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Pending">Pending</option>
+            <option value="Draft">Draft</option>
+            <option value="Cancelled">Cancelled</option>
           </select>
           <div className="relative">
             <button
@@ -738,7 +774,7 @@ export default function BookingPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <div
           onClick={() =>
             setCustomerFilter((prev) => (prev === "linked" ? "all" : "linked"))
@@ -787,6 +823,102 @@ export default function BookingPage() {
             </div>
             <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-700">
               <span className="material-symbols-outlined">link_off</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Confirmed */}
+        <div
+          onClick={() =>
+            setStatusFilter((prev) => (prev === "Confirmed" ? "" : "Confirmed"))
+          }
+          className={`rounded-xl border bg-white shadow-sm p-5 cursor-pointer transition-all ${
+            statusFilter === "Confirmed"
+              ? "border-green-600 ring-1 ring-green-600"
+              : "border-slate-200 hover:border-green-600/50"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500 font-semibold">Confirmed</p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {counts ? counts.confirmedCount.toLocaleString() : "—"}
+              </p>
+            </div>
+            <div className="size-12 rounded-full bg-green-50 flex items-center justify-center text-green-600">
+              <span className="material-symbols-outlined">check_circle</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Pending */}
+        <div
+          onClick={() =>
+            setStatusFilter((prev) => (prev === "Pending" ? "" : "Pending"))
+          }
+          className={`rounded-xl border bg-white shadow-sm p-5 cursor-pointer transition-all ${
+            statusFilter === "Pending"
+              ? "border-amber-500 ring-1 ring-amber-500"
+              : "border-slate-200 hover:border-amber-500/50"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500 font-semibold">Pending</p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {counts ? counts.pendingCount.toLocaleString() : "—"}
+              </p>
+            </div>
+            <div className="size-12 rounded-full bg-amber-50 flex items-center justify-center text-amber-600">
+              <span className="material-symbols-outlined">hourglass_top</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Draft */}
+        <div
+          onClick={() =>
+            setStatusFilter((prev) => (prev === "Draft" ? "" : "Draft"))
+          }
+          className={`rounded-xl border bg-white shadow-sm p-5 cursor-pointer transition-all ${
+            statusFilter === "Draft"
+              ? "border-slate-500 ring-1 ring-slate-500"
+              : "border-slate-200 hover:border-slate-500/50"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500 font-semibold">Drafts</p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {counts ? counts.draftCount.toLocaleString() : "—"}
+              </p>
+            </div>
+            <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+              <span className="material-symbols-outlined">edit_note</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Cancelled */}
+        <div
+          onClick={() =>
+            setStatusFilter((prev) => (prev === "Cancelled" ? "" : "Cancelled"))
+          }
+          className={`rounded-xl border bg-white shadow-sm p-5 cursor-pointer transition-all ${
+            statusFilter === "Cancelled"
+              ? "border-red-500 ring-1 ring-red-500"
+              : "border-slate-200 hover:border-red-500/50"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500 font-semibold">Cancelled</p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {counts ? counts.cancelledCount.toLocaleString() : "—"}
+              </p>
+            </div>
+            <div className="size-12 rounded-full bg-red-50 flex items-center justify-center text-red-600">
+              <span className="material-symbols-outlined">cancel</span>
             </div>
           </div>
         </div>
@@ -844,6 +976,23 @@ export default function BookingPage() {
                   <th
                     scope="col"
                     className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
+                    onClick={() => handleSort("created_at")}
+                    aria-sort={
+                      sortConfig.key === "created_at"
+                        ? sortConfig.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
+                  >
+                    <div className="flex items-center gap-1">
+                      Created At
+                      {renderSortIcon("created_at")}
+                    </div>
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
                     onClick={() => handleSort("travellerFirstName")}
                     aria-sort={
                       sortConfig.key === "travellerFirstName"
@@ -890,6 +1039,23 @@ export default function BookingPage() {
                     <div className="flex items-center gap-1">
                       Trip Type
                       {renderSortIcon("tripType")}
+                    </div>
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 cursor-pointer group select-none hover:bg-slate-100 transition-colors"
+                    onClick={() => handleSort("status")}
+                    aria-sort={
+                      sortConfig.key === "status"
+                        ? sortConfig.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
+                  >
+                    <div className="flex items-center gap-1">
+                      Status
+                      {renderSortIcon("status")}
                     </div>
                   </th>
                   <th
@@ -958,6 +1124,13 @@ export default function BookingPage() {
                       </button>
                     </td>
                     <td className="px-6 py-4">
+                      <span className="text-slate-600 text-sm">
+                        {booking.created_at
+                          ? new Date(booking.created_at).toLocaleString()
+                          : "N/A"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div
                           className="size-9 rounded-full bg-cover bg-center"
@@ -987,6 +1160,23 @@ export default function BookingPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-slate-600">{booking.tripType}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
+                          booking.status === "Confirmed"
+                            ? "bg-green-50 text-green-700 ring-green-600/20"
+                            : booking.status === "Pending"
+                            ? "bg-amber-50 text-amber-700 ring-amber-600/20"
+                            : booking.status === "Draft"
+                            ? "bg-slate-50 text-slate-700 ring-slate-600/20"
+                            : booking.status === "Cancelled"
+                            ? "bg-red-50 text-red-700 ring-red-600/20"
+                            : "bg-slate-50 text-slate-700 ring-slate-600/20"
+                        }`}
+                      >
+                        {booking.status || "Draft"}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="bg-blue-50 text-primary px-2 py-1 rounded text-xs font-bold">

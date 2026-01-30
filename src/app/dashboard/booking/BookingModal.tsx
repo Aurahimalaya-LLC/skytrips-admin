@@ -729,6 +729,44 @@ export default function BookingModal({
       return dateStr;
     };
 
+    // Auto-detect Draft status if details are missing
+    const requiredFields = [
+      "pnr",
+      "airlines",
+      "origin",
+      "destination",
+      "travelDate",
+      "tripType",
+      "flightClass",
+      "flightNumber",
+    ];
+
+    let hasMissingFields = requiredFields.some((field) => {
+      const val = formData[field as keyof FormData];
+      return !val || (typeof val === "string" && val.trim() === "");
+    });
+
+    // Conditional check for Round Trip
+    if (formData.tripType === "Round Trip") {
+      if (!formData.returnDate || formData.returnDate.trim() === "") {
+        hasMissingFields = true;
+      }
+    }
+
+    const hasValidTraveller =
+      formData.travellers.length > 0 &&
+      formData.travellers.every(
+        (t) => t.firstName && t.firstName.trim() !== "" && t.lastName && t.lastName.trim() !== ""
+      );
+
+    let finalStatus = formData.status;
+
+    // If user explicitly selected Cancelled or Refunded (if available), respect it?
+    // But if they try to save as Confirmed/Pending with missing details, force Draft.
+    if ((hasMissingFields || !hasValidTraveller) && finalStatus !== "Cancelled") {
+      finalStatus = "Draft";
+    }
+
     // Map back to the Booking interface structure before saving
     const bookingToSave: Partial<Booking> = {
       // Legacy flat fields removed to prevent usage
@@ -754,7 +792,7 @@ export default function BookingModal({
       costprice: formData.costPrice,
       sellingPrice: formData.sellingPrice,
       payment: formData.paymentStatus,
-      status: formData.status,
+      status: finalStatus,
 
       // Re-enabled fields as columns are added to DB
       email: formData.email,
@@ -1348,7 +1386,7 @@ export default function BookingModal({
 
                   {/* Route & Trip Details */}
                   <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
-                    <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                       <h3 className="text-lg font-bold text-slate-900 flex items-center tracking-tight">
                         <span className="material-symbols-outlined text-primary mr-3">
                           flight_takeoff
@@ -1356,14 +1394,14 @@ export default function BookingModal({
                         Route & Trip Details
                       </h3>
                     </div>
-                    <div className="p-8">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <div className="p-5">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                         <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                          <label className="block text-sm font-bold text-slate-700 mb-1 tracking-tight">
                             Trip Type
                           </label>
                           <select
-                            className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
+                            className="block w-full h-10 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-3"
                             name="tripType"
                             value={formData.tripType}
                             onChange={handleChange}
@@ -1376,11 +1414,11 @@ export default function BookingModal({
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                            <label className="block text-sm font-bold text-slate-700 mb-1 tracking-tight">
                               Departure Date
                             </label>
                             <input
-                              className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
+                              className="block w-full h-10 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-3"
                               name="travelDate"
                               type="date"
                               value={formData.travelDate}
@@ -1390,11 +1428,11 @@ export default function BookingModal({
                           </div>
                           {formData.tripType === "Round Trip" && (
                             <div>
-                              <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                              <label className="block text-sm font-bold text-slate-700 mb-1 tracking-tight">
                                 Return Date
                               </label>
                               <input
-                                className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
+                                className="block w-full h-10 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-3"
                                 name="returnDate"
                                 type="date"
                                 value={formData.returnDate}
@@ -1412,6 +1450,7 @@ export default function BookingModal({
                             onChange={handleChange}
                             disabled={isReadOnly}
                             icon="flight_takeoff"
+                            className="block w-full h-10 pl-12 pr-10 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
                           />
                         </div>
                         <div>
@@ -1422,18 +1461,19 @@ export default function BookingModal({
                             onChange={handleChange}
                             disabled={isReadOnly}
                             icon="flight_land"
+                            className="block w-full h-10 pl-12 pr-10 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
                           />
                         </div>
                       </div>
 
                       {/* Detailed Itinerary Segments */}
-                      <div className="space-y-6">
+                      <div className="space-y-4">
                         {formData.itineraries?.map((itinerary, itinIndex) => (
                           <div
                             key={itinIndex}
-                            className="bg-slate-50 border border-slate-200 rounded-xl p-6"
+                            className="bg-slate-50 border border-slate-200 rounded-xl p-4"
                           >
-                            <div className="flex justify-between items-center mb-4">
+                            <div className="flex justify-between items-center mb-3">
                               <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
                                 {itinIndex === 0
                                   ? "Outbound Flight Segments"
@@ -1441,11 +1481,11 @@ export default function BookingModal({
                               </h4>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                               {itinerary.segments.map((segment, segIndex) => (
                                 <div
                                   key={segIndex}
-                                  className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative group"
+                                  className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm relative group"
                                 >
                                   <button
                                     type="button"
@@ -1459,7 +1499,7 @@ export default function BookingModal({
                                     </span>
                                   </button>
 
-                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                                     {/* Departure */}
                                     <div className="col-span-1 md:col-span-2">
                                       <label className="text-xs font-bold text-slate-500 uppercase">
@@ -1468,7 +1508,7 @@ export default function BookingModal({
                                       <div className="grid grid-cols-3 gap-2 mt-1">
                                         <input
                                           placeholder="IATA"
-                                          className="block w-full rounded-md border-slate-200 text-sm"
+                                          className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
                                           value={segment.departure?.iataCode}
                                           onChange={(e) =>
                                             handleSegmentChange(
@@ -1482,7 +1522,7 @@ export default function BookingModal({
                                         />
                                         <input
                                           placeholder="Terminal"
-                                          className="block w-full rounded-md border-slate-200 text-sm"
+                                          className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
                                           value={segment.departure?.terminal}
                                           onChange={(e) =>
                                             handleSegmentChange(
@@ -1496,7 +1536,7 @@ export default function BookingModal({
                                         />
                                         <input
                                           type="datetime-local"
-                                          className="block w-full rounded-md border-slate-200 text-sm"
+                                          className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
                                           value={segment.departure?.at}
                                           onChange={(e) =>
                                             handleSegmentChange(
@@ -1519,7 +1559,7 @@ export default function BookingModal({
                                       <div className="grid grid-cols-3 gap-2 mt-1">
                                         <input
                                           placeholder="IATA"
-                                          className="block w-full rounded-md border-slate-200 text-sm"
+                                          className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
                                           value={segment.arrival?.iataCode}
                                           onChange={(e) =>
                                             handleSegmentChange(
@@ -1533,7 +1573,7 @@ export default function BookingModal({
                                         />
                                         <input
                                           placeholder="Terminal"
-                                          className="block w-full rounded-md border-slate-200 text-sm"
+                                          className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
                                           value={segment.arrival?.terminal}
                                           onChange={(e) =>
                                             handleSegmentChange(
@@ -1547,7 +1587,7 @@ export default function BookingModal({
                                         />
                                         <input
                                           type="datetime-local"
-                                          className="block w-full rounded-md border-slate-200 text-sm"
+                                          className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
                                           value={segment.arrival?.at}
                                           onChange={(e) =>
                                             handleSegmentChange(
@@ -1563,14 +1603,14 @@ export default function BookingModal({
                                     </div>
                                   </div>
 
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                     <div>
                                       <label className="text-xs font-bold text-slate-500 uppercase">
                                         Carrier
                                       </label>
                                       <input
                                         placeholder="Code (e.g. QF)"
-                                        className="block w-full mt-1 rounded-md border-slate-200 text-sm"
+                                        className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
                                         value={segment.carrierCode}
                                         onChange={(e) =>
                                           handleSegmentChange(
@@ -1588,7 +1628,7 @@ export default function BookingModal({
                                       </label>
                                       <input
                                         placeholder="Number"
-                                        className="block w-full mt-1 rounded-md border-slate-200 text-sm"
+                                        className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
                                         value={segment.number}
                                         onChange={(e) =>
                                           handleSegmentChange(
@@ -1606,7 +1646,7 @@ export default function BookingModal({
                                       </label>
                                       <input
                                         placeholder="Code"
-                                        className="block w-full mt-1 rounded-md border-slate-200 text-sm"
+                                        className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
                                         value={segment.aircraft?.code}
                                         onChange={(e) =>
                                           handleSegmentChange(
@@ -1625,7 +1665,7 @@ export default function BookingModal({
                                       </label>
                                       <input
                                         placeholder="PTxxHxxM"
-                                        className="block w-full mt-1 rounded-md border-slate-200 text-sm"
+                                        className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
                                         value={segment.duration}
                                         onChange={(e) =>
                                           handleSegmentChange(
@@ -1655,13 +1695,13 @@ export default function BookingModal({
                         ))}
                       </div>
 
-                      <div className="mt-8 pt-6 border-t border-slate-100">
-                        <div className="flex justify-between items-center mb-6">
+                      <div className="mt-5 pt-4 border-t border-slate-100">
+                        <div className="flex justify-between items-center mb-3">
                           <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
                             Global Flight Details
                           </h4>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                           <div className="md:col-span-1">
                             <AirlineAutocomplete
                               label="Primary Airline"
@@ -1670,14 +1710,15 @@ export default function BookingModal({
                               onChange={handleChange}
                               disabled={isReadOnly}
                               icon="airlines"
+                              className="block w-full h-10 pl-12 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
                             />
                           </div>
                           <div className="md:col-span-1">
-                            <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                            <label className="block text-sm font-bold text-slate-700 mb-1 tracking-tight">
                               Class
                             </label>
                             <select
-                              className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
+                              className="block w-full h-10 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
                               name="flightClass"
                               value={formData.flightClass}
                               onChange={handleChange}
@@ -1958,6 +1999,7 @@ export default function BookingModal({
                         >
                           <option>Confirmed</option>
                           <option>Pending</option>
+                          <option>Draft</option>
                           <option>Cancelled</option>
                         </select>
                       </div>

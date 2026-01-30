@@ -26,9 +26,10 @@ interface AirportAutocompleteProps {
   onChange: (e: ChangeEvent<HTMLInputElement> | { target: { name: string; value: string } }) => void;
   disabled?: boolean;
   icon: string;
+  className?: string;
 }
 
-const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: AirportAutocompleteProps) => {
+const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon, className }: AirportAutocompleteProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [filteredOptions, setFilteredOptions] = useState<AirportOption[]>([]);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
@@ -147,7 +148,7 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
           role="combobox"
           aria-expanded={isOpen}
           aria-controls={listboxId}
-          className="block w-full h-12 pl-12 pr-10 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
+          className={className || "block w-full h-12 pl-12 pr-10 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"}
           name={name}
           placeholder="City or Airport"
           type="text"
