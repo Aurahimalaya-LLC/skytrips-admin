@@ -1,5 +1,6 @@
 import { Booking, ManageBooking } from "@/types";
 import FlightDetailsCard from "@/components/booking-management/FlightDetailsCard";
+import { useState } from "react";
 
 interface FlightDetailsTabProps {
   booking: Booking;
@@ -70,6 +71,7 @@ export default function FlightDetailsTab({
     segments.length > 1 ? `${segments.length - 1} Stop(s)` : "Direct";
 
   const { sellingPrice, costPrice, profit, profitPercent } = calculations;
+  const [isVerified, setIsVerified] = useState(false);
 
   return (
     <div className="flex flex-col gap-6">
@@ -129,6 +131,22 @@ export default function FlightDetailsTab({
             </div>
           </div>
 
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+            <div className="mt-0.5">
+              <input
+                type="checkbox"
+                id="verify-details"
+                checked={isVerified}
+                onChange={(e) => setIsVerified(e.target.checked)}
+                className="rounded border-slate-300 text-primary focus:ring-primary size-4 cursor-pointer"
+              />
+            </div>
+            <label htmlFor="verify-details" className="text-sm text-slate-700 cursor-pointer select-none">
+              <span className="font-semibold text-slate-900 block mb-1">Verify Request Details</span>
+              I confirm that I have reviewed the refund request details, including the reason and notes provided. I am ready to proceed to the next step.
+            </label>
+          </div>
+
           <div className="flex justify-end items-center gap-3 pt-4 border-t border-slate-200">
             {onPrevious && (
               <button
@@ -140,7 +158,8 @@ export default function FlightDetailsTab({
             )}
             <button
               onClick={onNext}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg shadow-sm transition-colors flex items-center gap-2"
+              disabled={!isVerified}
+              className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined text-[18px]">
                 arrow_forward

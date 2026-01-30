@@ -241,6 +241,7 @@ export default function DashboardLayout({
           {/* Customers */}
           <Link
             href="/dashboard/customers"
+            prefetch={false}
             className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname === "/dashboard/customers"
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
@@ -295,6 +296,7 @@ export default function DashboardLayout({
           {/* Bookings */}
           <Link
             href="/dashboard/booking"
+            prefetch={false}
             className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname === "/dashboard/booking"
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
@@ -404,6 +406,7 @@ export default function DashboardLayout({
           {/* Routes */}
           <Link
             href="/dashboard/routes"
+            prefetch={false}
             className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname.startsWith("/dashboard/routes")
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
@@ -431,6 +434,7 @@ export default function DashboardLayout({
           {/* Airlines Management */}
           <Link
             href="/dashboard/airlines"
+            prefetch={false}
             className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname === "/dashboard/airlines"
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
@@ -458,6 +462,7 @@ export default function DashboardLayout({
           {/* Airports Management */}
           <Link
             href="/dashboard/airports"
+            prefetch={false}
             className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname === "/dashboard/airports"
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
@@ -485,6 +490,7 @@ export default function DashboardLayout({
           {/* Agency */}
           <Link
             href="/dashboard/agencies"
+            prefetch={false}
             className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname.startsWith("/dashboard/agencies")
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
@@ -540,6 +546,7 @@ export default function DashboardLayout({
           {/* Services */}
           <Link
             href="/dashboard/services"
+            prefetch={false}
             className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname.startsWith("/dashboard/services")
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
@@ -567,6 +574,7 @@ export default function DashboardLayout({
           {/* Setting */}
           <Link
             href="/dashboard/settings"
+            prefetch={false}
             className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
               pathname === "/dashboard/settings"
                 ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"

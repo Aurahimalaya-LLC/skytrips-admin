@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import RefundConfirmModal from "@/components/RefundConfirmModal";
 import SignInPromptModal from "@/components/SignInPromptModal";
+import SendSMSModal from "@/components/booking-management/SendSMSModal";
 import { supabase } from "@/lib/supabase";
 import { ManageBooking } from "@/types";
 import { Booking } from "@/types";
@@ -27,6 +28,7 @@ export default function BookingRowMenu({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSignInPromptOpen, setIsSignInPromptOpen] = useState(false);
+  const [isSmsOpen, setIsSmsOpen] = useState(false);
   const [isAuthorizedUser, setIsAuthorizedUser] = useState(false);
   const [localUser, setLocalUser] = useState<{
     id: string;
@@ -157,7 +159,32 @@ export default function BookingRowMenu({
       },
     },
     { label: "Re-issue", icon: "sync", action: onReissue },
+    {
+      label: "Send SMS",
+      icon: "sms",
+      action: () => setIsSmsOpen(true),
+    },
   ];
+
+  const handleSendSMS = async (message: string) => {
+    if (!booking.phone) throw new Error("No phone number available for this booking");
+    
+    const response = await fetch("/api/send-sms", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: booking.phone,
+        message,
+      }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || "Failed to send SMS");
+    }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
     if (
@@ -338,6 +365,17 @@ export default function BookingRowMenu({
         <SignInPromptModal
           isOpen={isSignInPromptOpen}
           onClose={() => setIsSignInPromptOpen(false)}
+        />
+      )}
+      {isSmsOpen && (
+        <SendSMSModal
+          isOpen={isSmsOpen}
+          onClose={() => setIsSmsOpen(false)}
+          recipient={{
+            name: booking.travellers?.[0]?.firstName || booking.email || "Customer",
+            phone: booking.phone || "",
+          }}
+          onSend={handleSendSMS}
         />
       )}
     </div>
