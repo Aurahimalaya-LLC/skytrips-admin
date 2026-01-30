@@ -7,6 +7,11 @@ export default function NavigationMenu({
   items = [
     { label: "Overview", href: "/dashboard/admin#overview", icon: "home", id: "overview" },
     { label: "Media Management", href: "/dashboard/admin#media", icon: "video_library", id: "media" },
+    { label: "Bookings", href: "/dashboard/booking", icon: "confirmation_number", id: "bookings" },
+    { label: "Manage Booking", href: "/dashboard/manage-booking", icon: "edit_calendar", id: "manage-booking" },
+    { label: "Routes", href: "/dashboard/routes", icon: "alt_route", id: "routes" },
+    { label: "Airlines", href: "/dashboard/airlines", icon: "airlines", id: "airlines" },
+    { label: "Airports", href: "/dashboard/airports", icon: "flight_takeoff", id: "airports" },
     { label: "Agency", href: "/dashboard/agencies", icon: "domain", id: "agency" },
     { label: "Settings", href: "/dashboard/admin#settings", icon: "settings", id: "settings" },
     { label: "Users", href: "/dashboard/users", icon: "group", id: "users" },
@@ -80,7 +85,7 @@ export default function NavigationMenu({
       >
         <ul role="menubar" className="flex flex-col sm:flex-row">
           {([...items].sort((a, b) => {
-            const order = ["overview", "media", "agency", "settings", "users"];
+            const order = ["overview", "media", "bookings", "manage-booking", "routes", "airlines", "airports", "agency", "settings", "users"];
             const ia = order.indexOf(a.id);
             const ib = order.indexOf(b.id);
             const pa = ia === -1 ? Number.MAX_SAFE_INTEGER : ia;
