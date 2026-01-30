@@ -15,6 +15,7 @@ interface SendEmailModalProps {
     pnr?: string;
   };
   lastEmailSent?: string | null;
+  lastEmailStatus?: "sent" | "failed" | "pending";
   onSend?: (data: {
     subject: string;
     message: string;
@@ -30,6 +31,8 @@ interface SendEmailModalProps {
   templates?: EmailTemplate[];
   initialTemplateId?: string;
   additionalReplacements?: Record<string, string>;
+  onSkip?: () => void;
+  skipLabel?: string;
 }
 
 export default function SendEmailModal({
@@ -37,12 +40,15 @@ export default function SendEmailModal({
   onClose,
   recipient,
   lastEmailSent,
+  lastEmailStatus,
   onSend,
   onSave,
   mode = "send",
   templates,
   initialTemplateId,
   additionalReplacements,
+  onSkip,
+  skipLabel = "Skip & Continue",
 }: SendEmailModalProps) {
   const activeTemplates = templates || DEFAULT_EMAIL_TEMPLATES;
   const [selectedTemplate, setSelectedTemplate] = useState(
@@ -217,8 +223,8 @@ export default function SendEmailModal({
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
                 History
               </h3>
-              <p className="text-xs text-slate-500">
-                Last email sent:{" "}
+              <p className="text-xs text-slate-500 flex flex-wrap items-center gap-2">
+                <span>Last email sent:</span>
                 <span className="font-bold text-slate-700">
                   {lastEmailSent
                     ? new Date(lastEmailSent).toLocaleString("en-AU", {
@@ -230,6 +236,19 @@ export default function SendEmailModal({
                       })
                     : "Never"}
                 </span>
+                {lastEmailStatus && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
+                      lastEmailStatus === "sent"
+                        ? "bg-green-100 text-green-700"
+                        : lastEmailStatus === "failed"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {lastEmailStatus}
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -344,7 +363,7 @@ export default function SendEmailModal({
             </button>
             <button
               onClick={handleAction}
-              disabled={isSending || success}
+              disabled={isSending}
               className="px-6 py-2 text-sm font-bold text-white bg-primary rounded-lg hover:bg-blue-600 shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSending ? (
@@ -361,6 +380,15 @@ export default function SendEmailModal({
                 </>
               )}
             </button>
+            {onSkip && (
+              <button
+                onClick={onSkip}
+                disabled={isSending}
+                className="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                {skipLabel}
+              </button>
+            )}
           </div>
         </div>
       </div>

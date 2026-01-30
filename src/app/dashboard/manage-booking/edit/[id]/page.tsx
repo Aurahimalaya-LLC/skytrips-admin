@@ -39,15 +39,40 @@ export default function EditBookingPage() {
     agency?: string;
   } | null>(null);
 
+  const [processingForm, setProcessingForm] = useState({
+    reason: "",
+    notes: "",
+    notifyEmail: true,
+    notifySMS: false,
+    notificationTemplate: "",
+    messageContent: "",
+  });
+
   // Financial State
   const [financials, setFinancials] = useState({
-    penalty: "50.00",
-    agencyFee: "30.00",
-    skytripsFee: "10.00",
+    penalty: "0.00",
+    agencyFee: "0.00",
+    skytripsFee: "0.00",
     agencyRefundedCP: "0.00",
     adjustment: "0.00",
     adjustmentReason: "",
   });
+
+  useEffect(() => {
+    if (booking) {
+      const parseHelper = (val: string | number | undefined | null) => {
+        if (!val) return 0;
+        const str = val.toString().replace(/,/g, "");
+        return parseFloat(str) || 0;
+      };
+      
+      const sellingPrice = parseHelper(booking.sellingPrice);
+      const costPrice = parseHelper(booking.buyingPrice);
+      const profit = sellingPrice - costPrice;
+      
+
+    }
+  }, [booking]);
 
   useEffect(() => {
     if (id) {
@@ -59,10 +84,10 @@ export default function EditBookingPage() {
     if (record?.financial_breakdown) {
       setFinancials({
         penalty:
-          record.financial_breakdown.airline_penalty?.toString() || "50.00",
-        agencyFee: record.financial_breakdown.agency_fees?.toString() || "30.00",
+          record.financial_breakdown.airline_penalty?.toString() || "0.00",
+        agencyFee: record.financial_breakdown.agency_fees?.toString() || "0.00",
         skytripsFee:
-          record.financial_breakdown.skytrips_fee?.toString() || "10.00",
+          record.financial_breakdown.skytrips_fee?.toString() || "0.00",
         agencyRefundedCP:
           record.financial_breakdown.agency_refunded_cp?.toString() || "0.00",
         adjustment: Math.abs(
@@ -89,6 +114,13 @@ export default function EditBookingPage() {
       }
       if (data.refund_status) {
         setRefundStatus(data.refund_status);
+      }
+      if (data.reason || data.reason_detail) {
+        setProcessingForm((prev) => ({
+          ...prev,
+          reason: data.reason || "",
+          notes: data.reason_detail || "",
+        }));
       }
 
       if (data.booking_details) {
@@ -143,6 +175,8 @@ export default function EditBookingPage() {
         .update({
           selected_travellers: selectedTravellers,
           refund_status: refundStatus,
+          reason: processingForm.reason,
+          reason_detail: processingForm.notes,
           updated_at: new Date().toISOString(),
         })
         .eq("uid", id);
@@ -150,7 +184,7 @@ export default function EditBookingPage() {
       if (error) throw error;
 
       // Navigate to next tab
-      setActiveTab("financial-summary");
+      setActiveTab("request");
     } catch (err) {
       console.error("Error updating record:", err);
       alert("Failed to update booking. Please try again.");
@@ -277,7 +311,7 @@ export default function EditBookingPage() {
     skytripsFeeVal,
     agencyRefundedCPVal,
     adjustmentVal,
-    differenceVal,
+    differenceVal: sellingPrice - netRefund,
     netRefund,
   };
 
@@ -351,50 +385,50 @@ export default function EditBookingPage() {
               <p className="mt-1 text-sm text-slate-500">{getPageSubtitle()}</p>
             </div>
             <div className="flex items-center gap-3">
-              {activeTab === "request" && (
-                 <button
-                   onClick={() => setActiveTab("processing")}
-                   className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-hover"
-                 >
-                   Next Step
-                   <span className="material-symbols-outlined text-[18px]">
-                     arrow_forward
-                   </span>
-                 </button>
-              )}
               {activeTab === "processing" && (
+                <button
+                  onClick={handleUpdate}
+                  disabled={processing}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {processing ? (
+                    <>
+                      <span className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      Next Step
+                      <span className="material-symbols-outlined text-[18px]">
+                        arrow_forward
+                      </span>
+                    </>
+                  )}
+                </button>
+              )}
+              {activeTab === "request" && (
                 <>
                   <button
-                    onClick={() => setActiveTab("request")}
+                    onClick={() => setActiveTab("processing")}
                     className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
                   >
                     Back
                   </button>
                   <button
-                    onClick={handleUpdate}
-                    disabled={processing}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setActiveTab("financial-summary")}
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-hover"
                   >
-                    {processing ? (
-                      <>
-                        <span className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        Next Step
-                        <span className="material-symbols-outlined text-[18px]">
-                          arrow_forward
-                        </span>
-                      </>
-                    )}
+                    Next Step
+                    <span className="material-symbols-outlined text-[18px]">
+                      arrow_forward
+                    </span>
                   </button>
                 </>
               )}
               {activeTab === "financial-summary" && (
                 <>
                   <button
-                    onClick={() => setActiveTab("processing")}
+                    onClick={() => setActiveTab("request")}
                     className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-[#f6f7f8]"
                   >
                     <span className="material-symbols-outlined text-[18px]">
@@ -448,25 +482,25 @@ export default function EditBookingPage() {
               {[
                 {
                   id: "01",
-                  name: "Request",
-                  status:
-                    activeTab === "request"
-                      ? "current"
-                      : ["processing", "financial-summary", "refunded"].includes(activeTab)
-                        ? "complete"
-                        : "upcoming",
-                  onClick: () => setActiveTab("request"),
-                },
-                {
-                  id: "02",
                   name: "Processing",
                   status:
                     activeTab === "processing"
                       ? "current"
-                      : ["financial-summary", "refunded"].includes(activeTab)
+                      : ["request", "financial-summary", "refunded"].includes(activeTab)
                         ? "complete"
                         : "upcoming",
                   onClick: () => setActiveTab("processing"),
+                },
+                {
+                  id: "02",
+                  name: "Request",
+                  status:
+                    activeTab === "request"
+                      ? "current"
+                      : ["financial-summary", "refunded"].includes(activeTab)
+                        ? "complete"
+                        : "upcoming",
+                  onClick: () => setActiveTab("request"),
                 },
                 {
                   id: "03",
@@ -531,10 +565,12 @@ export default function EditBookingPage() {
             <ProcessingTab
               booking={booking}
               record={record}
-              selectedTravellers={selectedTravellers}
-              setSelectedTravellers={setSelectedTravellers}
-              refundStatus={refundStatus}
-              setRefundStatus={setRefundStatus}
+              requester={requester}
+              processingForm={processingForm}
+              setProcessingForm={setProcessingForm}
+              onConfirm={handleUpdate}
+              onCancel={() => router.back()}
+              isProcessing={processing}
             />
           )}
 
@@ -549,6 +585,8 @@ export default function EditBookingPage() {
                 profit,
                 profitPercent: profitMargin,
               }}
+              onNext={() => setActiveTab("financial-summary")}
+              onPrevious={() => setActiveTab("processing")}
             />
           )}
 
@@ -559,6 +597,9 @@ export default function EditBookingPage() {
               financials={financials}
               setFinancials={handleFinancialUpdate}
               calculations={calculations}
+              onPrevious={() => setActiveTab("request")}
+              onConfirm={handleFinalSave}
+              isProcessing={processing}
             />
           )}
 

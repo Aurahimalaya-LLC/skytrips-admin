@@ -31,6 +31,9 @@ interface FinancialSummaryTabProps {
     differenceVal: number;
     netRefund: number;
   };
+  onPrevious: () => void;
+  onConfirm: () => void;
+  isProcessing?: boolean;
 }
 
 export default function FinancialSummaryTab({
@@ -39,18 +42,39 @@ export default function FinancialSummaryTab({
   financials,
   setFinancials,
   calculations,
+  onPrevious,
+  onConfirm,
+  isProcessing = false,
 }: FinancialSummaryTabProps) {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
 
   const handleSendEmail = async (data: {
     subject: string;
     message: string;
     template: string;
   }) => {
-    // In a real implementation, we would send the email here
-    console.log("Sending email:", data);
-    // await handleSaveAndProceed(); // Parent handles saving
-    setIsEmailModalOpen(false);
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to: booking.email,
+          subject: data.subject,
+          message: data.message,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to send email");
+      }
+    } catch (error) {
+      console.error("Error sending email:", error);
+      throw error;
+    }
   };
 
   const {
@@ -108,82 +132,21 @@ export default function FinancialSummaryTab({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Deductions */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-slate-900 border-b pb-2">
-                  Deductions
-                </h4>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    Airline Penalty
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-slate-500">
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      value={financials.penalty}
-                      onChange={(e) =>
-                        setFinancials("penalty", e.target.value)
-                      }
-                      className="pl-7 w-full rounded-lg border-slate-300 text-sm focus:border-primary focus:ring-primary"
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    Agency Fees
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-slate-500">
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      value={financials.agencyFee}
-                      onChange={(e) =>
-                        setFinancials("agencyFee", e.target.value)
-                      }
-                      className="pl-7 w-full rounded-lg border-slate-300 text-sm focus:border-primary focus:ring-primary"
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    Skytrips Fee
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-slate-500">
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      value={financials.skytripsFee}
-                      onChange={(e) =>
-                        setFinancials("skytripsFee", e.target.value)
-                      }
-                      className="pl-7 w-full rounded-lg border-slate-300 text-sm focus:border-primary focus:ring-primary"
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 gap-6">
+              {/* Deductions - Removed */}
 
               {/* Adjustments */}
               <div className="space-y-4">
                 <h4 className="text-sm font-medium text-slate-900 border-b pb-2">
                   Adjustments & Refund
                 </h4>
+
                 <div>
                   <label className="block text-xs font-medium text-slate-700 mb-1">
                     Agency Refunded (CP)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-slate-500">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
                       $
                     </span>
                     <input
@@ -192,7 +155,7 @@ export default function FinancialSummaryTab({
                       onChange={(e) =>
                         setFinancials("agencyRefundedCP", e.target.value)
                       }
-                      className="pl-7 w-full rounded-lg border-slate-300 text-sm focus:border-primary focus:ring-primary"
+                      className="pl-9 w-full rounded-lg border border-slate-300 text-sm focus:border-primary focus:ring-primary py-2.5"
                       placeholder="0.00"
                     />
                   </div>
@@ -206,7 +169,7 @@ export default function FinancialSummaryTab({
                     Manual Adjustment
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-slate-500">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
                       $
                     </span>
                     <input
@@ -215,7 +178,7 @@ export default function FinancialSummaryTab({
                       onChange={(e) =>
                         setFinancials("adjustment", e.target.value)
                       }
-                      className="pl-7 w-full rounded-lg border-slate-300 text-sm focus:border-primary focus:ring-primary"
+                      className="pl-9 w-full rounded-lg border border-slate-300 text-sm focus:border-primary focus:ring-primary py-2.5"
                       placeholder="0.00"
                     />
                   </div>
@@ -287,6 +250,24 @@ export default function FinancialSummaryTab({
             </div>
           </div>
         </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6">
+          <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <span className="material-symbols-outlined text-slate-400">
+              mail
+            </span>
+            Proposal
+          </h3>
+          <button
+            onClick={() => setIsProposalModalOpen(true)}
+            className="w-full px-4 py-2 text-sm font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              send
+            </span>
+            Send Proposal
+          </button>
+        </div>
       </div>
 
       <SendEmailModal
@@ -305,6 +286,78 @@ export default function FinancialSummaryTab({
           "{REFUND_AMOUNT}": formatCurrency(netRefund),
         }}
       />
+
+      <SendEmailModal
+        isOpen={isProposalModalOpen}
+        onClose={() => setIsProposalModalOpen(false)}
+        onSend={async (data) => {
+          try {
+            const response = await fetch("/api/send-email", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                to: booking.email,
+                subject: data.subject,
+                message: data.message,
+              }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || "Failed to send email");
+            }
+          } catch (error) {
+            console.error("Error sending proposal:", error);
+            throw error;
+          }
+        }}
+        initialTemplateId="refund_proposal"
+        templates={[
+          ...DEFAULT_EMAIL_TEMPLATES,
+          {
+            id: "refund_proposal",
+            name: "Refund Proposal",
+            subject: "Refund Proposal - Booking #{PNR}",
+            content:
+              "Dear {NAME},\n\nRegarding your booking #{PNR}, we have reviewed your case and would like to propose the following refund option:\n\nProposed Refund Amount: {REFUND_AMOUNT}\n\nPlease let us know if this is acceptable.\n\nBest regards,\nSkyTrips Team",
+          },
+        ]}
+        recipient={{
+          name: booking.travellers?.[0]
+            ? `${booking.travellers[0].firstName} ${booking.travellers[0].lastName}`
+            : "Customer",
+          email: booking.email || "",
+          pnr: booking.PNR,
+        }}
+        additionalReplacements={{
+          "{REFUND_AMOUNT}": formatCurrency(netRefund),
+        }}
+      />
+
+      <div className="lg:col-span-3 flex justify-end items-center gap-3 pt-4 border-t border-slate-200">
+        <button
+          onClick={onPrevious}
+          className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition-colors"
+        >
+          Previous Step
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={isProcessing}
+          className="px-4 py-2 text-sm font-medium text-white bg-[#137fec] hover:bg-[#106ac4] rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {isProcessing ? (
+            <span className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          ) : (
+            <span className="material-symbols-outlined text-[18px]">
+              check
+            </span>
+          )}
+          Confirm & Process
+        </button>
+      </div>
     </div>
   );
 }

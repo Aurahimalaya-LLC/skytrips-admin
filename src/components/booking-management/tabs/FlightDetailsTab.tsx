@@ -15,6 +15,8 @@ interface FlightDetailsTabProps {
     email: string;
     agency?: string;
   } | null;
+  onNext: () => void;
+  onPrevious?: () => void;
 }
 
 export default function FlightDetailsTab({
@@ -22,6 +24,8 @@ export default function FlightDetailsTab({
   record,
   calculations,
   requester,
+  onNext,
+  onPrevious,
 }: FlightDetailsTabProps) {
   // Note: Requester fetching was in the page. 
   // Ideally, we should fetch this in the parent or reuse the booking user info if available.
@@ -123,6 +127,26 @@ export default function FlightDetailsTab({
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="flex justify-end items-center gap-3 pt-4 border-t border-slate-200">
+            {onPrevious && (
+              <button
+                onClick={onPrevious}
+                className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition-colors"
+              >
+                Previous Step
+              </button>
+            )}
+            <button
+              onClick={onNext}
+              className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg shadow-sm transition-colors flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                arrow_forward
+              </span>
+              Next Step
+            </button>
           </div>
 
         </div>
