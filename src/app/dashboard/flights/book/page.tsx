@@ -191,22 +191,18 @@ export default function FlightBookingPage() {
       const passengerInput = passengers.map((id, idx) => {
         const f = (typeof document !== "undefined" ? document.getElementById(`fname-${id}`) : null) as HTMLInputElement | null;
         const l = (typeof document !== "undefined" ? document.getElementById(`lname-${id}`) : null) as HTMLInputElement | null;
-        const p = (typeof document !== "undefined" ? document.getElementById(`passport-${id}`) : null) as HTMLInputElement | null;
-        const genderEl = (typeof document !== "undefined" ? document.getElementById(`gender-${id}`) : null) as HTMLSelectElement | null;
-        const dobEl = (typeof document !== "undefined" ? document.getElementById(`dob-${id}`) : null) as HTMLInputElement | null;
-        const countryEl = (typeof document !== "undefined" ? document.getElementById(`country-${id}`) : null) as HTMLSelectElement | null;
-        const passportCountryEl = (typeof document !== "undefined" ? document.getElementById(`passportCountry-${id}`) : null) as HTMLSelectElement | null;
-        const passportExpiryEl = (typeof document !== "undefined" ? document.getElementById(`passportExpiry-${id}`) : null) as HTMLInputElement | null;
+        
         const firstName = (f?.value || "").trim() || "Unknown";
         const lastName = (l?.value || "").trim() || "Unknown";
-        const passportNumber = (p?.value || "").trim();
-        const gender = (genderEl?.value || "UNSPECIFIED").trim() || "UNSPECIFIED";
-        const dob = (dobEl?.value || "").trim();
-        const rawCountry = (countryEl?.value || "").trim();
-        const rawPassportCountry = (passportCountryEl?.value || "").trim();
-        const country = getIsoCountry(rawCountry);
-        const passportCountry = getIsoCountry(rawPassportCountry);
-        const passportExpiryDate = (passportExpiryEl?.value || "").trim();
+        
+        // Default values for removed fields
+        const passportNumber = "";
+        const gender = "MALE"; // Defaulting to MALE since field is removed
+        const dob = "1990-01-01"; // Default DOB
+        const country = "NP"; // Default Country
+        const passportCountry = "NP";
+        const passportExpiryDate = "";
+
         const passengerType =
           idx < adults ? "ADULT" : idx < adults + children ? "CHILD" : "INFANT";
         const title = gender === "MALE" ? "Mr" : gender === "FEMALE" ? "Ms" : "Mx";
@@ -334,16 +330,16 @@ export default function FlightBookingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-20 font-display">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
         {!success && (
-          <div className="mb-8">
+          <div className="mb-6">
             <nav className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
               <span>Search Results</span>
               <span className="material-symbols-outlined text-[12px]">chevron_right</span>
-              <span className="text-[#0EA5E9]">Passenger Information</span>
+              <span className="text-[#0EA5E9]">Traveller Information</span>
             </nav>
             <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-              Passenger Info & Agency Commission
+              Traveller Info & Agency Commission
             </h1>
           </div>
         )}
@@ -358,18 +354,18 @@ export default function FlightBookingPage() {
         )}
 
         {!success && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
           
           {/* Main Content - Passenger Forms */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-8 space-y-4">
             
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-6 shadow-sm">
               {passengers.map((id, index) => {
                 const isLead = index === 0;
                 let typeLabel = "Adult";
                 if (index >= adults && index < adults + children) typeLabel = "Child";
                 if (index >= adults + children) typeLabel = "Infant";
-                const label = isLead ? "Lead Passenger" : `Passenger ${index + 1} (${typeLabel})`;
+                const label = isLead ? "Lead Traveller" : `Traveller ${index + 1} (${typeLabel})`;
                 return (
                   <div key={id} className={index > 0 ? "mt-8 pt-8 border-t border-slate-100" : ""}>
                     <PassengerForm
@@ -443,7 +439,7 @@ export default function FlightBookingPage() {
                 <p className="text-xs text-slate-500">Base: {successData.currency} {successData.base.toFixed(2)}</p>
               </div>
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <p className="text-xs font-bold text-slate-400 uppercase">Passengers</p>
+                <p className="text-xs font-bold text-slate-400 uppercase">Travellers</p>
                 <p className="text-sm font-bold text-slate-900">{successData.passengers.length}</p>
                 <p className="text-xs text-slate-500">Adults {adults}, Children {children}, Infants {infants}</p>
               </div>
