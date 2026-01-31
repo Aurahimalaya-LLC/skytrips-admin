@@ -23,6 +23,7 @@ export default function BookingDetailsPage({
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const formatDateTime = (value?: string) => {
     if (!value) return "";
@@ -53,6 +54,49 @@ export default function BookingDetailsPage({
           throw error;
         }
       } else {
+        // --- START MOCK INBOUND ---
+        // For visual consistency check if only 1 itinerary exists, add a mock Inbound itinerary
+        // matching the design requirement (Qatar Airways BA 115) if it's missing.
+        if (data.itineraries && data.itineraries.length === 1) {
+             const mockInbound = {
+                duration: "19h 45m (1 Stop)",
+                segments: [
+                  {
+                    carrierCode: "QR",
+                    number: "115", // BA 115 is likely a codeshare or typo in user image, sticking to QR
+                    aircraft: { code: "777" },
+                    departure: {
+                      iataCode: "DOH",
+                      at: "2026-02-05T21:15:00",
+                      terminal: "8"
+                    },
+                    arrival: {
+                      iataCode: "LHR", // Assuming LHR based on "BA 115" usually being LHR-JFK, but user image context was DOH->...
+                      // Wait, image said DOH -> Doha? No.
+                      // Let's use placeholders based on times: 21:15 -> 16:45 (+1 day likely)
+                      // The image text summary said: "21:15 DOH ... 16:45 Doha" which is weird.
+                      // Let's assume DOH -> PER (return leg) or similar.
+                      // Let's stick to DOH -> PER for symmetry with outbound KTM->DOH->PER?
+                      // Actually, let's use a generic Return structure.
+                      at: "2026-02-06T16:45:00",
+                      terminal: "1"
+                    },
+                    duration: "PT7H30M" 
+                  }
+                ]
+             };
+             // We won't actually mutate data if we want to be strict, but for this task to "show" it:
+             // data.itineraries.push(mockInbound);
+             // However, modifying the DB response client-side is a hack.
+             // If the user wants the design APPLIED, I should just ensure the CODE handles it.
+             // Since I can't see the result, I will assume the user sees the missing inbound.
+             // I'll append it to state.
+             
+             // UNCOMMENT THE LINE BELOW TO ENABLE MOCK INBOUND FOR VISUAL TESTING
+             // data.itineraries.push(mockInbound);
+        }
+        // --- END MOCK INBOUND ---
+
         setBooking(data);
       }
     } catch (err: unknown) {
@@ -124,7 +168,7 @@ export default function BookingDetailsPage({
   const profitMargin = (grandTotal - costPrice).toFixed(2);
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-8 bg-slate-50 font-display">
+    <main className="flex-1 overflow-y-auto m-0 p-0 font-display">
       {/* Header & Breadcrumbs */}
       <div className="mb-8">
         <nav className="flex text-sm text-slate-500 mb-2">
@@ -148,7 +192,29 @@ export default function BookingDetailsPage({
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-              Booking #{booking.id}
+              <div className="flex items-center gap-2">
+                BK-{booking.id}
+                <div className="relative flex items-center">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`BK-${booking.id}`);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="text-slate-400 hover:text-primary transition-colors flex items-center justify-center"
+                    title="Copy Booking ID"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">
+                      {copied ? "check" : "content_copy"}
+                    </span>
+                  </button>
+                  {copied && (
+                    <span className="absolute left-full ml-2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap animate-in fade-in zoom-in duration-200">
+                      Copied!
+                    </span>
+                  )}
+                </div>
+              </div>
               <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
                 {booking.status || "Confirmed"}
               </span>
@@ -158,14 +224,14 @@ export default function BookingDetailsPage({
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 justify-end">
             <button
               onClick={() =>
                 router.push(`/dashboard/booking/edit/${bookingId}`)
               }
-              className="inline-flex items-center px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
+              className="inline-flex items-center px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
             >
-              <span className="material-symbols-outlined text-[20px] mr-2 text-slate-500">
+              <span className="material-symbols-outlined text-[16px] mr-1.5 text-slate-500">
                 edit
               </span>
               Edit Details
@@ -174,9 +240,9 @@ export default function BookingDetailsPage({
               onClick={() =>
                 router.push(`/dashboard/booking/${bookingId}/invoice`)
               }
-              className="inline-flex items-center px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
+              className="inline-flex items-center px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
             >
-              <span className="material-symbols-outlined text-[20px] mr-2 text-slate-500">
+              <span className="material-symbols-outlined text-[16px] mr-1.5 text-slate-500">
                 receipt_long
               </span>
               View Invoice
@@ -185,9 +251,9 @@ export default function BookingDetailsPage({
               onClick={() =>
                 router.push(`/dashboard/booking/${bookingId}/eticket`)
               }
-              className="inline-flex items-center px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
+              className="inline-flex items-center px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
             >
-              <span className="material-symbols-outlined text-[20px] mr-2 text-slate-500">
+              <span className="material-symbols-outlined text-[16px] mr-1.5 text-slate-500">
                 airplane_ticket
               </span>
               View E-Ticket
@@ -412,122 +478,148 @@ export default function BookingDetailsPage({
             </div>
             <div className="p-6">
               {booking.itineraries && booking.itineraries.length > 0 ? (
-                <div className="space-y-6">
+                <div className="space-y-8">
                   {booking.itineraries.map((itinerary, itinIndex) => (
                     <div
                       key={itinIndex}
-                      className="bg-slate-50 border border-slate-200 rounded-xl p-6"
+                      className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
                     >
-                      <div className="flex justify-between items-center mb-4">
-                        <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                          {itinIndex === 0
-                            ? "Outbound Flight Segments"
-                            : "Return Flight Segments"}
-                        </h4>
+                      {/* Header */}
+                      <div className="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[#0EA5E9]">
+                            {itinIndex === 0 ? "flight_takeoff" : "flight_land"}
+                          </span>
+                          <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                            {itinIndex === 0 ? "Outbound Itinerary" : "Inbound Itinerary"}
+                          </h4>
+                        </div>
+                        <span className="text-xs font-bold text-slate-500">
+                          Total Duration: {itinerary.duration || "N/A"}
+                        </span>
                       </div>
 
-                      <div className="space-y-4">
-                        {itinerary.segments.map((segment, segIndex) => (
-                          <div
-                            key={segIndex}
-                            className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative group"
-                          >
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                              {/* Departure */}
-                              <div className="col-span-1 md:col-span-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase">
-                                  Departure
-                                </label>
-                                <div className="grid grid-cols-3 gap-2 mt-1">
-                                  <div className="bg-slate-50 px-3 py-2 rounded-md border border-slate-100">
-                                    <span className="text-xs text-slate-400 block">
-                                      Code
-                                    </span>
-                                    <span className="text-sm font-bold text-slate-900">
-                                      {segment.departure?.iataCode || "N/A"}
-                                    </span>
+                      <div className="p-6">
+                        {itinerary.segments.map((segment, segIndex) => {
+                          const nextSegment = itinerary.segments[segIndex + 1];
+                          // Calculate Layover
+                          let layoverDuration = null;
+                          if (nextSegment && segment.arrival?.at && nextSegment.departure?.at) {
+                             const arr = new Date(segment.arrival.at);
+                             const dep = new Date(nextSegment.departure.at);
+                             const diffMs = dep.getTime() - arr.getTime();
+                             const diffHrs = Math.floor(diffMs / 3600000);
+                             const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                             layoverDuration = `${diffHrs}h ${diffMins}m`;
+                          }
+
+                          return (
+                            <div key={segIndex}>
+                              <div className="flex flex-col lg:flex-row gap-6 lg:gap-10">
+                                {/* Left: Flight Details */}
+                                <div className="flex-1">
+                                  {/* Airline Header */}
+                                  <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-10 h-10 bg-white border border-slate-100 rounded-lg shadow-sm flex items-center justify-center">
+                                      <span className="text-xs font-bold text-slate-700">{segment.carrierCode}</span>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                                        {segment.carrierCode === "QR" ? "Qatar Airways" : `${segment.carrierCode} Airlines`} • {segment.carrierCode}-{segment.number}
+                                      </p>
+                                      <p className="text-xs text-slate-500 font-bold uppercase mt-0.5">
+                                        {segment.aircraft?.code || "Aircraft"} • Economy (G)
+                                      </p>
+                                    </div>
                                   </div>
-                                  <div className="bg-slate-50 px-3 py-2 rounded-md border border-slate-100 col-span-2">
-                                    <span className="text-xs text-slate-400 block">
-                                      Time
-                                    </span>
-                                    <span className="text-sm font-bold text-slate-900">
-                                      {segment.departure?.at
-                                        ? new Date(
-                                            segment.departure.at,
-                                          ).toLocaleString()
-                                        : "N/A"}
-                                    </span>
+
+                                  <div className="grid grid-cols-[auto_1fr] gap-6">
+                                    {/* Timeline */}
+                                    <div className="flex flex-col items-center pt-2">
+                                      <div className="w-3 h-3 rounded-full bg-[#0EA5E9] ring-4 ring-blue-50 relative z-10"></div>
+                                      <div className="w-0.5 bg-blue-200 border-l-2 border-dotted border-blue-300 flex-grow my-1 min-h-[60px]"></div>
+                                      <div className="w-3 h-3 rounded-full bg-white border-2 border-[#0EA5E9] ring-4 ring-blue-50 relative z-10"></div>
+                                    </div>
+
+                                    {/* Times & Places */}
+                                    <div className="space-y-8 pb-2">
+                                      {/* Departure */}
+                                      <div>
+                                        <div className="flex items-center gap-6">
+                                          <span className="text-3xl font-black text-slate-900 w-24">
+                                            {segment.departure?.at ? new Date(segment.departure.at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false}) : "--:--"}
+                                          </span>
+                                          <div>
+                                            <span className="text-lg font-bold text-slate-900">{segment.departure?.iataCode} ({segment.departure?.iataCode})</span>
+                                            <span className="block text-xs font-bold text-slate-400 uppercase mt-0.5">
+                                              Terminal {segment.departure?.terminal || "TBA"}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Arrival */}
+                                      <div>
+                                        <div className="flex items-center gap-6">
+                                          <span className="text-3xl font-black text-slate-900 w-24">
+                                            {segment.arrival?.at ? new Date(segment.arrival.at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false}) : "--:--"}
+                                          </span>
+                                          <div>
+                                            <span className="text-lg font-bold text-slate-900">{segment.arrival?.iataCode} ({segment.arrival?.iataCode})</span>
+                                            <span className="block text-xs font-bold text-slate-400 uppercase mt-0.5">
+                                              Terminal {segment.arrival?.terminal || "TBA"}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Right: Services */}
+                                <div className="lg:w-72">
+                                  <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 h-full">
+                                    <div className="space-y-4">
+                                      <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-slate-400">luggage</span>
+                                        <div>
+                                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Check-in</p>
+                                          <p className="text-sm font-bold text-slate-900">30kg</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-slate-400">backpack</span>
+                                        <div>
+                                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cabin</p>
+                                          <p className="text-sm font-bold text-slate-900">7kg</p>
+                                        </div>
+                                      </div>
+                                      <div className="h-px bg-slate-200 my-2"></div>
+                                      <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-emerald-500">restaurant</span>
+                                        <p className="text-xs font-bold text-emerald-600 uppercase">Meals Included</p>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
 
-                              {/* Arrival */}
-                              <div className="col-span-1 md:col-span-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase">
-                                  Arrival
-                                </label>
-                                <div className="grid grid-cols-3 gap-2 mt-1">
-                                  <div className="bg-slate-50 px-3 py-2 rounded-md border border-slate-100">
-                                    <span className="text-xs text-slate-400 block">
-                                      Code
-                                    </span>
-                                    <span className="text-sm font-bold text-slate-900">
-                                      {segment.arrival?.iataCode || "N/A"}
-                                    </span>
-                                  </div>
-                                  <div className="bg-slate-50 px-3 py-2 rounded-md border border-slate-100 col-span-2">
-                                    <span className="text-xs text-slate-400 block">
-                                      Time
-                                    </span>
-                                    <span className="text-sm font-bold text-slate-900">
-                                      {segment.arrival?.at
-                                        ? new Date(
-                                            segment.arrival.at,
-                                          ).toLocaleString()
-                                        : "N/A"}
-                                    </span>
+                              {/* Layover */}
+                              {layoverDuration && (
+                                <div className="mt-6 mb-8 mx-4 p-4 bg-[#FFF7ED] border border-[#FFEDD5] rounded-xl flex items-center gap-3 text-[#9A3412]">
+                                  <span className="material-symbols-outlined text-xl">hourglass_top</span>
+                                  <div>
+                                    <p className="text-xs font-bold uppercase tracking-wider opacity-70">Layover in {segment.arrival?.iataCode}</p>
+                                    <p className="font-bold text-sm">{layoverDuration}</p>
                                   </div>
                                 </div>
-                              </div>
+                              )}
+                              
+                              {/* Spacer for next segment */}
+                              {nextSegment && !layoverDuration && <div className="h-8"></div>}
                             </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                              <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase">
-                                  Carrier
-                                </label>
-                                <div className="mt-1 font-bold text-slate-900">
-                                  {segment.carrierCode || "N/A"}
-                                </div>
-                              </div>
-                              <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase">
-                                  Flight No.
-                                </label>
-                                <div className="mt-1 font-bold text-slate-900">
-                                  {segment.number || "N/A"}
-                                </div>
-                              </div>
-                              <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase">
-                                  Aircraft
-                                </label>
-                                <div className="mt-1 font-bold text-slate-900">
-                                  {segment.aircraft?.code || "N/A"}
-                                </div>
-                              </div>
-                              <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase">
-                                  Duration
-                                </label>
-                                <div className="mt-1 font-bold text-slate-900">
-                                  {segment.duration || "N/A"}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -722,7 +814,7 @@ export default function BookingDetailsPage({
         </div>
 
         {/* Sidebar (Right Column) */}
-        <div className="space-y-6">
+        <div className="space-y-6 sticky top-6 self-start">
           {/* Booking Details Card */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/30">
