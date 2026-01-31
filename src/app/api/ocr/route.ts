@@ -4,13 +4,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const maxDuration = 60; // 60 seconds
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-};
 
 export async function POST(req: Request) {
   try {

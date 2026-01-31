@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyOTPCode, OTPType } from "@/lib/otp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import crypto from "crypto";
+import { User } from "@supabase/supabase-js";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,9 +23,10 @@ export async function POST(req: NextRequest) {
     if (type === "signup") {
       console.log(`Verifying signup for ${email}`);
       // Find user by email
-      const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      const { data, error: listError } = await supabaseAdmin.auth.admin.listUsers();
       if (listError) throw listError;
       
+      const users: User[] = data?.users || [];
       const user = users.find(u => u.email === email);
       if (!user) throw new Error("User not found");
 
