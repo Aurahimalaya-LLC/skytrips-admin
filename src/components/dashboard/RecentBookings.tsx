@@ -62,10 +62,11 @@ export default function RecentBookings() {
 
   const getStatusColor = (status: string) => {
     const s = status.toLowerCase();
-    if (s === 'confirmed' || s === 'completed') return 'bg-success/20 text-success';
-    if (s === 'pending' || s === 'processing') return 'bg-warning/20 text-warning';
-    if (s === 'cancelled' || s === 'failed') return 'bg-destructive/20 text-destructive';
-    return 'bg-slate-100 text-slate-600';
+    if (s === 'issued' || s === 'completed') return 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+    if (s === 'confirmed' || s === 'hold') return 'bg-blue-100 text-blue-700 border border-blue-200';
+    if (s === 'pending' || s === 'processing') return 'bg-amber-100 text-amber-700 border border-amber-200';
+    if (s === 'cancelled' || s === 'failed') return 'bg-red-100 text-red-700 border border-red-200';
+    return 'bg-slate-100 text-slate-600 border border-slate-200';
   };
 
   return (
@@ -160,7 +161,7 @@ export default function RecentBookings() {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
-                      {booking.status}
+                      {booking.status === 'Confirmed' ? 'Hold' : booking.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">

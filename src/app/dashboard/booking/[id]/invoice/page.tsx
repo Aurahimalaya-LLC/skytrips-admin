@@ -135,7 +135,7 @@ export default function InvoicePage({
   const supportPhone = selectedCompany?.phones[0]?.value || "+1 800 123 4567";
   const supportEmail =
     selectedCompany?.emails[0]?.value || "support@skyhigh.com";
-  const supportHours = "24/7 Support";
+  const supportHours = selectedCompany?.operatingHours || "24/7 Support";
 
   // Calculate financials
   const sellingPrice = Number(booking.sellingPrice) || 0;

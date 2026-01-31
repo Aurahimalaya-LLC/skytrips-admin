@@ -41,6 +41,7 @@ export async function GET() {
   // Get status counts in parallel
   const [
     { count: confirmedCount },
+    { count: issuedCount },
     { count: pendingCount },
     { count: draftCount },
     { count: cancelledCount },
@@ -49,6 +50,10 @@ export async function GET() {
       .from("bookings")
       .select("id", { count: "exact", head: true })
       .eq("status", "Confirmed"),
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "Issued"),
     supabase
       .from("bookings")
       .select("id", { count: "exact", head: true })
@@ -72,6 +77,7 @@ export async function GET() {
     withCustomerCount: withCustomerCount || 0,
     withoutCustomerCount: withoutCustomerCount || 0,
     confirmedCount: confirmedCount || 0,
+    issuedCount: issuedCount || 0,
     pendingCount: pendingCount || 0,
     draftCount: draftCount || 0,
     cancelledCount: cancelledCount || 0,

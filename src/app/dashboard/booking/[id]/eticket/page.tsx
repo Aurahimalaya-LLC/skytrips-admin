@@ -207,7 +207,7 @@ export default function ETicketPage({
   const supportPhone = selectedCompany?.phones[0]?.value || "+1 800 123 4567";
   const supportEmail =
     selectedCompany?.emails[0]?.value || "support@skyhigh.com";
-  const supportHours = "24/7 Support"; // Could be added to company profile later
+  const supportHours = selectedCompany?.operatingHours || "24/7 Support";
 
   // Support Information
   const generateICSContent = (booking: Booking) => {
@@ -979,8 +979,16 @@ END:VCALENDAR`;
                         <td className="px-6 py-4 text-slate-600">
                           {traveller.passportNumber || "N/A"}
                         </td>
-                        <td className="px-6 py-4 text-emerald-600 font-bold">
-                          Confirmed
+                        <td className={`px-6 py-4 font-bold ${
+                          booking.status === "Confirmed"
+                            ? "text-blue-600"
+                            : booking.status === "Issued"
+                            ? "text-emerald-600"
+                            : "text-slate-600"
+                        }`}>
+                          {booking.status === "Confirmed"
+                            ? "Hold"
+                            : booking.status || "Hold"}
                         </td>
                       </tr>
                     ))

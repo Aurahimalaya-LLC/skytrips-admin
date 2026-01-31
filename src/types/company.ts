@@ -28,6 +28,7 @@ export interface CompanyProfile {
   emails: ContactMethod[];
   phones: PhoneNumber[];
   website?: string;
+  operatingHours?: string;
   isHeadquarters: boolean;
   createdAt: string;
   updatedAt: string;

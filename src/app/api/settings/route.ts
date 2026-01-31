@@ -12,6 +12,7 @@ type CompanyRow = {
   emails?: Array<string | ContactMethod> | null;
   phones?: Array<string | PhoneNumber> | null;
   website?: string;
+  operating_hours?: string;
   is_headquarters?: boolean;
   created_at?: string;
   updated_at?: string;
@@ -100,6 +101,7 @@ export async function GET() {
         emails: normalizeEmails(item.emails),
         phones: normalizePhones(item.phones),
         website: item.website,
+        operatingHours: item.operating_hours,
         isHeadquarters: item.is_headquarters,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
@@ -173,6 +175,7 @@ export async function POST(request: Request) {
         emails: normalizeEmails(item.emails),
         phones: normalizePhones(item.phones),
         website: item.website,
+        operatingHours: item.operating_hours,
         isHeadquarters: item.is_headquarters,
         createdAt: item.created_at,
         updatedAt: item.updated_at,

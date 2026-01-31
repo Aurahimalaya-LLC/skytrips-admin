@@ -1997,10 +1997,11 @@ export default function BookingModal({
                           onChange={handleChange}
                           disabled={isReadOnly}
                         >
-                          <option>Confirmed</option>
-                          <option>Pending</option>
-                          <option>Draft</option>
-                          <option>Cancelled</option>
+                          <option value="Confirmed">Hold</option>
+                          <option value="Issued">Issued</option>
+                          <option value="Pending">Pending</option>
+                          <option value="Draft">Draft</option>
+                          <option value="Cancelled">Cancelled</option>
                         </select>
                       </div>
                     </div>

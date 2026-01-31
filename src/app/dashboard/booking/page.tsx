@@ -17,6 +17,7 @@ export default function BookingPage() {
     withCustomerCount: number;
     withoutCustomerCount: number;
     confirmedCount: number;
+    issuedCount: number;
     pendingCount: number;
     draftCount: number;
     cancelledCount: number;
@@ -209,6 +210,7 @@ export default function BookingPage() {
                 withCustomerCount?: unknown;
                 withoutCustomerCount?: unknown;
                 confirmedCount?: unknown;
+                issuedCount?: unknown;
                 pendingCount?: unknown;
                 draftCount?: unknown;
                 cancelledCount?: unknown;
@@ -229,6 +231,8 @@ export default function BookingPage() {
               typeof parsed.confirmedCount === "number"
                 ? parsed.confirmedCount
                 : 0,
+            issuedCount:
+              typeof parsed.issuedCount === "number" ? parsed.issuedCount : 0,
             pendingCount:
               typeof parsed.pendingCount === "number"
                 ? parsed.pendingCount
@@ -660,7 +664,8 @@ export default function BookingPage() {
             }}
           >
             <option value="">All Statuses</option>
-            <option value="Confirmed">Confirmed</option>
+            <option value="Confirmed">Hold</option>
+            <option value="Issued">Issued</option>
             <option value="Pending">Pending</option>
             <option value="Draft">Draft</option>
             <option value="Cancelled">Cancelled</option>
@@ -827,25 +832,49 @@ export default function BookingPage() {
           </div>
         </div>
 
-        {/* Confirmed */}
+        {/* Hold (was Confirmed) */}
         <div
           onClick={() =>
             setStatusFilter((prev) => (prev === "Confirmed" ? "" : "Confirmed"))
           }
           className={`rounded-xl border bg-white shadow-sm p-5 cursor-pointer transition-all ${
             statusFilter === "Confirmed"
-              ? "border-green-600 ring-1 ring-green-600"
-              : "border-slate-200 hover:border-green-600/50"
+              ? "border-blue-600 ring-1 ring-blue-600"
+              : "border-slate-200 hover:border-blue-600/50"
           }`}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500 font-semibold">Confirmed</p>
+              <p className="text-sm text-slate-500 font-semibold">Hold</p>
               <p className="mt-2 text-3xl font-bold text-slate-900">
                 {counts ? counts.confirmedCount.toLocaleString() : "—"}
               </p>
             </div>
-            <div className="size-12 rounded-full bg-green-50 flex items-center justify-center text-green-600">
+            <div className="size-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+              <span className="material-symbols-outlined">pause_circle</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Issued (New) */}
+        <div
+          onClick={() =>
+            setStatusFilter((prev) => (prev === "Issued" ? "" : "Issued"))
+          }
+          className={`rounded-xl border bg-white shadow-sm p-5 cursor-pointer transition-all ${
+            statusFilter === "Issued"
+              ? "border-emerald-600 ring-1 ring-emerald-600"
+              : "border-slate-200 hover:border-emerald-600/50"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500 font-semibold">Issued</p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {counts ? counts.issuedCount.toLocaleString() : "—"}
+              </p>
+            </div>
+            <div className="size-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
               <span className="material-symbols-outlined">check_circle</span>
             </div>
           </div>
@@ -1163,20 +1192,24 @@ export default function BookingPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
-                          booking.status === "Confirmed"
-                            ? "bg-green-50 text-green-700 ring-green-600/20"
-                            : booking.status === "Pending"
-                            ? "bg-amber-50 text-amber-700 ring-amber-600/20"
-                            : booking.status === "Draft"
-                            ? "bg-slate-50 text-slate-700 ring-slate-600/20"
-                            : booking.status === "Cancelled"
-                            ? "bg-red-50 text-red-700 ring-red-600/20"
-                            : "bg-slate-50 text-slate-700 ring-slate-600/20"
-                        }`}
-                      >
-                        {booking.status || "Draft"}
-                      </span>
+                          className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
+                            booking.status === "Confirmed"
+                              ? "bg-blue-50 text-blue-700 ring-blue-600/20"
+                              : booking.status === "Issued"
+                              ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                              : booking.status === "Pending"
+                              ? "bg-amber-50 text-amber-700 ring-amber-600/20"
+                              : booking.status === "Draft"
+                              ? "bg-slate-50 text-slate-700 ring-slate-600/20"
+                              : booking.status === "Cancelled"
+                              ? "bg-red-50 text-red-700 ring-red-600/20"
+                              : "bg-slate-50 text-slate-700 ring-slate-600/20"
+                          }`}
+                        >
+                          {(booking.status === "Confirmed"
+                            ? "Hold"
+                            : booking.status) || "Draft"}
+                        </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="bg-blue-50 text-primary px-2 py-1 rounded text-xs font-bold">

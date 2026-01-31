@@ -215,8 +215,19 @@ export default function BookingDetailsPage({
                   )}
                 </div>
               </div>
-              <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                {booking.status || "Confirmed"}
+              <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border ${
+                booking.status === "Confirmed"
+                  ? "bg-blue-100 text-blue-700 border-blue-200"
+                  : booking.status === "Issued"
+                  ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                  : booking.status === "Cancelled"
+                  ? "bg-red-100 text-red-700 border-red-200"
+                  : booking.status === "Pending"
+                  ? "bg-amber-100 text-amber-700 border-amber-200"
+                  : "bg-slate-100 text-slate-700 border-slate-200"
+              }`}>
+                {(booking.status === "Confirmed" ? "Hold" : booking.status) ||
+                  "Draft"}
               </span>
             </h1>
             <p className="mt-1 text-sm text-slate-500 font-medium">
@@ -229,12 +240,12 @@ export default function BookingDetailsPage({
               onClick={() =>
                 router.push(`/dashboard/booking/edit/${bookingId}`)
               }
-              className="inline-flex items-center px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
+              className="inline-flex items-center p-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-all active:scale-95"
+              title="Edit Details"
             >
-              <span className="material-symbols-outlined text-[16px] mr-1.5 text-slate-500">
+              <span className="material-symbols-outlined text-[20px] text-slate-500">
                 edit
               </span>
-              Edit Details
             </button>
             <button
               onClick={() =>
@@ -879,8 +890,18 @@ export default function BookingDetailsPage({
                   Booking Status
                 </label>
                 <div className="mt-1">
-                  <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                    {booking.status || "Confirmed"}
+                  <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${
+                    booking.status === "Confirmed"
+                      ? "bg-blue-100 text-blue-700 border-blue-200"
+                      : booking.status === "Issued"
+                      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                      : booking.status === "Cancelled"
+                      ? "bg-red-100 text-red-700 border-red-200"
+                      : booking.status === "Pending"
+                      ? "bg-amber-100 text-amber-700 border-amber-200"
+                      : "bg-slate-100 text-slate-700 border-slate-200"
+                  }`}>
+                    {(booking.status === "Confirmed" ? "Hold" : booking.status) || "Draft"}
                   </span>
                 </div>
               </div>

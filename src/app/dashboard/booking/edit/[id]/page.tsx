@@ -2335,7 +2335,8 @@ export default function EditBookingPage({
                     value={formData.status}
                     onChange={handleChange}
                   >
-                    <option value="Confirmed">Confirmed</option>
+                    <option value="Confirmed">Hold</option>
+                    <option value="Issued">Issued</option>
                     <option value="Pending">Pending</option>
                     <option value="Draft">Draft</option>
                     <option value="Cancelled">Cancelled</option>

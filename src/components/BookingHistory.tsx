@@ -172,13 +172,17 @@ export default function BookingHistory({
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${
                           booking.status === "Confirmed"
+                            ? "bg-blue-50 border-blue-100 text-blue-700"
+                            : booking.status === "Issued"
                             ? "bg-emerald-50 border-emerald-100 text-emerald-700"
                             : booking.status === "Cancelled"
-                              ? "bg-red-50 border-red-100 text-red-700"
-                              : "bg-amber-50 border-amber-100 text-amber-700"
+                            ? "bg-red-50 border-red-100 text-red-700"
+                            : "bg-amber-50 border-amber-100 text-amber-700"
                         }`}
                       >
-                        {booking.status}
+                        {booking.status === "Confirmed"
+                          ? "Hold"
+                          : booking.status}
                       </span>
                     </td>
                     <td className="px-6 py-3 text-right">

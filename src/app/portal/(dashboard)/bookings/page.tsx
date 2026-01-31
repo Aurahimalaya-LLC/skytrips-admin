@@ -110,9 +110,15 @@ export default function MyTripsPage() {
                     </div>
                     <div className="ml-2 flex-shrink-0 flex flex-col items-end">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        booking.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        booking.status === 'Confirmed' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : booking.status === 'Issued'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : booking.status === 'Cancelled'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {booking.status || "Confirmed"}
+                        {booking.status === 'Confirmed' ? 'Hold' : (booking.status || "Hold")}
                       </span>
                       <p className="mt-1 text-sm text-gray-500">
                         {booking.departureDate || booking.travelDate}
