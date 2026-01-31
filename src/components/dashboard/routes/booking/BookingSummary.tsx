@@ -36,14 +36,14 @@ export default function BookingSummary({ offer, netFare, taxes, total, passenger
     : "Schedule TBA";
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden sticky top-8 font-display">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden sticky top-4 font-display">
       {/* Header */}
       <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center gap-2">
         <span className="material-symbols-outlined text-[#0EA5E9] text-[20px]">analytics</span>
         <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider">Booking Summary</h3>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 space-y-4">
         {/* Flight Info */}
         <div>
           <div className="flex items-center justify-between mb-2">
