@@ -104,6 +104,51 @@ const openApiSpec = {
         },
       },
     },
+    '/flights': {
+      get: {
+        summary: 'List Flight Routes',
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 10 } },
+          { name: 'origin', in: 'query', schema: { type: 'string' }, description: 'Filter by departure airport (IATA code or name)' },
+          { name: 'destination', in: 'query', schema: { type: 'string' }, description: 'Filter by arrival airport (IATA code or name)' },
+          { name: 'slug', in: 'query', schema: { type: 'string' }, description: 'Filter by unique slug' },
+        ],
+        responses: {
+          200: {
+            description: 'Successful response',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/FlightRouteListResponse',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/flights/{id}': {
+      get: {
+        summary: 'Get Flight Route Details',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          200: {
+            description: 'Successful response',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/FlightRouteResponse',
+                },
+              },
+            },
+          },
+          404: { description: 'Flight route not found' },
+        },
+      },
+    },
   },
   components: {
     schemas: {
@@ -191,6 +236,42 @@ const openApiSpec = {
             type: 'object',
             properties: {
               data: { $ref: '#/components/schemas/Airport' },
+            },
+          },
+        ],
+      },
+      FlightRoute: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          departure_airport: { type: 'string' },
+          arrival_airport: { type: 'string' },
+          average_flight_time: { type: 'string' },
+          distance: { type: 'string' },
+          cheapest_month: { type: 'string' },
+          daily_flights: { type: 'integer' },
+          slug: { type: 'string' },
+          created_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      FlightRouteListResponse: {
+        allOf: [
+          { $ref: '#/components/schemas/ApiResponse' },
+          {
+            type: 'object',
+            properties: {
+              data: { type: 'array', items: { $ref: '#/components/schemas/FlightRoute' } },
+            },
+          },
+        ],
+      },
+      FlightRouteResponse: {
+        allOf: [
+          { $ref: '#/components/schemas/ApiResponse' },
+          {
+            type: 'object',
+            properties: {
+              data: { $ref: '#/components/schemas/FlightRoute' },
             },
           },
         ],
