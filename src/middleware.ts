@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { rateLimit } from '@/lib/rate-limit';
 
-export async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   // Only apply to API v1 routes
   if (req.nextUrl.pathname.startsWith('/api/v1')) {
     
