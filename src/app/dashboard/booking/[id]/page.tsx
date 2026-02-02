@@ -10,6 +10,7 @@ import {
   getCustomerEmail,
   getCustomerPhone,
 } from "@/lib/booking-helpers";
+import MileageTracker from "@/components/booking-management/MileageTracker";
 
 export default function BookingDetailsPage({
   params,
@@ -905,6 +906,9 @@ export default function BookingDetailsPage({
                   </span>
                 </div>
               </div>
+
+              {/* AI Mileage Tracker */}
+              <MileageTracker itineraries={booking.itineraries} />
             </div>
           </div>
 
