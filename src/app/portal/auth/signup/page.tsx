@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
-function SignupContent() {
+function CustomerSignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -326,8 +326,8 @@ function SignupContent() {
 
 export default function CustomerSignupPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
-      <SignupContent />
+    <Suspense fallback={<div>Loading...</div>}>
+      <CustomerSignupContent />
     </Suspense>
   );
 }

@@ -13,9 +13,13 @@ export async function PUT(
 
   const body = await request.json();
 
+  // Temporary fix: Remove issue_country until migration is applied
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { issue_country, ...safeBody } = body;
+
   const { data, error } = await supabase
     .from('travellers')
-    .update(body)
+    .update(safeBody)
     .eq('id', id)
     .select()
     .single();
