@@ -58,7 +58,6 @@ const Accordion = React.forwardRef<HTMLDivElement, AccordionProps>(
         }
         
         if (onValueChange) {
-            // @ts-expect-error - Handling union type for callback
             onValueChange(type === "single" ? (next[0] || "") : next);
         }
       },
