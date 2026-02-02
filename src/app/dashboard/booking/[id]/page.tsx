@@ -10,6 +10,7 @@ import {
   getCustomerEmail,
   getCustomerPhone,
 } from "@/lib/booking-helpers";
+import { getBookingPayments, BookingPaymentDetails } from "@/lib/services/booking-payments";
 import MileageTracker from "@/components/booking-management/MileageTracker";
 
 export default function BookingDetailsPage({
@@ -22,6 +23,7 @@ export default function BookingDetailsPage({
   const bookingId = id;
 
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [payments, setPayments] = useState<BookingPaymentDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -167,6 +169,47 @@ export default function BookingDetailsPage({
   // I will use reasonable fallbacks to match the visual structure.
 
   const profitMargin = (grandTotal - costPrice).toFixed(2);
+
+  // Derived Payment Data
+  const latestPayment = payments.length > 0 ? payments[0] : null;
+  const totalPaid = payments.reduce((sum, p) => sum + (p.payment_amount || 0), 0);
+  
+  // Determine Payment Status based on payments table
+  let displayPaymentStatus = booking.paymentStatus || "Pending";
+  let displayPaymentStatusColor = "bg-amber-100 text-amber-700 border-amber-200";
+
+  if (payments.length > 0) {
+    // Check if fully paid
+    if (totalPaid >= grandTotal - 0.01) { // Small tolerance for float comparison
+        displayPaymentStatus = "Paid";
+        displayPaymentStatusColor = "bg-emerald-100 text-emerald-700 border-emerald-200";
+    } else if (totalPaid > 0) {
+        displayPaymentStatus = "Partial";
+        displayPaymentStatusColor = "bg-blue-100 text-blue-700 border-blue-200";
+    } else {
+         // If payments exist but sum is 0 (e.g. failed/pending records)
+         const status = latestPayment?.payment_record_status;
+         if (status === "Completed" || status === "Paid") {
+             // Fallback if amount is somehow 0 but marked paid? Unlikely but safe.
+             displayPaymentStatus = "Paid"; 
+             displayPaymentStatusColor = "bg-emerald-100 text-emerald-700 border-emerald-200";
+         } else if (status === "Failed") {
+             displayPaymentStatus = "Failed";
+             displayPaymentStatusColor = "bg-red-100 text-red-700 border-red-200";
+         }
+    }
+  }
+
+  // Determine Payment Method from payments table
+  const displayPaymentMethod = latestPayment?.booking_payment_method || booking.paymentmethod || "Credit Card";
+  
+  // Determine Transaction ID from payments table
+  const displayTransactionId = latestPayment?.payment_id || booking.transactionId || "Pending";
+
+  // Determine Payment Date from payments table
+  const displayPaymentDate = latestPayment?.payment_date 
+    ? new Date(latestPayment.payment_date).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })
+    : booking.dateofpayment || "Pending";
 
   return (
     <main className="flex-1 overflow-y-auto m-0 p-0 font-display">
@@ -931,8 +974,8 @@ export default function BookingDetailsPage({
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                     Payment Status
                   </label>
-                  <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded border border-amber-200">
-                    {booking.paymentStatus || "Pending"}
+                  <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded border ${displayPaymentStatusColor}`}>
+                    {displayPaymentStatus}
                   </span>
                 </div>
               </div>
@@ -946,7 +989,7 @@ export default function BookingDetailsPage({
                     <span className="material-symbols-outlined text-slate-400 text-[16px]">
                       credit_card
                     </span>
-                    {booking.paymentmethod || "Credit Card"}
+                    {displayPaymentMethod}
                   </div>
                 </div>
                 <div>
@@ -954,7 +997,7 @@ export default function BookingDetailsPage({
                     Transaction ID
                   </label>
                   <p className="text-xs font-bold text-slate-900 break-all">
-                    {booking.transactionId || "TXN-12345678-ABCD-90"}
+                    {displayTransactionId}
                   </p>
                 </div>
                 <div>
@@ -962,7 +1005,7 @@ export default function BookingDetailsPage({
                     Date of Payment
                   </label>
                   <p className="text-sm font-bold text-slate-900">
-                    {booking.dateofpayment || "10 Aug 2021"}
+                    {displayPaymentDate}
                   </p>
                 </div>
               </div>
