@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
     if (listError) throw listError;
     
-    const user = users.find(u => u.email === email);
+    const user = users.find((u: { email?: string }) => u.email === email);
     if (!user) throw new Error("User not found");
 
     // Update password
