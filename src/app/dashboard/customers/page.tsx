@@ -83,7 +83,7 @@ export default function CustomersPage() {
       }));
 
       const ids = baseData.map((c) => String(c.id || "")).filter(Boolean);
-      let metrics: Record<string, { totalSpend: number; lastLogin: string | null }> = {};
+      let metrics: Record<string, { totalSpend: number; lastLogin: string | null; totalMiles: number }> = {};
       if (ids.length > 0) {
         const res = await fetch("/api/customers/metrics", {
           method: "POST",
@@ -94,7 +94,7 @@ export default function CustomersPage() {
         if (res.ok) {
           metrics = (json?.metrics || {}) as Record<
             string,
-            { totalSpend: number; lastLogin: string | null }
+            { totalSpend: number; lastLogin: string | null; totalMiles: number }
           >;
         } else {
           console.error("Failed to fetch customer metrics", json?.error);
@@ -108,6 +108,7 @@ export default function CustomersPage() {
           ...c,
           totalSpend: m?.totalSpend ?? 0,
           lastLogin: m?.lastLogin ?? undefined,
+          totalMiles: m?.totalMiles ?? 0,
         };
       });
 
@@ -138,6 +139,25 @@ export default function CustomersPage() {
 
   useEffect(() => {
     fetchCustomers();
+  }, [fetchCustomers]);
+
+  // Real-time subscription for booking updates to refresh metrics (miles/spend)
+  useEffect(() => {
+    const channel = supabase
+      .channel("customer_bookings_updates")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings" },
+        () => {
+          console.log("Bookings updated, refreshing customer metrics...");
+          fetchCustomers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchCustomers]);
 
   useEffect(() => {
@@ -410,7 +430,7 @@ export default function CustomersPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="font-medium text-foreground">
-                        {customer.totalMiles?.toLocaleString()} <span className="text-muted-foreground text-xs">mi</span>
+                        {customer.totalMiles?.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 })} <span className="text-muted-foreground text-xs">mi</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">

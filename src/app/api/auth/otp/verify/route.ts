@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyOTPCode, OTPType } from "@/lib/otp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import crypto from "crypto";
+import { User } from "@supabase/supabase-js";
 
 export async function POST(req: NextRequest) {
   try {

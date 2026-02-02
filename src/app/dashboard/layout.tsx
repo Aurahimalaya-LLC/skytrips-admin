@@ -571,6 +571,34 @@ export default function DashboardLayout({
             </p>
           </Link>
 
+          {/* Documentation */}
+          <Link
+            href="/dashboard/docs"
+            prefetch={false}
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
+              pathname === "/dashboard/docs"
+                ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
+                : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
+            }`}
+            aria-label="Documentation"
+            title="Documentation"
+          >
+            <span
+              className={`material-symbols-outlined ${
+                pathname === "/dashboard/docs"
+                  ? "active-icon"
+                  : "group-hover:text-primary transition-colors"
+              }`}
+            >
+              menu_book
+            </span>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Documentation
+            </p>
+          </Link>
+
           {/* Setting */}
           <Link
             href="/dashboard/settings"
