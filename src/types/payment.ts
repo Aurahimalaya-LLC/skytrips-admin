@@ -8,6 +8,7 @@ export interface Payment {
   status: 'Pending' | 'Completed' | 'Failed' | 'Refunded'; // Adjust based on actual values
   amount: number;
   payment_date: string; // ISO string
+  payment_method?: string | null;
   agency_name: string | null;
   cp: string | null; // Contact Phone
   contact_person: string | null;
@@ -23,5 +24,5 @@ export interface PaymentFilters {
   search?: string;
 }
 
-export type SortField = 'created_date' | 'amount' | 'selling_price' | 'payment_date' | 'status' | 'payment_id' | 'booking_id';
+export type SortField = 'created_date' | 'amount' | 'selling_price' | 'payment_date' | 'status' | 'payment_id' | 'booking_id' | 'agency_name' | 'contact_person';
 export type SortOrder = 'asc' | 'desc';

@@ -1,17 +1,149 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import PaymentsTable from "@/components/dashboard/payments/PaymentsTable";
+import { supabase } from "@/lib/supabase";
 
 type ViewMode = 'customers' | 'agencies';
 
+interface DateRange {
+  label: string;
+  start: string | null;
+  end: string | null;
+}
+
+interface Stats {
+  totalInflow: number;
+  totalPending: number;
+  totalCompleted: number;
+  pendingCount: number;
+  completedCount: number;
+  loading: boolean;
+  error: string | null;
+}
+
 export default function PaymentsPage() {
-  const [dateRange, setDateRange] = useState("Last 30 Days");
-  const [period, setPeriod] = useState("30D");
+  // Date Range State
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange>({
+    label: "Last 30 Days",
+    start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
+    end: new Date().toISOString()
+  });
+
+  // Stats State
+  const [stats, setStats] = useState<Stats>({
+    totalInflow: 0,
+    totalPending: 0,
+    totalCompleted: 0,
+    pendingCount: 0,
+    completedCount: 0,
+    loading: true,
+    error: null
+  });
+
   const [viewMode, setViewMode] = useState<ViewMode>('customers');
-  // Removing page-level isLoading as it's handled by the table, 
-  // but we might want a small transition for the view switch if needed.
-  // The table component handles its own loading state.
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  // Close Date Picker on Click Outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+        setShowDatePicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fetch Stats
+  useEffect(() => {
+    async function fetchStats() {
+      setStats(prev => ({ ...prev, loading: true, error: null }));
+      try {
+        let query = supabase
+          .from('view_unified_payments')
+          .select('amount, payment_source, status');
+
+        // Apply View Mode Filter
+        const sourceFilter = viewMode === 'customers' ? 'Customer' : 'Agency';
+        query = query.eq('payment_source', sourceFilter);
+
+        // Apply Date Filter
+        if (dateRange.start) {
+          query = query.gte('created_date', dateRange.start);
+        }
+        if (dateRange.end) {
+          query = query.lte('created_date', dateRange.end);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        let inflow = 0;
+        let pending = 0;
+        let completed = 0;
+        let pCount = 0;
+        let cCount = 0;
+
+        data?.forEach((item) => {
+          const amt = Number(item.amount) || 0;
+          const st = item.status?.toUpperCase() || '';
+          
+          inflow += amt; // Total volume
+
+          if (st === 'COMPLETED' || st === 'PAID') {
+            completed += amt;
+            cCount++;
+          } else if (st === 'PENDING' || st === 'PARTIAL') {
+            pending += amt;
+            pCount++;
+          }
+        });
+        
+        setStats({
+          totalInflow: inflow,
+          totalPending: pending,
+          totalCompleted: completed,
+          pendingCount: pCount,
+          completedCount: cCount,
+          loading: false,
+          error: null
+        });
+
+      } catch (err) {
+        console.error("Error fetching stats:", err);
+        setStats(prev => ({ 
+          ...prev, 
+          loading: false, 
+          error: err instanceof Error ? err.message : "Failed to load stats" 
+        }));
+      }
+    }
+
+    fetchStats();
+  }, [viewMode, dateRange]);
+
+  // Handle Date Range Selection
+  const handleDateRangeSelect = (option: string) => {
+    const end = new Date().toISOString();
+    let start = null;
+
+    if (option === "Last 30 Days") {
+      start = new Date(new Date().setDate(new Date().getDate() - 30)).toISOString();
+    } else if (option === "Last 90 Days") {
+      start = new Date(new Date().setDate(new Date().getDate() - 90)).toISOString();
+    } else if (option === "This Year") {
+      start = new Date(new Date().getFullYear(), 0, 1).toISOString();
+    } else if (option === "All Time") {
+      start = null;
+    }
+
+    setDateRange({ label: option, start, end });
+    setShowDatePicker(false);
+  };
+
 
   useEffect(() => {
     const savedMode = sessionStorage.getItem('payment_view_mode') as ViewMode;
@@ -28,7 +160,7 @@ export default function PaymentsPage() {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto w-full font-display pb-12 space-y-8">
+    <div className="max-w-[1600px] mx-auto w-full font-display pb-12 space-y-8 min-h-full">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
@@ -66,28 +198,32 @@ export default function PaymentsPage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-4">
-          <button className="h-10 px-4 bg-white border border-slate-200 rounded-lg text-slate-700 text-sm font-bold flex items-center gap-2 hover:bg-slate-50 shadow-sm">
+        <div className="flex items-center gap-4 relative" ref={datePickerRef}>
+          <button 
+            onClick={() => setShowDatePicker(!showDatePicker)}
+            className="h-10 px-4 bg-white border border-slate-200 rounded-lg text-slate-700 text-sm font-bold flex items-center gap-2 hover:bg-slate-50 shadow-sm transition-all"
+          >
             <span className="material-symbols-outlined text-[20px]">calendar_today</span>
-            Date Range: <span className="text-[#00A76F]">{dateRange}</span>
+            Date Range: <span className="text-[#00A76F]">{dateRange.label}</span>
             <span className="material-symbols-outlined text-[20px]">expand_more</span>
           </button>
 
-          <div className="flex bg-slate-100 p-1 rounded-lg">
-            {["30D", "90D", "YTD"].map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${
-                  period === p 
-                    ? "bg-white text-slate-900 shadow-sm" 
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
+          {/* Date Picker Dropdown */}
+          {showDatePicker && (
+            <div className="absolute top-12 right-0 bg-white border border-slate-200 rounded-lg shadow-xl z-50 w-48 py-2 animate-in fade-in zoom-in-95 duration-200">
+              {["Last 30 Days", "Last 90 Days", "This Year", "All Time"].map((option) => (
+                <button
+                  key={option}
+                  onClick={() => handleDateRangeSelect(option)}
+                  className={`w-full text-left px-4 py-2 text-sm font-medium hover:bg-slate-50 transition-colors ${
+                    dateRange.label === option ? "text-[#00A76F] bg-emerald-50" : "text-slate-700"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -95,98 +231,115 @@ export default function PaymentsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {viewMode === 'customers' ? (
           <>
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+            <div className="bg-card rounded-xl border border-border p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">TOTAL INFLOW (SP)</h3>
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">TOTAL INFLOW (SP)</h3>
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600">
                   <span className="material-symbols-outlined text-[18px]">arrow_downward</span>
                 </div>
               </div>
-              <div className="text-3xl font-black text-slate-900 mb-3 tracking-tight">$482,900.00</div>
-              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-50 text-emerald-600 text-[11px] font-bold">
-                <span className="material-symbols-outlined text-[14px]">trending_up</span>
-                +12.5% vs last month
+              <div className="text-3xl font-black text-foreground mb-3 tracking-tight">
+                {stats.loading ? (
+                  <span className="text-muted animate-pulse">Loading...</span>
+                ) : stats.error ? (
+                  <span className="text-destructive text-sm">Error</span>
+                ) : (
+                  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.totalInflow)
+                )}
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-600 text-[11px] font-bold">
+                <span className="material-symbols-outlined text-[14px]">calendar_month</span>
+                {dateRange.label}
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+            <div className="bg-card rounded-xl border border-border p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">RECEIVED PAYMENTS</h3>
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">RECEIVED PAYMENTS</h3>
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600">
                   <span className="material-symbols-outlined text-[18px]">payments</span>
                 </div>
               </div>
-              <div className="text-3xl font-black text-slate-900 mb-3 tracking-tight">$412,500.00</div>
-              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-50 text-emerald-600 text-[11px] font-bold">
+              <div className="text-3xl font-black text-foreground mb-3 tracking-tight">
+                {stats.loading ? "Loading..." : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.totalCompleted)}
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-600 text-[11px] font-bold">
                 <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                85% Collection Rate
+                {stats.totalInflow > 0 ? ((stats.totalCompleted / stats.totalInflow) * 100).toFixed(1) : 0}% Collection Rate
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+            <div className="bg-card rounded-xl border border-border p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">PENDING INFLOW</h3>
-                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">PENDING INFLOW</h3>
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600">
                   <span className="material-symbols-outlined text-[18px]">pending</span>
                 </div>
               </div>
-              <div className="text-3xl font-black text-slate-900 mb-3 tracking-tight">$70,400.00</div>
-              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-50 text-amber-600 text-[11px] font-bold">
+              <div className="text-3xl font-black text-foreground mb-3 tracking-tight">
+                {stats.loading ? "Loading..." : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.totalPending)}
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 text-amber-600 text-[11px] font-bold">
                 <span className="material-symbols-outlined text-[14px]">schedule</span>
-                24 Invoices Pending
+                {stats.pendingCount} Invoices Pending
               </div>
             </div>
           </>
         ) : (
           <>
-             <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+             <div className="bg-card rounded-xl border border-border p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">TOTAL OUTFLOW (CP)</h3>
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">TOTAL OUTFLOW (CP)</h3>
+                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600">
                   <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
                 </div>
               </div>
-              <div className="text-3xl font-black text-slate-900 mb-3 tracking-tight">$320,150.00</div>
-              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-50 text-blue-600 text-[11px] font-bold">
+              <div className="text-3xl font-black text-foreground mb-3 tracking-tight">
+                {stats.loading ? "Loading..." : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.totalInflow)}
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 text-[11px] font-bold">
                 <span className="material-symbols-outlined text-[14px]">trending_up</span>
-                +8.2% vs last month
+                Total Volume
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+            <div className="bg-card rounded-xl border border-border p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">PAID TO AGENCIES</h3>
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">PAID TO AGENCIES</h3>
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600">
                   <span className="material-symbols-outlined text-[18px]">check_circle</span>
                 </div>
               </div>
-              <div className="text-3xl font-black text-slate-900 mb-3 tracking-tight">$280,000.00</div>
-              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-50 text-emerald-600 text-[11px] font-bold">
+              <div className="text-3xl font-black text-foreground mb-3 tracking-tight">
+                {stats.loading ? "Loading..." : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.totalCompleted)}
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-600 text-[11px] font-bold">
                 <span className="material-symbols-outlined text-[14px]">done_all</span>
-                87% Settlement Rate
+                {stats.totalInflow > 0 ? ((stats.totalCompleted / stats.totalInflow) * 100).toFixed(1) : 0}% Settlement Rate
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+            <div className="bg-card rounded-xl border border-border p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">PENDING PAYOUTS</h3>
-                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">PENDING PAYOUTS</h3>
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600">
                   <span className="material-symbols-outlined text-[18px]">pending_actions</span>
                 </div>
               </div>
-              <div className="text-3xl font-black text-slate-900 mb-3 tracking-tight">$40,150.00</div>
-              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-50 text-amber-600 text-[11px] font-bold">
+              <div className="text-3xl font-black text-foreground mb-3 tracking-tight">
+                {stats.loading ? "Loading..." : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.totalPending)}
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 text-amber-600 text-[11px] font-bold">
                 <span className="material-symbols-outlined text-[14px]">schedule</span>
-                15 Settlements Due
+                {stats.pendingCount} Settlements Due
               </div>
             </div>
           </>
         )}
       </div>
 
-      {/* Main Payment Table */}
-      <PaymentsTable viewMode={viewMode} />
-      
+      {/* Main Table Content */}
+      <PaymentsTable viewMode={viewMode} dateRange={dateRange} />
     </div>
   );
 }
