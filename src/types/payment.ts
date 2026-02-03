@@ -4,6 +4,7 @@ export interface Payment {
   created_date: string; // ISO string
   customer_name: string;
   selling_price: number;
+  cost_price?: number;
   status: 'Pending' | 'Completed' | 'Failed' | 'Refunded'; // Adjust based on actual values
   amount: number;
   payment_date: string; // ISO string

@@ -93,7 +93,7 @@ async function migrateFinancials() {
         }
         if (successCount % 10 === 0 && successCount > 0) console.log(`✅ Progress: ${successCount} records updated...`);
       } catch (innerError: unknown) {
-        const message = innerError instanceof Error ? innerError.message : String(innerError);
+        const message = innerError instanceof Error ? innerError.message : JSON.stringify(innerError);
         console.error(`💥 Unexpected error processing payment ${payment.payment_id}:`, message);
         failureCount++;
         errors.push({ payment_id: payment.payment_id, error: message });

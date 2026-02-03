@@ -271,6 +271,16 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
                       )}
                     </div>
                   </th>
+                  <th className="px-6 py-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('booking_id')}>
+                    <div className="flex items-center gap-1">
+                      Booking Ref
+                      {sortField === 'booking_id' && (
+                        <span className="material-symbols-outlined text-[16px]">
+                          {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
                   <th className="px-6 py-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('created_date')}>
                     <div className="flex items-center gap-1">
                       Date
