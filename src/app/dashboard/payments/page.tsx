@@ -63,7 +63,7 @@ export default function PaymentsPage() {
       try {
         let query = supabase
           .from('view_unified_payments')
-          .select('amount, payment_source, status');
+          .select('amount, payment_source, status, selling_price, cost_price');
 
         // Apply View Mode Filter
         const sourceFilter = viewMode === 'customers' ? 'Customer' : 'Agency';
@@ -77,7 +77,24 @@ export default function PaymentsPage() {
           query = query.lte('created_date', dateRange.end);
         }
 
-        const { data, error } = await query;
+        let { data, error } = await query;
+
+        // Fallback if cost_price/selling_price don't exist yet in the view (Error 42703)
+        if (error && String(error.code) === '42703') {
+          console.warn("View missing price columns, falling back to 'amount'");
+          let fallbackQuery = supabase
+            .from('view_unified_payments')
+            .select('amount, payment_source, status')
+            .eq('payment_source', viewMode === 'customers' ? 'Customer' : 'Agency');
+
+          // Re-apply date filter for fallback
+          if (dateRange.start) fallbackQuery = fallbackQuery.gte('created_date', dateRange.start);
+          if (dateRange.end) fallbackQuery = fallbackQuery.lte('created_date', dateRange.end);
+
+          const res = await fallbackQuery;
+          data = res.data as any;
+          error = res.error;
+        }
 
         if (error) throw error;
 
@@ -88,7 +105,11 @@ export default function PaymentsPage() {
         let cCount = 0;
 
         data?.forEach((item) => {
-          const amt = Number(item.amount) || 0;
+          // Use selling_price for Customers, cost_price for Agencies, fallback to amount
+          const isCustomer = viewMode === 'customers';
+          const price = isCustomer ? item.selling_price : item.cost_price;
+          const amt = (Number(price) || Number(item.amount) || 0);
+          
           const st = item.status?.toUpperCase() || '';
           
           inflow += amt; // Total volume

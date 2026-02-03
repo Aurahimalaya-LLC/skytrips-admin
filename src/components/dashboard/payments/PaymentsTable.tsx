@@ -79,6 +79,13 @@ export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProp
       const { data: fetchedData, error: fetchError, count } = await query;
 
       if (fetchError) {
+        // Handle missing column error (42703) - likely due to invalid sort field
+        if (String(fetchError.code) === '42703' && ['selling_price', 'cost_price', 'customer_name'].includes(sortField)) {
+           console.warn(`Sort field ${sortField} missing, falling back to created_date`);
+           setSortField('created_date');
+           return; // Trigger re-fetch via useEffect
+        }
+
         console.error("Supabase fetch error:", fetchError);
         throw fetchError;
       }
