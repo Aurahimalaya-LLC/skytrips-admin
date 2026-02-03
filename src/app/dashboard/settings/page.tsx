@@ -7,6 +7,7 @@ import CompanyManager from "@/components/CompanyManager";
 import PaymentMethodsManager from "@/components/settings/PaymentMethodsManager";
 import { MediaSelectorModal } from "@/components/media/MediaSelectorModal";
 import CurrencyTab from "@/components/dashboard/settings/CurrencyTab";
+import DomainRoutingTab, { DomainRoutingConfig } from "@/components/dashboard/settings/DomainRoutingTab";
 import SendEmailModal from "@/components/booking-management/SendEmailModal";
 import { DEFAULT_EMAIL_TEMPLATES, EmailTemplate } from "@/lib/email-templates";
 
@@ -35,6 +36,14 @@ export default function SettingsPage() {
     seoTitle: "",
     metaDescription: "",
     faqs: [] as { question: string; answer: string }[],
+    domainRouting: {
+      enabled: false,
+      mappings: [
+        { region: "Nepal", domain: "skytrips.com.np", countryCode: "NP" },
+        { region: "Australia", domain: "skytrips.com.au", countryCode: "AU" },
+      ],
+      fallbackDomain: "skytripsworld.com",
+    } as DomainRoutingConfig,
   });
 
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(
@@ -70,6 +79,14 @@ export default function SettingsPage() {
           seoTitle: data.seo_title || "",
           metaDescription: data.meta_description || "",
           faqs: Array.isArray(data.faqs) ? data.faqs : [],
+          domainRouting: data.domain_routing || {
+            enabled: false,
+            mappings: [
+              { region: "Nepal", domain: "skytrips.com.np", countryCode: "NP" },
+              { region: "Australia", domain: "skytrips.com.au", countryCode: "AU" },
+            ],
+            fallbackDomain: "skytripsworld.com",
+          },
         });
         setLogoPreview(data.logo_url || null);
       }
@@ -101,6 +118,7 @@ export default function SettingsPage() {
           seo_title: settings.seoTitle,
           meta_description: settings.metaDescription,
           faqs: settings.faqs,
+          domain_routing: settings.domainRouting,
         }),
       });
 
@@ -161,6 +179,7 @@ export default function SettingsPage() {
             "Currency",
             "Payment Methods",
             "Email Templates",
+            "Domain Routing",
           ].map((tab) => {
             const tabId = tab.toLowerCase().split(" ")[0];
             const isActive = activeTab === tabId;
@@ -200,6 +219,11 @@ export default function SettingsPage() {
                       mail
                     </span>
                   )}
+                  {tabId === "domain" && (
+                    <span className="material-symbols-outlined text-[18px]">
+                      public
+                    </span>
+                  )}
                   {tab}
                 </div>
               </button>
@@ -210,67 +234,6 @@ export default function SettingsPage() {
 
       {activeTab === "company" && (
         <div className="space-y-8 animate-in fade-in duration-300">
-          {/* Company Information Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-border">
-              <span className="material-symbols-outlined text-primary">
-                storefront
-              </span>
-              <h2 className="text-lg font-bold text-foreground">
-                Company Information
-              </h2>
-            </div>
-
-            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-foreground">
-                    Company Name
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.companyName}
-                    onChange={(e) =>
-                      setSettings({ ...settings, companyName: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
-                    placeholder="Enter company name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-foreground">
-                    Company Email
-                  </label>
-                  <input
-                    type="email"
-                    value={settings.companyEmail}
-                    onChange={(e) =>
-                      setSettings({ ...settings, companyEmail: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
-                    placeholder="Enter company email"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-foreground">
-                    Company Phone
-                  </label>
-                  <input
-                    type="tel"
-                    value={settings.companyPhone}
-                    onChange={(e) =>
-                      setSettings({ ...settings, companyPhone: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
-                    placeholder="Enter company phone"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Logo & Icon Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 pb-2 border-b border-border">
@@ -468,6 +431,14 @@ export default function SettingsPage() {
         <div className="space-y-8 animate-in fade-in duration-300">
           <CurrencyTab />
         </div>
+      )}
+
+      {/* Domain Routing Tab */}
+      {activeTab === "domain" && (
+        <DomainRoutingTab
+          config={settings.domainRouting}
+          onChange={(domainRouting) => setSettings({ ...settings, domainRouting })}
+        />
       )}
 
       {/* Placeholder for other tabs */}
