@@ -8,8 +8,10 @@ import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import CustomerSearch from "@/components/CustomerSearch";
 import TravellerSearch from "@/components/TravellerSearch";
 import Link from "next/link";
-import { Customer, Traveller, FlightItinerary, Service } from "@/types";
+import { Customer, Traveller, FlightItinerary, Service, Booking } from "@/types";
 import countryData from "../../../../../../libs/shared-utils/constants/country.json";
+import NotificationConfirmModal from "@/components/NotificationConfirmModal";
+import BookingStatusProgress from "@/components/booking/BookingStatusProgress";
 
 type Agency = {
   uid: string;
@@ -96,8 +98,11 @@ export default function EditBookingPage({
   const [services, setServices] = useState<Service[]>([]);
   const [servicesLoading, setServicesLoading] = useState(false);
 
+  const [activeStep, setActiveStep] = useState(0);
   const [isMealModalOpen, setIsMealModalOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [currentBooking, setCurrentBooking] = useState<Booking | null>(null);
   const [existingContactSelected, setExistingContactSelected] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<
     string | number | undefined
@@ -362,6 +367,7 @@ export default function EditBookingPage({
 
       if (error) throw error;
       if (data) {
+        setCurrentBooking(data as unknown as Booking);
         const row = data as unknown as Record<string, unknown>;
         setCreatedAt(typeof row.created_at === "string" ? row.created_at : null);
         // Try to find customer ID from the booking data if available (lowercase 'customerid' in DB)
@@ -531,11 +537,38 @@ export default function EditBookingPage({
           itineraries: data.itineraries || [{ segments: [] }],
         });
         if (data.stopoverLocation) setShowStopover(true);
+
+        // Initialize activeStep based on status
+        const stage = getStatusStage(data.status || "Confirmed");
+        const stages = ["new", "in-progress", "confirmed", "completed"];
+        setActiveStep(stages.indexOf(stage));
       }
     } catch (err) {
       console.error("Error fetching booking:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConfirmIssue = async () => {
+    if (!id) return;
+
+    try {
+      const { error: updateError } = await supabase
+        .from("bookings")
+        .update({
+          status: "Issued",
+          bookingstatus: "Issued",
+        })
+        .eq("id", id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setFormData((prev) => ({ ...prev, status: "Issued" }));
+    } catch (err) {
+      console.error("Error issuing booking:", err);
+      throw err;
     }
   };
 
@@ -775,7 +808,7 @@ export default function EditBookingPage({
 
     if (
       (hasMissingFields || !hasValidTraveller) &&
-      finalStatus !== "Cancelled"
+      !["Cancelled", "Issued"].includes(finalStatus)
     ) {
       finalStatus = "Draft";
     }
@@ -1012,6 +1045,7 @@ export default function EditBookingPage({
         "issuedthroughagency",
         "handledBy",
         "bookingstatus",
+        "status",
         "costprice",
         "sellingprice",
         "paymentstatus",
@@ -1052,6 +1086,10 @@ export default function EditBookingPage({
           // 1. Apply mapping
           if (DB_COLUMN_MAPPING[key]) {
             dbKey = DB_COLUMN_MAPPING[key];
+            // If the original key is also a known column, keep it too
+            if (KNOWN_DB_COLUMNS.includes(key)) {
+              processed[key] = data[key];
+            }
           }
 
           // 2. Check if valid column (Case-sensitive check against known columns)
@@ -1110,6 +1148,73 @@ export default function EditBookingPage({
     }
   };
 
+  const getStatusStage = (status: string) => {
+    const s = status?.toLowerCase() || "";
+    if (["issued", "completed", "finalized"].includes(s)) return "completed";
+    if (["confirmed", "hold"].includes(s)) return "confirmed";
+    if (["pending", "processing", "send"].includes(s)) return "in-progress";
+    return "new";
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!id || !currentBooking) return;
+
+    // --- Validation Logic (Stage-based) ---
+    const targetStage = getStatusStage(newStatus);
+    const currentStage = getStatusStage(formData.status || "Draft");
+
+    // Only validate if moving forward
+    const stages = ["new", "in-progress", "confirmed", "completed"];
+    const currentIndex = stages.indexOf(currentStage);
+    const targetIndex = stages.indexOf(targetStage);
+
+    if (targetIndex > currentIndex) {
+      // Moving to In Progress: Check for basic route info
+      if (targetStage === "in-progress" || targetIndex > 1) {
+        if (!formData.origin || !formData.destination) {
+          alert("Please ensure Route details (Origin/Destination) are set before moving to In Progress.");
+          return;
+        }
+      }
+
+      // Moving to Confirmed: Check for Traveller/Contact info
+      if (targetStage === "confirmed" || targetIndex > 2) {
+        const hasTravellers = formData.travellers && formData.travellers.length > 0;
+        const hasContact = !!formData.email;
+        
+        if (!hasTravellers) {
+          alert("Please add at least one Traveller before confirming the booking.");
+          return;
+        }
+        if (!hasContact) {
+          alert("Please ensure Customer Contact information is complete before confirming.");
+          return;
+        }
+      }
+
+      // Moving to Completed: Check for PNR and Payments
+      if (targetStage === "completed") {
+        if (!formData.pnr || formData.pnr === "N/A" || formData.pnr.length < 5) {
+          alert("A valid PNR Reference is required to mark the booking as Completed.");
+          return;
+        }
+      }
+    }
+    // --- End Validation ---
+
+    // Update local state immediately for UI responsiveness
+    setFormData((prev) => ({ ...prev, status: newStatus }));
+  };
+
+  const currentStage = getStatusStage(formData.status || "Draft");
+
+   const customSteps = [
+     { id: "draft", name: "Trip Details", statuses: ["Draft", "New"] },
+     { id: "pending", name: "Traveller Details", statuses: ["Pending", "Processing", "Send"] },
+     { id: "confirmed", name: "Add-ons & Services", statuses: ["Confirmed", "Hold"] },
+     { id: "issued", name: "Financials & Save", statuses: ["Issued", "Completed", "Finalized"] },
+   ];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -1120,7 +1225,7 @@ export default function EditBookingPage({
 
   return (
     <div className="min-w-0 bg-slate-50 p-6 font-display">
-      <div className="mb-8 max-w-7xl mx-auto">
+      <div className="mb-8 max-w-full mx-auto">
         <nav className="flex text-sm text-slate-500 mb-2">
           <Link
             className="hover:text-slate-700 transition-colors"
@@ -1153,1110 +1258,1281 @@ export default function EditBookingPage({
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Column (Left) */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Customer Contact Details */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 className="text-base font-bold text-slate-900 flex items-center tracking-tight gap-2">
-                  <span className="material-symbols-outlined text-slate-400">
-                    contact_mail
-                  </span>
-                  Customer Contact Details
-                </h3>
-              </div>
-              <div className="p-6">
-                {/* Contact Type Toggle */}
-                <div className="flex p-1 bg-slate-100 rounded-xl mb-6">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        contactType: "existing",
-                        ...(selectedCustomer
-                          ? {
-                              email: selectedCustomer.email || "",
-                              phone: selectedCustomer.phone || "",
-                              address: toAddressString(
-                                selectedCustomer.address || "",
-                              ),
-                            }
-                          : {}),
-                      }));
-                      setFormErrors({});
-                      if (selectedCustomer) {
-                        setExistingContactSelected(true);
-                      } else {
-                        setExistingContactSelected(false);
-                      }
-                    }}
-                    className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                      formData.contactType === "existing"
-                        ? "bg-white text-primary shadow-sm ring-1 ring-slate-200"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[20px]">
-                      person_search
-                    </span>
-                    Existing Contact
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        contactType: "new",
-                        email: "",
-                        phone: "",
-                        address: "",
-                      }));
-                    }}
-                    className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                      formData.contactType === "new"
-                        ? "bg-white text-primary shadow-sm ring-1 ring-slate-200"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[20px]">
-                      person_add
-                    </span>
-                    New Contact
-                  </button>
-                </div>
+      {/* Booking Status Progress Indicator */}
+      <div className="max-w-full mx-auto mb-10 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 mb-6 px-4">
+          <span className="material-symbols-outlined text-primary text-[20px]">
+            analytics
+          </span>
+          <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+            Booking Workflow Stage
+          </h2>
+        </div>
+        <BookingStatusProgress
+          status={formData.status || "Draft"}
+          activeStep={activeStep}
+          customSteps={customSteps}
+          onStatusChange={(newStatus) => {
+            handleStatusChange(newStatus);
+            const stage = getStatusStage(newStatus);
+            const stages = ["new", "in-progress", "confirmed", "completed"];
+            setActiveStep(stages.indexOf(stage));
+          }}
+        />
+      </div>
 
-                {/* Search for Existing Contact */}
-                {formData.contactType === "existing" && (
-                  <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                    {!existingContactSelected ? (
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                          Search Customer
-                        </label>
-                        <CustomerSearch
-                          onSelect={handleCustomerSelect}
-                          className="w-full"
-                        />
-                      </div>
-                    ) : (
-                      <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setExistingContactSelected(false);
-                              setSelectedCustomer(null);
-                              setSelectedCustomerId(undefined);
-                              setFormData((prev) => ({
-                                ...prev,
-                                contactType: "existing",
-                                email: "",
-                                phone: "",
-                                address: "",
-                              }));
-                            }}
-                            className="bg-white text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 shadow-sm rounded-lg px-3 py-1.5 text-xs font-bold flex items-center gap-1 transition-all"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">
-                              edit
-                            </span>
-                            Change
-                          </button>
-                        </div>
-                        <div className="flex items-start gap-4">
-                          <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xl border-2 border-white shadow-sm">
-                            {selectedCustomer?.firstName?.[0] || ""}
-                            {selectedCustomer?.lastName?.[0] || ""}
-                          </div>
-                          <div>
-                            <h4 className="text-base font-bold text-slate-900">
-                              {selectedCustomer?.firstName}{" "}
-                              {selectedCustomer?.lastName}
-                            </h4>
-                            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
-                              <span className="flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[16px] text-slate-400">
-                                  email
-                                </span>
-                                {selectedCustomer?.email || "N/A"}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[16px] text-slate-400">
-                                  phone
-                                </span>
-                                {selectedCustomer?.phone || "N/A"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div
-                  className={`transition-all duration-500 ease-in-out overflow-hidden ${
-                    !hideContactFields
-                      ? "max-h-[800px] opacity-100"
-                      : "max-h-0 opacity-0"
-                  }`}
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                        Email Address
-                      </label>
-                      <div
-                        className={`relative rounded-md shadow-sm ${
-                          formErrors.email ? "error-field" : ""
-                        }`}
-                      >
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                          <span className="material-symbols-outlined text-slate-400 text-[18px]">
-                            email
-                          </span>
-                        </div>
-                        <input
-                          className={`block w-full h-10 rounded-lg border pl-10 focus:ring sm:text-sm font-medium transition-colors ${
-                            formErrors.email
-                              ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
-                              : "border-slate-200 focus:border-primary focus:ring-primary/10"
-                          }`}
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => {
-                            handleChange(e);
-                            if (formErrors.email)
-                              setFormErrors((prev) => ({ ...prev, email: "" }));
-                          }}
-                          placeholder="customer@email.com"
-                        />
-                      </div>
-                      {formErrors.email && (
-                        <p className="mt-1 text-xs text-red-600 font-medium flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[14px]">
-                            error
-                          </span>
-                          {formErrors.email}
-                        </p>
-                      )}
+      <form onSubmit={handleSubmit} className="max-w-full mx-auto">
+        <div className="space-y-6">
+          {/* Main Content Area */}
+          <div className="space-y-6">
+            {activeStep === 0 && (
+              <div className="animate-in fade-in slide-in-from-bottom-6 duration-700 ease-out space-y-6">
+                {/* Trip Summary Card */}
+                <div className="bg-primary/5 border border-primary/10 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-primary">flight_takeoff</span>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                        Phone Number
-                      </label>
-                      <div
-                        className={`relative rounded-md shadow-sm ${
-                          formErrors.phone ? "error-field" : ""
-                        }`}
-                      >
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                          <span className="material-symbols-outlined text-slate-400 text-[18px]">
-                            phone
-                          </span>
-                        </div>
-                        <input
-                          className={`block w-full h-10 rounded-lg border pl-10 focus:ring sm:text-sm font-medium transition-colors ${
-                            formErrors.phone
-                              ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
-                              : "border-slate-200 focus:border-primary focus:ring-primary/10"
-                          }`}
-                          id="phone"
-                          name="phone"
-                          type="tel"
-                          value={formData.phone}
-                          onChange={(e) => {
-                            handleChange(e);
-                            if (formErrors.phone)
-                              setFormErrors((prev) => ({ ...prev, phone: "" }));
-                          }}
-                          placeholder="+61 XXX XXX XXX"
-                        />
-                      </div>
-                      {formErrors.phone && (
-                        <p className="mt-1 text-xs text-red-600 font-medium flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[14px]">
-                            error
-                          </span>
-                          {formErrors.phone}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                        Address
-                      </label>
-                      <div
-                        className={`relative rounded-md shadow-sm ${
-                          formErrors.address ? "error-field" : ""
-                        }`}
-                      >
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                          <span className="material-symbols-outlined text-slate-400 text-[18px]">
-                            home
-                          </span>
-                        </div>
-                        <input
-                          className={`block w-full h-10 rounded-lg border pl-10 focus:ring sm:text-sm font-medium transition-colors ${
-                            formErrors.address
-                              ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
-                              : "border-slate-200 focus:border-primary focus:ring-primary/10"
-                          }`}
-                          id="address"
-                          name="address"
-                          type="text"
-                          value={formData.address}
-                          onChange={(e) => {
-                            handleChange(e);
-                            if (formErrors.address)
-                              setFormErrors((prev) => ({
-                                ...prev,
-                                address: "",
-                              }));
-                          }}
-                          placeholder="e.g. 123 Main St, City"
-                        />
-                      </div>
-                      {formErrors.address && (
-                        <p className="mt-1 text-xs text-red-600 font-medium flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[14px]">
-                            error
-                          </span>
-                          {formErrors.address}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  className={`transition-all duration-500 ease-in-out overflow-hidden ${
-                    hideContactFields
-                      ? "max-h-[100px] opacity-100"
-                      : "max-h-0 opacity-0"
-                  }`}
-                >
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-start gap-3">
-                    <span className="material-symbols-outlined text-slate-500">
-                      visibility_off
-                    </span>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">
-                        Contact fields hidden
+                      <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                        {formData.origin} → {formData.destination}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
+                        {formData.tripType} • {formData.travelDate} {formData.returnDate ? `to ${formData.returnDate}` : ""}
                       </p>
-                      <p className="text-xs text-slate-600">
-                        Using existing contact or traveller details. Switch to
-                        &quot;New Contact&quot; to edit manually.
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-8">
+                    <div className="text-center md:text-right">
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Total Price</p>
+                      <p className="text-2xl font-black text-primary tracking-tight">${calculateGrandTotal()}</p>
+                    </div>
+                    <div className="h-10 w-[1px] bg-slate-200 hidden md:block"></div>
+                    <div className="text-center md:text-right">
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Itinerary</p>
+                      <p className="text-sm font-bold text-slate-700">
+                        {formData.itineraries?.[0]?.segments.length || 0} Segments
                       </p>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-            {/* Traveller Information */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 className="text-base font-bold text-slate-900 flex items-center tracking-tight gap-2">
-                  <span className="material-symbols-outlined text-slate-400">
-                    person
-                  </span>
-                  Traveller Information
-                </h3>
-              </div>
-              <div className="p-6">
-                {formData.travellers.map((traveller, index) => (
-                  <div
-                    key={traveller.id || index}
-                    className="mb-8 p-6 border rounded-xl bg-slate-50 relative group"
-                  >
-                    <div className="flex justify-between items-center mb-6">
-                      <h4 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-sm">
-                          {index + 1}
-                        </span>
-                        Traveller Details
-                      </h4>
-                      <div className="flex gap-2">
-                        {formData.travellers.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeTraveller(index)}
-                            className="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-bold hover:bg-red-100 flex items-center gap-1"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">
-                              delete
-                            </span>
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    </div>
 
-                    <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                          <div className="flex items-center h-6">
-                            <input
-                              checked={travellerType === "existing"}
-                              onChange={() => {
-                                setTravellerType("existing");
-                                setSearchingTravellerIndex(index);
-                              }}
-                              className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
-                              id={`existing-traveller-${index}`}
-                              name={`traveller-type-${index}`}
-                              type="radio"
-                              value="existing"
-                            />
-                          </div>
-                          <label
-                            className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
-                            htmlFor={`existing-traveller-${index}`}
-                          >
-                            Existing Traveller
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                          <div className="flex items-center h-6">
-                            <input
-                              checked={travellerType === "new"}
-                              onChange={() => {
-                                setTravellerType("new");
-                                setSearchingTravellerIndex(null);
-                              }}
-                              className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
-                              id={`new-traveller-${index}`}
-                              name={`traveller-type-${index}`}
-                              type="radio"
-                              value="new"
-                            />
-                          </div>
-                          <label
-                            className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
-                            htmlFor={`new-traveller-${index}`}
-                          >
-                            New Traveller
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {travellerType === "existing" && (
-                      <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-200 bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                          Search Existing Traveller
-                        </label>
-                        <TravellerSearch
-                          onSelect={(t) => {
-                            handleTravellerSelect(t);
-                          }}
-                        />
-                        <p className="text-xs text-slate-500 mt-2">
-                          Select a traveller to auto-fill their details.
-                        </p>
-                      </div>
-                    )}
-
-                    {(travellerType === "new" ||
-                      (travellerType === "existing" &&
-                        traveller.firstName)) && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* First Name */}
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                            First Name
-                          </label>
-                          <input
-                            className={`block w-full h-10 rounded-lg border px-3 focus:ring focus:border-primary transition-colors uppercase ${
-                              formErrors[`traveller_${index}_firstName`]
-                                ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
-                                : "border-slate-200"
-                            }`}
-                            value={traveller.firstName}
-                            onChange={(e) => {
-                              handleTravellerChange(
-                                index,
-                                "firstName",
-                                e.target.value,
-                              );
-                              if (formErrors[`traveller_${index}_firstName`]) {
-                                const newErrors = { ...formErrors };
-                                delete newErrors[
-                                  `traveller_${index}_firstName`
-                                ];
-                                setFormErrors(newErrors);
-                              }
-                            }}
-                            placeholder="Given Name"
-                          />
-                          {formErrors[`traveller_${index}_firstName`] && (
-                            <p className="mt-1 text-xs text-red-600 font-medium">
-                              {formErrors[`traveller_${index}_firstName`]}
-                            </p>
-                          )}
-                        </div>
-                        {/* Last Name */}
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                            Last Name
-                          </label>
-                          <input
-                            className={`block w-full h-10 rounded-lg border px-3 focus:ring focus:border-primary transition-colors uppercase ${
-                              formErrors[`traveller_${index}_lastName`]
-                                ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
-                                : "border-slate-200"
-                            }`}
-                            value={traveller.lastName}
-                            onChange={(e) => {
-                              handleTravellerChange(
-                                index,
-                                "lastName",
-                                e.target.value,
-                              );
-                              if (formErrors[`traveller_${index}_lastName`]) {
-                                const newErrors = { ...formErrors };
-                                delete newErrors[`traveller_${index}_lastName`];
-                                setFormErrors(newErrors);
-                              }
-                            }}
-                            placeholder="Surname"
-                          />
-                          {formErrors[`traveller_${index}_lastName`] && (
-                            <p className="mt-1 text-xs text-red-600 font-medium">
-                              {formErrors[`traveller_${index}_lastName`]}
-                            </p>
-                          )}
-                        </div>
-                        {/* Passport Number */}
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                            Passport Number
-                          </label>
-                          <div className="relative">
-                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                              <span className="material-symbols-outlined text-slate-400 text-[18px]">
-                                badge
-                              </span>
-                            </div>
-                            <input
-                              className="block w-full h-10 rounded-lg border border-slate-200 pl-10 px-3 focus:ring focus:border-primary transition-colors uppercase"
-                              value={traveller.passportNumber || ""}
-                              onChange={(e) =>
-                                handleTravellerChange(
-                                  index,
-                                  "passportNumber",
-                                  e.target.value,
-                                )
-                              }
-                              placeholder="Passport No."
-                            />
-                          </div>
-                        </div>
-                        {/* Passport Expiry */}
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                            Passport Expiry
-                          </label>
-                          <input
-                            type="date"
-                            className="block w-full h-10 rounded-lg border border-slate-200 px-3 focus:ring focus:border-primary transition-colors"
-                            value={traveller.passportExpiry || ""}
-                            onChange={(e) =>
-                              handleTravellerChange(
-                                index,
-                                "passportExpiry",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </div>
-                        {/* Nationality */}
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                            Nationality
-                          </label>
-                          <div className="relative">
-                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                              <span className="material-symbols-outlined text-slate-400 text-[18px]">
-                                flag
-                              </span>
-                            </div>
-                            <select
-                              className="block w-full h-10 rounded-lg border border-slate-200 pl-10 px-3 focus:ring focus:border-primary transition-colors appearance-none bg-white"
-                              value={traveller.nationality || "Nepalese"}
-                              onChange={(e) =>
-                                handleTravellerChange(
-                                  index,
-                                  "nationality",
-                                  e.target.value,
-                                )
-                              }
-                            >
-                              {countryData.countries.map((c) => (
-                                <option key={c.value} value={c.label}>
-                                  {c.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                        {/* DOB */}
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                            Date of Birth
-                          </label>
-                          <input
-                            type="date"
-                            className="block w-full h-10 rounded-lg border border-slate-200 px-3 focus:ring focus:border-primary transition-colors"
-                            value={traveller.dob || ""}
-                            onChange={(e) =>
-                              handleTravellerChange(
-                                index,
-                                "dob",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </div>
-                        {/* E-Ticket Number */}
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                            E-Ticket Number
-                          </label>
-                          <div className="relative">
-                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                              <span className="material-symbols-outlined text-slate-400 text-[18px]">
-                                confirmation_number
-                              </span>
-                            </div>
-                            <input
-                              className="block w-full h-10 rounded-lg border border-slate-200 pl-10 px-3 focus:ring focus:border-primary transition-colors"
-                              value={traveller.eticketNumber || ""}
-                              onChange={(e) =>
-                                handleTravellerChange(
-                                  index,
-                                  "eticketNumber",
-                                  e.target.value,
-                                )
-                              }
-                              placeholder="E-Ticket No."
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                {/* Route & Trip Details */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
+                    <h3 className="text-base font-bold text-slate-900 flex items-center tracking-tight gap-2">
+                      <span className="material-symbols-outlined text-slate-400">
+                        map
+                      </span>
+                      Trip Configuration
+                    </h3>
                   </div>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={addTraveller}
-                  className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-primary hover:text-primary hover:bg-blue-50/50 transition-all flex items-center justify-center gap-2"
-                >
-                  <span className="material-symbols-outlined">person_add</span>
-                  Add Another Traveller
-                </button>
-              </div>
-            </div>
-
-            {/* Route & Trip Details */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 className="text-base font-bold text-slate-900 flex items-center tracking-tight gap-2">
-                  <span className="material-symbols-outlined text-slate-400">
-                    flight_takeoff
-                  </span>
-                  Route & Trip Details
-                </h3>
-              </div>
-              <div className="p-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
-                      Trip Type
-                    </label>
-                    <select
-                      className="block w-full h-10 rounded-lg border-slate-300 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3"
-                      name="tripType"
-                      value={formData.tripType}
-                      onChange={handleChange}
-                    >
-                      <option value="One Way">One Way</option>
-                      <option value="Round Trip">Round Trip</option>
-                      <option value="Multi City">Multi City</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
-                        Departure Date
-                      </label>
-                      <input
-                        className="block w-full h-10 rounded-lg border-slate-300 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3"
-                        name="travelDate"
-                        type="date"
-                        value={formData.travelDate}
-                        onChange={handleChange}
-                      />
-                    </div>
-                    {formData.tripType === "Round Trip" && (
+                  <div className="p-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
-                          Return Date
+                          Trip Type
                         </label>
-                        <input
+                        <select
                           className="block w-full h-10 rounded-lg border-slate-300 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3"
-                          name="returnDate"
-                          type="date"
-                          value={formData.returnDate}
+                          name="tripType"
+                          value={formData.tripType}
                           onChange={handleChange}
+                        >
+                          <option value="One Way">One Way</option>
+                          <option value="Round Trip">Round Trip</option>
+                          <option value="Multi City">Multi City</option>
+                        </select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
+                            Departure Date
+                          </label>
+                          <input
+                            className="block w-full h-10 rounded-lg border-slate-300 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3"
+                            name="travelDate"
+                            type="date"
+                            value={formData.travelDate}
+                            onChange={handleChange}
+                          />
+                        </div>
+                        {formData.tripType === "Round Trip" && (
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
+                              Return Date
+                            </label>
+                            <input
+                              className="block w-full h-10 rounded-lg border-slate-300 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3"
+                              name="returnDate"
+                              type="date"
+                              value={formData.returnDate}
+                              onChange={handleChange}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <AirportAutocomplete
+                          label="Origin (From)"
+                          name="origin"
+                          value={formData.origin}
+                          onChange={handleChange}
+                          icon="flight_takeoff"
+                          className="block w-full h-10 pl-12 pr-10 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
                         />
                       </div>
-                    )}
-                  </div>
-                  <div>
-                    <AirportAutocomplete
-                      label="Origin (From)"
-                      name="origin"
-                      value={formData.origin}
-                      onChange={handleChange}
-                      icon="flight_takeoff"
-                      className="block w-full h-10 pl-12 pr-10 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
-                    />
-                  </div>
-                  <div>
-                    <AirportAutocomplete
-                      label="Destination (To)"
-                      name="destination"
-                      value={formData.destination}
-                      onChange={handleChange}
-                      icon="flight_land"
-                      className="block w-full h-10 pl-12 pr-10 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
-                    />
-                  </div>
-                </div>
-
-                {/* Detailed Itinerary Segments */}
-                <div className="space-y-4">
-                  {formData.itineraries?.map((itinerary, itinIndex) => (
-                    <div
-                      key={itinIndex}
-                      className="bg-slate-50 border border-slate-200 rounded-xl p-4"
-                    >
-                      <div className="flex justify-between items-center mb-3">
-                        <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                          {itinIndex === 0
-                            ? "Outbound Flight Segments"
-                            : "Return Flight Segments"}
-                        </h4>
+                      <div>
+                        <AirportAutocomplete
+                          label="Destination (To)"
+                          name="destination"
+                          value={formData.destination}
+                          onChange={handleChange}
+                          icon="flight_land"
+                          className="block w-full h-10 pl-12 pr-10 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
+                        />
                       </div>
+                    </div>
 
-                      <div className="space-y-3">
-                        {itinerary.segments.map((segment, segIndex) => (
-                          <div
-                            key={segIndex}
-                            className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm relative group"
-                          >
+                    {/* Detailed Itinerary Segments */}
+                    <div className="space-y-4">
+                      {formData.itineraries?.map((itinerary, itinIndex) => (
+                        <div
+                          key={itinIndex}
+                          className="bg-slate-50 border border-slate-200 rounded-xl p-4"
+                        >
+                          <div className="flex justify-between items-center mb-3">
+                            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                              {itinIndex === 0
+                                ? "Outbound Flight Segments"
+                                : "Inbound Flight Segments"}
+                            </h4>
+                          </div>
+
+                          <div className="space-y-3">
+                            {itinerary.segments.map((segment, segIndex) => (
+                              <div
+                                key={segIndex}
+                                className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm relative group"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => removeSegment(itinIndex, segIndex)}
+                                  className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
+                                >
+                                  <span className="material-symbols-outlined text-lg">
+                                    delete
+                                  </span>
+                                </button>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+                                  {/* Departure */}
+                                  <div className="col-span-1 md:col-span-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">
+                                      Departure
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2 mt-1">
+                                      <input
+                                        placeholder="IATA"
+                                        className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
+                                        value={segment.departure?.iataCode}
+                                        onChange={(e) =>
+                                          handleSegmentChange(
+                                            itinIndex,
+                                            segIndex,
+                                            "departure",
+                                            e.target.value,
+                                            "iataCode",
+                                          )
+                                        }
+                                      />
+                                      <input
+                                        placeholder="Terminal"
+                                        className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
+                                        value={segment.departure?.terminal}
+                                        onChange={(e) =>
+                                          handleSegmentChange(
+                                            itinIndex,
+                                            segIndex,
+                                            "departure",
+                                            e.target.value,
+                                            "terminal",
+                                          )
+                                        }
+                                      />
+                                      <input
+                                        type="datetime-local"
+                                        className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
+                                        value={segment.departure?.at}
+                                        onChange={(e) =>
+                                          handleSegmentChange(
+                                            itinIndex,
+                                            segIndex,
+                                            "departure",
+                                            e.target.value,
+                                            "at",
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Arrival */}
+                                  <div className="col-span-1 md:col-span-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">
+                                      Arrival
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2 mt-1">
+                                      <input
+                                        placeholder="IATA"
+                                        className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
+                                        value={segment.arrival?.iataCode}
+                                        onChange={(e) =>
+                                          handleSegmentChange(
+                                            itinIndex,
+                                            segIndex,
+                                            "arrival",
+                                            e.target.value,
+                                            "iataCode",
+                                          )
+                                        }
+                                      />
+                                      <input
+                                        placeholder="Terminal"
+                                        className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
+                                        value={segment.arrival?.terminal}
+                                        onChange={(e) =>
+                                          handleSegmentChange(
+                                            itinIndex,
+                                            segIndex,
+                                            "arrival",
+                                            e.target.value,
+                                            "terminal",
+                                          )
+                                        }
+                                      />
+                                      <input
+                                        type="datetime-local"
+                                        className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
+                                        value={segment.arrival?.at}
+                                        onChange={(e) =>
+                                          handleSegmentChange(
+                                            itinIndex,
+                                            segIndex,
+                                            "arrival",
+                                            e.target.value,
+                                            "at",
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                  <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase">
+                                      Carrier
+                                    </label>
+                                    <input
+                                      placeholder="Code (e.g. QF)"
+                                      className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
+                                      value={segment.carrierCode}
+                                      onChange={(e) =>
+                                        handleSegmentChange(
+                                          itinIndex,
+                                          segIndex,
+                                          "carrierCode",
+                                          e.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase">
+                                      Flight No.
+                                    </label>
+                                    <input
+                                      placeholder="Number"
+                                      className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
+                                      value={segment.number}
+                                      onChange={(e) =>
+                                        handleSegmentChange(
+                                          itinIndex,
+                                          segIndex,
+                                          "number",
+                                          e.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase">
+                                      Aircraft
+                                    </label>
+                                    <input
+                                      placeholder="Code"
+                                      className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
+                                      value={segment.aircraft?.code}
+                                      onChange={(e) =>
+                                        handleSegmentChange(
+                                          itinIndex,
+                                          segIndex,
+                                          "aircraft",
+                                          e.target.value,
+                                          "code",
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase">
+                                      Duration
+                                    </label>
+                                    <input
+                                      placeholder="PTxxHxxM"
+                                      className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
+                                      value={segment.duration}
+                                      onChange={(e) =>
+                                        handleSegmentChange(
+                                          itinIndex,
+                                          segIndex,
+                                          "duration",
+                                          e.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                             <button
                               type="button"
-                              onClick={() => removeSegment(itinIndex, segIndex)}
-                              className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
+                              onClick={() => addSegment(itinIndex)}
+                              className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 font-bold hover:border-primary hover:text-primary hover:bg-blue-50/50 transition-all flex items-center justify-center gap-2 text-sm"
                             >
                               <span className="material-symbols-outlined text-lg">
-                                delete
+                                add
                               </span>
+                              Add Flight Segment
                             </button>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-                              {/* Departure */}
-                              <div className="col-span-1 md:col-span-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase">
-                                  Departure
-                                </label>
-                                <div className="grid grid-cols-3 gap-2 mt-1">
-                                  <input
-                                    placeholder="IATA"
-                                    className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
-                                    value={segment.departure?.iataCode}
-                                    onChange={(e) =>
-                                      handleSegmentChange(
-                                        itinIndex,
-                                        segIndex,
-                                        "departure",
-                                        e.target.value,
-                                        "iataCode",
-                                      )
-                                    }
-                                  />
-                                  <input
-                                    placeholder="Terminal"
-                                    className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
-                                    value={segment.departure?.terminal}
-                                    onChange={(e) =>
-                                      handleSegmentChange(
-                                        itinIndex,
-                                        segIndex,
-                                        "departure",
-                                        e.target.value,
-                                        "terminal",
-                                      )
-                                    }
-                                  />
-                                  <input
-                                    type="datetime-local"
-                                    className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
-                                    value={segment.departure?.at}
-                                    onChange={(e) =>
-                                      handleSegmentChange(
-                                        itinIndex,
-                                        segIndex,
-                                        "departure",
-                                        e.target.value,
-                                        "at",
-                                      )
-                                    }
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Arrival */}
-                              <div className="col-span-1 md:col-span-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase">
-                                  Arrival
-                                </label>
-                                <div className="grid grid-cols-3 gap-2 mt-1">
-                                  <input
-                                    placeholder="IATA"
-                                    className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
-                                    value={segment.arrival?.iataCode}
-                                    onChange={(e) =>
-                                      handleSegmentChange(
-                                        itinIndex,
-                                        segIndex,
-                                        "arrival",
-                                        e.target.value,
-                                        "iataCode",
-                                      )
-                                    }
-                                  />
-                                  <input
-                                    placeholder="Terminal"
-                                    className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
-                                    value={segment.arrival?.terminal}
-                                    onChange={(e) =>
-                                      handleSegmentChange(
-                                        itinIndex,
-                                        segIndex,
-                                        "arrival",
-                                        e.target.value,
-                                        "terminal",
-                                      )
-                                    }
-                                  />
-                                  <input
-                                    type="datetime-local"
-                                    className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
-                                    value={segment.arrival?.at}
-                                    onChange={(e) =>
-                                      handleSegmentChange(
-                                        itinIndex,
-                                        segIndex,
-                                        "arrival",
-                                        e.target.value,
-                                        "at",
-                                      )
-                                    }
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                              <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase">
-                                  Carrier
-                                </label>
-                                <input
-                                  placeholder="Code (e.g. QF)"
-                                  className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
-                                  value={segment.carrierCode}
-                                  onChange={(e) =>
-                                    handleSegmentChange(
-                                      itinIndex,
-                                      segIndex,
-                                      "carrierCode",
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase">
-                                  Flight No.
-                                </label>
-                                <input
-                                  placeholder="Number"
-                                  className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
-                                  value={segment.number}
-                                  onChange={(e) =>
-                                    handleSegmentChange(
-                                      itinIndex,
-                                      segIndex,
-                                      "number",
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase">
-                                  Aircraft
-                                </label>
-                                <input
-                                  placeholder="Code"
-                                  className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
-                                  value={segment.aircraft?.code}
-                                  onChange={(e) =>
-                                    handleSegmentChange(
-                                      itinIndex,
-                                      segIndex,
-                                      "aircraft",
-                                      e.target.value,
-                                      "code",
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase">
-                                  Duration
-                                </label>
-                                <input
-                                  placeholder="PTxxHxxM"
-                                  className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
-                                  value={segment.duration}
-                                  onChange={(e) =>
-                                    handleSegmentChange(
-                                      itinIndex,
-                                      segIndex,
-                                      "duration",
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => addSegment(itinIndex)}
-                          className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 font-bold hover:border-primary hover:text-primary hover:bg-blue-50/50 transition-all flex items-center justify-center gap-2 text-sm"
-                        >
-                          <span className="material-symbols-outlined text-lg">
-                            add
-                          </span>
-                          Add Flight Segment
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-8 pt-6 border-t border-slate-100">
-                  <div className="flex justify-between items-center mb-6">
-                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
-                      Global Flight Details
-                    </h4>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="md:col-span-1">
-                      <AirlineAutocomplete
-                        label="Primary Airline"
-                        name="airlines"
-                        value={formData.airlines}
-                        onChange={handleChange}
-                        icon="airlines"
-                      />
-                    </div>
-                    <div className="md:col-span-1">
-                      <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
-                        Class
-                      </label>
-                      <select
-                        className="block w-full h-10 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
-                        name="flightClass"
-                        value={formData.flightClass}
-                        onChange={handleChange}
-                      >
-                        <option>Economy</option>
-                        <option>Premium Economy</option>
-                        <option>Business</option>
-                        <option>First Class</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <div className="p-3 bg-blue-50 border border-blue-100 rounded-md flex items-start gap-3">
-                    <span className="material-symbols-outlined text-blue-500 mt-0.5">
-                      info
-                    </span>
-                    <div>
-                      <p className="text-sm text-blue-800 font-medium">
-                        Itinerary Modification
-                      </p>
-                      <p className="text-xs text-blue-700 mt-0.5">
-                        Changing origin, destination, or dates may affect
-                        pricing. Ensure to re-calculate fares after modifying
-                        the itinerary.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Add-ons & Services */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 className="text-base font-bold text-slate-900 flex items-center tracking-tight gap-2">
-                  <span className="material-symbols-outlined text-slate-400">
-                    extension
-                  </span>
-                  Add-ons & Services
-                </h3>
-              </div>
-              <div className="p-6">
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-                  ANCILLARY SERVICES
-                </label>
-                <div className="space-y-4">
-                  {servicesLoading ? (
-                    <div className="text-sm text-slate-500 font-medium">
-                      Loading services...
-                    </div>
-                  ) : services.length === 0 ? (
-                    <div className="text-sm text-slate-500 font-medium">
-                      No active services found.
-                    </div>
-                  ) : (
-                    services.map((service) => {
-                      const key = service.name;
-                      const selected = Object.prototype.hasOwnProperty.call(
-                        formData.prices,
-                        key,
-                      );
-                      const value = selected
-                        ? formData.prices[key]
-                        : String(service.base_price ?? 0);
-
-                      return (
-                        <div
-                          key={service.id || service.name}
-                          className="flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <input
-                              type="checkbox"
-                              checked={selected}
-                              onChange={(e) => {
-                                const checked = e.target.checked;
-                                setFormData((prev) => {
-                                  const nextPrices = { ...prev.prices };
-                                  if (checked) {
-                                    nextPrices[key] =
-                                      nextPrices[key] ||
-                                      String(service.base_price ?? 0);
-                                  } else {
-                                    delete nextPrices[key];
-                                  }
-                                  return { ...prev, prices: nextPrices };
-                                });
-                              }}
-                              className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary"
-                            />
-                            <div className="min-w-0">
-                              <div className="text-sm font-bold text-slate-700 truncate">
-                                {service.name}
-                              </div>
-                              {service.type && (
-                                <div className="text-xs text-slate-400 font-medium truncate">
-                                  {service.type}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="relative w-28">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <span className="text-slate-400 text-xs">$</span>
-                            </div>
-                            <input
-                              type="number"
-                              value={value}
-                              disabled={!selected}
-                              onChange={(e) => {
-                                const nextValue = e.target.value;
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  prices: {
-                                    ...prev.prices,
-                                    [key]: nextValue,
-                                  },
-                                }));
-                              }}
-                              className="block w-full h-9 rounded-lg border-slate-200 pl-6 pr-3 text-right text-sm font-medium focus:border-primary focus:ring-primary/10 disabled:bg-slate-50 disabled:text-slate-400"
-                            />
                           </div>
                         </div>
-                      );
-                    })
-                  )}
+                      ))}
+                    </div>
 
-                  <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
-                    <span className="text-sm font-bold text-slate-900">
-                      Add-ons Subtotal
-                    </span>
-                    <span className="text-lg font-bold text-blue-600">
-                      ${calculateAddonsTotal()}
-                    </span>
+                    <div className="mt-8 pt-6 border-t border-slate-100">
+                      <div className="flex justify-between items-center mb-6">
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                          Global Flight Details
+                        </h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="md:col-span-1">
+                          <AirlineAutocomplete
+                            label="Primary Airline"
+                            name="airlines"
+                            value={formData.airlines}
+                            onChange={handleChange}
+                            icon="airlines"
+                          />
+                        </div>
+                        <div className="md:col-span-1">
+                          <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                            Class
+                          </label>
+                          <select
+                            className="block w-full h-10 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
+                            name="flightClass"
+                            value={formData.flightClass}
+                            onChange={handleChange}
+                          >
+                            <option>Economy</option>
+                            <option>Premium Economy</option>
+                            <option>Business</option>
+                            <option>First Class</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6">
+                      <div className="p-3 bg-blue-50 border border-blue-100 rounded-md flex items-start gap-3">
+                        <span className="material-symbols-outlined text-blue-500 mt-0.5">
+                          info
+                        </span>
+                        <div>
+                          <p className="text-sm text-blue-800 font-medium">
+                            Itinerary Modification
+                          </p>
+                          <p className="text-xs text-blue-700 mt-0.5">
+                            Changing origin, destination, or dates may affect
+                            pricing. Ensure to re-calculate fares after modifying
+                            the itinerary.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange("Pending")}
+                        className="px-8 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-blue-600 transition-all flex items-center gap-2"
+                      >
+                        Continue to Travellers
+                        <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Special Requests / Notes */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 className="text-base font-bold text-slate-900 flex items-center tracking-tight gap-2">
-                  <span className="material-symbols-outlined text-slate-400">
-                    note
-                  </span>
-                  Special Requests / Notes
-                </h3>
-              </div>
-              <div className="p-6">
-                <textarea
-                  className="block w-full h-24 rounded-lg border-slate-200 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3 py-2"
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  placeholder="Enter any special requests or internal notes here..."
-                ></textarea>
-              </div>
-            </div>
-          </div>
+            {activeStep === 1 && (
+              <div className="animate-in fade-in slide-in-from-bottom-6 duration-700 ease-out space-y-6">
+                {/* Traveller Information */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
+                    <h3 className="text-base font-bold text-slate-900 flex items-center tracking-tight gap-2">
+                      <span className="material-symbols-outlined text-slate-400">
+                        groups
+                      </span>
+                      Traveller Details
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    {formData.travellers.map((traveller, index) => (
+                      <div
+                        key={traveller.id || index}
+                        className="mb-8 p-6 border rounded-xl bg-slate-50 relative group"
+                      >
+                        <div className="flex justify-between items-center mb-6">
+                          <h4 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-sm">
+                              {index + 1}
+                            </span>
+                            Traveller Details
+                          </h4>
+                          <div className="flex gap-2">
+                            {formData.travellers.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeTraveller(index)}
+                                className="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-bold hover:bg-red-100 flex items-center gap-1"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">
+                                  delete
+                                </span>
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        </div>
 
-          {/* Sidebar Column (Right) */}
-          <div className="space-y-6">
+                        <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                              <div className="flex items-center h-6">
+                                <input
+                                  checked={travellerType === "existing"}
+                                  onChange={() => {
+                                    setTravellerType("existing");
+                                    setSearchingTravellerIndex(index);
+                                  }}
+                                  className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
+                                  id={`existing-traveller-${index}`}
+                                  name={`traveller-type-${index}`}
+                                  type="radio"
+                                  value="existing"
+                                />
+                              </div>
+                              <label
+                                className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
+                                htmlFor={`existing-traveller-${index}`}
+                              >
+                                Existing Traveller
+                              </label>
+                            </div>
+                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                              <div className="flex items-center h-6">
+                                <input
+                                  checked={travellerType === "new"}
+                                  onChange={() => {
+                                    setTravellerType("new");
+                                    setSearchingTravellerIndex(null);
+                                  }}
+                                  className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
+                                  id={`new-traveller-${index}`}
+                                  name={`traveller-type-${index}`}
+                                  type="radio"
+                                  value="new"
+                                />
+                              </div>
+                              <label
+                                className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
+                                htmlFor={`new-traveller-${index}`}
+                              >
+                                New Traveller
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+
+                        {travellerType === "existing" && (
+                          <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-200 bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
+                            <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                              Search Existing Traveller
+                            </label>
+                            <TravellerSearch
+                              onSelect={(t) => {
+                                handleTravellerSelect(t);
+                              }}
+                            />
+                            <p className="text-xs text-slate-500 mt-2">
+                              Select a traveller to auto-fill their details.
+                            </p>
+                          </div>
+                        )}
+
+                        {(travellerType === "new" ||
+                          (travellerType === "existing" &&
+                            traveller.firstName)) && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* First Name */}
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                                First Name
+                              </label>
+                              <input
+                                className={`block w-full h-10 rounded-lg border px-3 focus:ring focus:border-primary transition-colors uppercase ${
+                                  formErrors[`traveller_${index}_firstName`]
+                                    ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
+                                    : "border-slate-200"
+                                }`}
+                                value={traveller.firstName}
+                                onChange={(e) => {
+                                  handleTravellerChange(
+                                    index,
+                                    "firstName",
+                                    e.target.value,
+                                  );
+                                  if (formErrors[`traveller_${index}_firstName`]) {
+                                    const newErrors = { ...formErrors };
+                                    delete newErrors[
+                                      `traveller_${index}_firstName`
+                                    ];
+                                    setFormErrors(newErrors);
+                                  }
+                                }}
+                                placeholder="Given Name"
+                              />
+                              {formErrors[`traveller_${index}_firstName`] && (
+                                <p className="mt-1 text-xs text-red-600 font-medium">
+                                  {formErrors[`traveller_${index}_firstName`]}
+                                </p>
+                              )}
+                            </div>
+                            {/* Last Name */}
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                                Last Name
+                              </label>
+                              <input
+                                className={`block w-full h-10 rounded-lg border px-3 focus:ring focus:border-primary transition-colors uppercase ${
+                                  formErrors[`traveller_${index}_lastName`]
+                                    ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
+                                    : "border-slate-200"
+                                }`}
+                                value={traveller.lastName}
+                                onChange={(e) => {
+                                  handleTravellerChange(
+                                    index,
+                                    "lastName",
+                                    e.target.value,
+                                  );
+                                  if (formErrors[`traveller_${index}_lastName`]) {
+                                    const newErrors = { ...formErrors };
+                                    delete newErrors[`traveller_${index}_lastName`];
+                                    setFormErrors(newErrors);
+                                  }
+                                }}
+                                placeholder="Surname"
+                              />
+                              {formErrors[`traveller_${index}_lastName`] && (
+                                <p className="mt-1 text-xs text-red-600 font-medium">
+                                  {formErrors[`traveller_${index}_lastName`]}
+                                </p>
+                              )}
+                            </div>
+                            {/* Passport Number */}
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                                Passport Number
+                              </label>
+                              <div className="relative">
+                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                  <span className="material-symbols-outlined text-slate-400 text-[18px]">
+                                    badge
+                                  </span>
+                                </div>
+                                <input
+                                  className="block w-full h-10 rounded-lg border border-slate-200 pl-10 px-3 focus:ring focus:border-primary transition-colors uppercase"
+                                  value={traveller.passportNumber || ""}
+                                  onChange={(e) =>
+                                    handleTravellerChange(
+                                      index,
+                                      "passportNumber",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="Passport No."
+                                />
+                              </div>
+                            </div>
+                            {/* Passport Expiry */}
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                                Passport Expiry
+                              </label>
+                              <input
+                                type="date"
+                                className="block w-full h-10 rounded-lg border border-slate-200 px-3 focus:ring focus:border-primary transition-colors"
+                                value={traveller.passportExpiry || ""}
+                                onChange={(e) =>
+                                  handleTravellerChange(
+                                    index,
+                                    "passportExpiry",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </div>
+                            {/* Nationality */}
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                                Nationality
+                              </label>
+                              <div className="relative">
+                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                  <span className="material-symbols-outlined text-slate-400 text-[18px]">
+                                    flag
+                                  </span>
+                                </div>
+                                <select
+                                  className="block w-full h-10 rounded-lg border border-slate-200 pl-10 px-3 focus:ring focus:border-primary transition-colors appearance-none bg-white"
+                                  value={traveller.nationality || "Nepalese"}
+                                  onChange={(e) =>
+                                    handleTravellerChange(
+                                      index,
+                                      "nationality",
+                                      e.target.value,
+                                    )
+                                  }
+                                >
+                                  {countryData.countries.map((c) => (
+                                    <option key={c.value} value={c.label}>
+                                      {c.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                            {/* DOB */}
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                                Date of Birth
+                              </label>
+                              <input
+                                type="date"
+                                className="block w-full h-10 rounded-lg border border-slate-200 px-3 focus:ring focus:border-primary transition-colors"
+                                value={traveller.dob || ""}
+                                onChange={(e) =>
+                                  handleTravellerChange(
+                                    index,
+                                    "dob",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </div>
+                            {/* E-Ticket Number */}
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                                E-Ticket Number
+                              </label>
+                              <div className="relative">
+                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                  <span className="material-symbols-outlined text-slate-400 text-[18px]">
+                                    confirmation_number
+                                  </span>
+                                </div>
+                                <input
+                                  className="block w-full h-10 rounded-lg border border-slate-200 pl-10 px-3 focus:ring focus:border-primary transition-colors"
+                                  value={traveller.eticketNumber || ""}
+                                  onChange={(e) =>
+                                    handleTravellerChange(
+                                      index,
+                                      "eticketNumber",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="E-Ticket No."
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={addTraveller}
+                      className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-primary hover:text-primary hover:bg-blue-50/50 transition-all flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined">person_add</span>
+                      Add Another Traveller
+                    </button>
+                  </div>
+                </div>
+
+                {/* Customer Contact Details (Moved here from Trip Details) */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
+                    <h3 className="text-base font-bold text-slate-900 flex items-center tracking-tight gap-2">
+                      <span className="material-symbols-outlined text-slate-400">
+                        contact_mail
+                      </span>
+                      Customer Contact Details
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    {/* Contact Type Toggle */}
+                    <div className="flex p-1 bg-slate-100 rounded-xl mb-6">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            contactType: "existing",
+                            ...(selectedCustomer
+                              ? {
+                                  email: selectedCustomer.email || "",
+                                  phone: selectedCustomer.phone || "",
+                                  address: toAddressString(
+                                    selectedCustomer.address || "",
+                                  ),
+                                }
+                              : {}),
+                          }));
+                          setFormErrors({});
+                          if (selectedCustomer) {
+                            setExistingContactSelected(true);
+                          } else {
+                            setExistingContactSelected(false);
+                          }
+                        }}
+                        className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
+                          formData.contactType === "existing"
+                            ? "bg-white text-primary shadow-sm ring-1 ring-slate-200"
+                            : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[20px]">
+                          person_search
+                        </span>
+                        Existing Contact
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            contactType: "new",
+                            email: "",
+                            phone: "",
+                            address: "",
+                          }));
+                        }}
+                        className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
+                          formData.contactType === "new"
+                            ? "bg-white text-primary shadow-sm ring-1 ring-slate-200"
+                            : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[20px]">
+                          person_add
+                        </span>
+                        New Contact
+                      </button>
+                    </div>
+
+                    {/* Search for Existing Contact */}
+                    {formData.contactType === "existing" && (
+                      <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                        {!existingContactSelected ? (
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                              Search Customer
+                            </label>
+                            <CustomerSearch
+                              onSelect={handleCustomerSelect}
+                              className="w-full"
+                            />
+                          </div>
+                        ) : (
+                          <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setExistingContactSelected(false);
+                                  setSelectedCustomer(null);
+                                  setSelectedCustomerId(undefined);
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    contactType: "existing",
+                                    email: "",
+                                    phone: "",
+                                    address: "",
+                                  }));
+                                }}
+                                className="bg-white text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 shadow-sm rounded-lg px-3 py-1.5 text-xs font-bold flex items-center gap-1 transition-all"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">
+                                  edit
+                                </span>
+                                Change
+                              </button>
+                            </div>
+                            <div className="flex items-start gap-4">
+                              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xl border-2 border-white shadow-sm">
+                                {selectedCustomer?.firstName?.[0] || ""}
+                                {selectedCustomer?.lastName?.[0] || ""}
+                              </div>
+                              <div>
+                                <h4 className="text-base font-bold text-slate-900">
+                                  {selectedCustomer?.firstName}{" "}
+                                  {selectedCustomer?.lastName}
+                                </h4>
+                                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                                  <span className="flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[16px] text-slate-400">
+                                      email
+                                    </span>
+                                    {selectedCustomer?.email || "N/A"}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[16px] text-slate-400">
+                                      phone
+                                    </span>
+                                    {selectedCustomer?.phone || "N/A"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div
+                      className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                        !hideContactFields
+                          ? "max-h-[800px] opacity-100"
+                          : "max-h-0 opacity-0"
+                      }`}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                            Email Address
+                          </label>
+                          <div
+                            className={`relative rounded-md shadow-sm ${
+                              formErrors.email ? "error-field" : ""
+                            }`}
+                          >
+                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                              <span className="material-symbols-outlined text-slate-400 text-[18px]">
+                                email
+                              </span>
+                            </div>
+                            <input
+                              className={`block w-full h-10 rounded-lg border pl-10 focus:ring sm:text-sm font-medium transition-colors ${
+                                formErrors.email
+                                  ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
+                                  : "border-slate-200 focus:border-primary focus:ring-primary/10"
+                              }`}
+                              id="email"
+                              name="email"
+                              type="email"
+                              value={formData.email}
+                              onChange={(e) => {
+                                handleChange(e);
+                                if (formErrors.email)
+                                  setFormErrors((prev) => ({ ...prev, email: "" }));
+                              }}
+                              placeholder="customer@email.com"
+                            />
+                          </div>
+                          {formErrors.email && (
+                            <p className="mt-1 text-xs text-red-600 font-medium flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px]">
+                                error
+                              </span>
+                              {formErrors.email}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                            Phone Number
+                          </label>
+                          <div
+                            className={`relative rounded-md shadow-sm ${
+                              formErrors.phone ? "error-field" : ""
+                            }`}
+                          >
+                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                              <span className="material-symbols-outlined text-slate-400 text-[18px]">
+                                phone
+                              </span>
+                            </div>
+                            <input
+                              className={`block w-full h-10 rounded-lg border pl-10 focus:ring sm:text-sm font-medium transition-colors ${
+                                formErrors.phone
+                                  ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
+                                  : "border-slate-200 focus:border-primary focus:ring-primary/10"
+                              }`}
+                              id="phone"
+                              name="phone"
+                              type="tel"
+                              value={formData.phone}
+                              onChange={(e) => {
+                                handleChange(e);
+                                if (formErrors.phone)
+                                  setFormErrors((prev) => ({ ...prev, phone: "" }));
+                              }}
+                              placeholder="+61 XXX XXX XXX"
+                            />
+                          </div>
+                          {formErrors.phone && (
+                            <p className="mt-1 text-xs text-red-600 font-medium flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px]">
+                                error
+                              </span>
+                              {formErrors.phone}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                            Address
+                          </label>
+                          <div
+                            className={`relative rounded-md shadow-sm ${
+                              formErrors.address ? "error-field" : ""
+                            }`}
+                          >
+                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                              <span className="material-symbols-outlined text-slate-400 text-[18px]">
+                                home
+                              </span>
+                            </div>
+                            <input
+                              className={`block w-full h-10 rounded-lg border pl-10 focus:ring sm:text-sm font-medium transition-colors ${
+                                formErrors.address
+                                  ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
+                                  : "border-slate-200 focus:border-primary focus:ring-primary/10"
+                              }`}
+                              id="address"
+                              name="address"
+                              type="text"
+                              value={formData.address}
+                              onChange={(e) => {
+                                handleChange(e);
+                                if (formErrors.address)
+                                  setFormErrors((prev) => ({
+                                    ...prev,
+                                    address: "",
+                                  }));
+                              }}
+                              placeholder="e.g. 123 Main St, City"
+                            />
+                          </div>
+                          {formErrors.address && (
+                            <p className="mt-1 text-xs text-red-600 font-medium flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px]">
+                                error
+                              </span>
+                              {formErrors.address}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                        hideContactFields
+                          ? "max-h-[100px] opacity-100"
+                          : "max-h-0 opacity-0"
+                      }`}
+                    >
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-start gap-3">
+                        <span className="material-symbols-outlined text-slate-500">
+                          visibility_off
+                        </span>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">
+                            Contact fields hidden
+                          </p>
+                          <p className="text-xs text-slate-600">
+                            Using existing contact or traveller details. Switch to
+                            &quot;New Contact&quot; to edit manually.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeStep === 2 && (
+              <div className="animate-in fade-in slide-in-from-bottom-6 duration-700 ease-out space-y-6">
+                {/* Add-ons & Services */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
+                    <h3 className="text-base font-bold text-slate-900 flex items-center tracking-tight gap-2">
+                      <span className="material-symbols-outlined text-slate-400">
+                        add_circle
+                      </span>
+                      Available Add-ons & Services
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    <p className="text-xs text-slate-500 font-medium mb-6 uppercase tracking-widest">
+                      Customize trip with ancillary services
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {servicesLoading ? (
+                        <div className="col-span-full py-10 flex flex-col items-center justify-center text-slate-400 gap-2">
+                          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                          <span className="text-xs font-bold uppercase tracking-widest">Loading Services...</span>
+                        </div>
+                      ) : services.length === 0 ? (
+                        <div className="col-span-full py-10 border-2 border-dashed border-slate-100 rounded-xl flex flex-col items-center justify-center text-slate-400">
+                          <span className="material-symbols-outlined text-4xl mb-2">inventory_2</span>
+                          <span className="text-xs font-bold uppercase tracking-widest">No active services found</span>
+                        </div>
+                      ) : (
+                        services.map((service) => {
+                          const key = service.name;
+                          const selected = Object.prototype.hasOwnProperty.call(
+                            formData.prices,
+                            key,
+                          );
+                          const value = selected
+                            ? formData.prices[key]
+                            : String(service.base_price ?? 0);
+
+                          return (
+                            <div
+                              key={service.id || service.name}
+                              className={`p-4 rounded-xl border transition-all duration-300 flex items-start gap-4 ${
+                                selected 
+                                  ? "bg-primary/5 border-primary shadow-sm ring-1 ring-primary/10" 
+                                  : "bg-white border-slate-100 hover:border-slate-200"
+                              }`}
+                            >
+                              <div className="flex items-center h-6 mt-0.5">
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setFormData((prev) => {
+                                      const nextPrices = { ...prev.prices };
+                                      if (checked) {
+                                        nextPrices[key] =
+                                          nextPrices[key] ||
+                                          String(service.base_price ?? 0);
+                                      } else {
+                                        delete nextPrices[key];
+                                      }
+                                      return { ...prev, prices: nextPrices };
+                                    });
+                                  }}
+                                  className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer transition-colors"
+                                />
+                              </div>
+                              <div className="flex-grow min-w-0">
+                                <div className="flex justify-between items-start mb-1">
+                                  <h4 className={`text-sm font-black truncate ${selected ? "text-primary" : "text-slate-700"}`}>
+                                    {service.name}
+                                  </h4>
+                                  <span className={`text-xs font-black ${selected ? "text-primary" : "text-slate-400"}`}>
+                                    ${parseFloat(value).toFixed(2)}
+                                  </span>
+                                </div>
+                                {service.description && (
+                                  <p className="text-[11px] text-slate-500 leading-relaxed mb-3 line-clamp-2">
+                                    {service.description}
+                                  </p>
+                                )}
+                                {selected && (
+                                  <div className="mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <label className="text-[10px] font-black text-primary uppercase tracking-widest block mb-1.5">
+                                      Adjust Price
+                                    </label>
+                                    <div className="relative">
+                                      <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                                        <span className="text-primary/40 text-[10px] font-bold">$</span>
+                                      </div>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={value}
+                                        onChange={(e) => {
+                                          const nextValue = e.target.value;
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            prices: {
+                                              ...prev.prices,
+                                              [key]: nextValue,
+                                            },
+                                          }));
+                                        }}
+                                        className="block w-full h-8 rounded-lg border-primary/20 bg-white pl-6 pr-3 text-xs font-black text-primary focus:border-primary focus:ring focus:ring-primary/10 transition-all"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-blue-500"></span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          Add-ons impact grand total
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-slate-500 uppercase">Subtotal:</span>
+                        <span className="text-xl font-black text-blue-600">
+                          ${calculateAddonsTotal()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeStep === 3 && (
+              <div className="animate-in fade-in slide-in-from-bottom-6 duration-700 ease-out space-y-6">
+                {/* Issuance Requirements */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl overflow-hidden shadow-sm">
+                  <div className="px-6 py-4 border-b border-amber-100 flex justify-between items-center bg-white">
+                    <h3 className="text-base font-bold text-amber-900 flex items-center tracking-tight gap-2">
+                      <span className="material-symbols-outlined text-amber-500">
+                        task_alt
+                      </span>
+                      Issuance Requirements
+                    </h3>
+                    <span className="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold uppercase rounded-md">
+                      Mandatory
+                    </span>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                          PNR Reference / Booking ID
+                        </label>
+                        <div className="relative">
+                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <span className="material-symbols-outlined text-slate-400 text-[18px]">
+                              confirmation_number
+                            </span>
+                          </div>
+                          <input
+                            className="block w-full h-12 rounded-lg border-slate-300 pl-10 focus:ring focus:ring-amber-500/10 focus:border-amber-500 transition-all uppercase font-black text-lg tracking-widest text-slate-900"
+                            name="pnr"
+                            value={formData.pnr}
+                            onChange={handleChange}
+                            placeholder="ENTER PNR"
+                          />
+                        </div>
+                        <p className="mt-2 text-xs text-amber-700 font-medium">
+                          Enter the airline PNR or GDS reference to enable marking as Issued.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                          Issuing Agency
+                        </label>
+                        <select
+                          className="block w-full h-12 rounded-lg border-slate-300 focus:ring focus:ring-amber-500/10 focus:border-amber-500 transition-all font-bold text-slate-900"
+                          name="agency"
+                          value={formData.agency}
+                          onChange={handleChange}
+                        >
+                          <option value="">Select issuing agency</option>
+                          <option value="CVFR">CVFR</option>
+                          <option value="Peace zone">Peace zone</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Stage 3 specific content can go here if needed, otherwise sidebar sections will stack below */}
+              </div>
+            )}
+
+            {/* Special Requests / Notes - Show only on Add-ons & Services Step */}
+            {activeStep === 2 && (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
+                  <h3 className="text-base font-bold text-slate-900 flex items-center tracking-tight gap-2">
+                    <span className="material-symbols-outlined text-slate-400">
+                      note
+                    </span>
+                    Special Requests / Notes
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <textarea
+                    className="block w-full h-24 rounded-lg border-slate-200 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium px-3 py-2"
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleChange}
+                    placeholder="Enter any special requests or internal notes here..."
+                  ></textarea>
+                </div>
+              </div>
+            )}
+
+            {/* Sidebar Sections (Stacked Full Width) */}
             {/* Booking Details */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div 
+              className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-500 ease-in-out ${
+                activeStep === 3 
+                  ? "opacity-100 scale-100 h-auto visible" 
+                  : "opacity-0 scale-95 h-0 overflow-hidden invisible pointer-events-none"
+              }`}
+              aria-hidden={activeStep !== 3}
+              data-completion-state={activeStep === 3}
+            >
               <div className="px-5 py-4 border-b border-slate-100">
                 <h3 className="text-base font-bold text-slate-900">
                   Booking Details
@@ -2329,24 +2605,32 @@ export default function EditBookingPage({
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
                     Booking Status
                   </label>
-                  <select
-                    className="block w-full h-10 rounded-lg border-slate-200 px-3 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                  >
-                    <option value="Confirmed">Hold</option>
-                    <option value="Issued">Issued</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Draft">Draft</option>
-                    <option value="Cancelled">Cancelled</option>
-                  </select>
+                    <select
+                      className="block w-full h-10 rounded-lg border-slate-200 px-3 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium"
+                      name="status"
+                      value={formData.status}
+                      onChange={(e) => handleStatusChange(e.target.value)}
+                    >
+                      <option value="Confirmed">Hold</option>
+                      <option value="Issued">Issued</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Draft">Draft</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
                 </div>
               </div>
             </div>
 
             {/* Financials */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div 
+              className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-500 ease-in-out ${
+                activeStep === 3 
+                  ? "opacity-100 scale-100 h-auto visible" 
+                  : "opacity-0 scale-95 h-0 overflow-hidden invisible pointer-events-none"
+              }`}
+              aria-hidden={activeStep !== 3}
+              data-completion-state={activeStep === 3}
+            >
               <div className="px-5 py-4 border-b border-slate-100">
                 <h3 className="text-base font-bold text-slate-900">
                   Financials
@@ -2379,22 +2663,6 @@ export default function EditBookingPage({
                     <option value="Refunded">Refunded</option>
                   </select>
                 </div>
-                {/* <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
-                    Payment Method
-                  </label>
-                  <select
-                    className="block w-full h-10 rounded-lg border-slate-200 px-3 focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-medium"
-                    name="paymentMethod"
-                    value={formData.paymentMethod}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select Payment Method</option>
-                    <option value="Credit Card">Credit Card</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="Cash">Cash</option>
-                  </select>
-                </div> */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-1">
                     Transaction ID
@@ -2500,24 +2768,88 @@ export default function EditBookingPage({
             </div>
 
             {/* Actions */}
-            <div className="space-y-3">
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full h-12 bg-blue-600 text-white rounded-lg font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined text-[20px]">
-                  save
-                </span>
-                {saving ? "Saving..." : "Save Changes"}
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/dashboard/booking")}
-                className="w-full h-12 bg-white border border-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-50 transition-all"
-              >
-                Cancel
-              </button>
+            <div className="mt-8 space-y-3">
+              {activeStep > 0 && activeStep < 3 && (
+                <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setActiveStep(activeStep - 1)}
+                    className="px-6 py-3 text-slate-600 font-bold hover:text-slate-900 transition-all flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-sm">arrow_back</span>
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveStep(activeStep + 1)}
+                    className="px-8 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-blue-600 transition-all flex items-center gap-2"
+                  >
+                    Continue
+                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                  </button>
+                </div>
+              )}
+
+              {activeStep === 3 && (
+                <>
+                  <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setActiveStep(2)}
+                      className="px-6 py-3 text-slate-600 font-bold hover:text-slate-900 transition-all flex items-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-sm">arrow_back</span>
+                      Back to Add-ons
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!formData.origin || !formData.destination) {
+                          alert("Please ensure Route details (Origin/Destination) are set.");
+                          return;
+                        }
+                        if (!formData.travellers || formData.travellers.length === 0) {
+                          alert("Please add at least one Traveller.");
+                          return;
+                        }
+                        if (!formData.email) {
+                          alert("Please ensure Customer Contact information is complete.");
+                          return;
+                        }
+                        if (!formData.pnr || formData.pnr === "N/A" || formData.pnr.length < 5) {
+                          alert("A valid PNR Reference is required to mark the booking as Issued.");
+                          return;
+                        }
+                        setShowNotificationModal(true);
+                      }}
+                      className="px-8 py-3 bg-green-600 text-white font-bold rounded-xl shadow-lg shadow-green-500/20 hover:bg-green-700 transition-all flex items-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-sm">check_circle</span>
+                      MARK AS ISSUED
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="w-full h-12 bg-blue-600 text-white rounded-lg font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">
+                        save
+                      </span>
+                      {saving ? "Saving..." : "Save Changes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/dashboard/booking")}
+                      className="w-full h-12 bg-white border border-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-50 transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -2615,6 +2947,14 @@ export default function EditBookingPage({
             </div>
           </div>
         </div>
+      )}
+      {showNotificationModal && currentBooking && (
+        <NotificationConfirmModal
+          isOpen={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
+          onConfirm={handleConfirmIssue}
+          booking={currentBooking}
+        />
       )}
     </div>
   );

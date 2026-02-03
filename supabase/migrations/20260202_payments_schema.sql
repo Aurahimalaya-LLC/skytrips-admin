@@ -23,8 +23,13 @@ CREATE INDEX IF NOT EXISTS idx_bookings_agency_id ON public.bookings(agency_id);
 
 -- 3. Views for Efficient Data Retrieval
 
+-- DROP DEPENDENT VIEWS FIRST to avoid "cannot change data type of view column" errors
+DROP VIEW IF EXISTS view_customer_payments;
+DROP VIEW IF EXISTS view_agency_payments;
+DROP VIEW IF EXISTS view_unified_payments;
+
 -- View: Unified Payments (Customer & Agency)
-CREATE OR REPLACE VIEW view_unified_payments AS
+CREATE OR REPLACE VIEW view_unified_payments WITH (security_invoker = true) AS
 SELECT 
     p.payment_id,
     b.id AS booking_id,
@@ -46,7 +51,10 @@ SELECT
     CASE 
         WHEN b.agency_id IS NOT NULL THEN 'Agency'
         ELSE 'Customer'
-    END AS payment_source
+    END AS payment_source,
+
+    -- Travellers Data
+    b.travellers AS travellers_json
 
 FROM 
     public.payments p
@@ -60,11 +68,11 @@ LEFT JOIN
 -- RESTORED LEGACY VIEWS (As Wrappers)
 
 -- View: Customer Payments (Legacy Wrapper)
-CREATE OR REPLACE VIEW view_customer_payments AS
+CREATE OR REPLACE VIEW view_customer_payments WITH (security_invoker = true) AS
 SELECT * FROM view_unified_payments WHERE payment_source = 'Customer';
 
 -- View: Agency Payments (Legacy Wrapper)
-CREATE OR REPLACE VIEW view_agency_payments AS
+CREATE OR REPLACE VIEW view_agency_payments WITH (security_invoker = true) AS
 SELECT * FROM view_unified_payments WHERE payment_source = 'Agency';
 
 

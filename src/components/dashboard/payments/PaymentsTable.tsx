@@ -8,11 +8,12 @@ import autoTable from "jspdf-autotable";
 
 interface PaymentsTableProps {
   viewMode: 'customers' | 'agencies';
+  dateRange: { start: string | null; end: string | null };
 }
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
-export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
+export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProps) {
   // Data State
   const [data, setData] = useState<Payment[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -51,12 +52,20 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
         const searchPattern = `%${searchTerm}%`;
         // Use a raw filter or simple OR if possible. 
         // Supabase JS .or() expects strict syntax.
-        query = query.or(`customer_name.ilike.${searchPattern},agency_name.ilike.${searchPattern},payment_id.ilike.${searchPattern}`);
+        query = query.or(`customer_name.ilike.${searchPattern},agency_name.ilike.${searchPattern},payment_id.ilike.${searchPattern},contact_person.ilike.${searchPattern}`);
       }
 
       // Apply Status Filter
       if (statusFilter !== "ALL") {
         query = query.eq('status', statusFilter);
+      }
+
+      // Apply Date Filter
+      if (dateRange.start) {
+        query = query.gte('created_date', dateRange.start);
+      }
+      if (dateRange.end) {
+        query = query.lte('created_date', dateRange.end);
       }
 
       // Apply Sorting
@@ -69,8 +78,12 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
 
       const { data: fetchedData, error: fetchError, count } = await query;
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error("Supabase fetch error:", fetchError);
+        throw fetchError;
+      }
 
+      console.log(`Fetched ${fetchedData?.length || 0} payments for ${viewMode}`);
       setData(fetchedData as Payment[]);
       setTotalCount(count || 0);
     } catch (err) {
@@ -79,15 +92,16 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [viewMode, page, pageSize, sortField, sortOrder, searchTerm, statusFilter]);
+  }, [viewMode, page, pageSize, sortField, sortOrder, searchTerm, statusFilter, dateRange]);
 
   // Debounce Search & Fetch
   useEffect(() => {
+    console.log("PaymentsTable: Triggering fetch due to state change", { viewMode, searchTerm, statusFilter, dateRange });
     const timer = setTimeout(() => {
       fetchPayments();
     }, 500);
     return () => clearTimeout(timer);
-  }, [fetchPayments]);
+  }, [fetchPayments, viewMode, searchTerm, statusFilter, dateRange]);
 
 
   const handleSort = (field: SortField) => {
@@ -119,7 +133,7 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
   };
 
   const exportCSV = () => {
-    const headers = ["ID", "Booking ID", "Date", "Entity", "Amount", "Status"];
+    const headers = ["ID", "Booking ID", "Date", "Entity", "Method", "Amount", "Status"];
     const csvRows = [headers.join(",")];
 
     data.forEach(row => {
@@ -129,6 +143,7 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
         row.booking_id,
         new Date(row.payment_date).toLocaleDateString(),
         `"${entity || ''}"`,
+        `"${row.payment_method || ''}"`,
         row.amount,
         row.status
       ];
@@ -149,7 +164,7 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 22);
 
-    const tableColumn = ["Date", "ID", "Entity", "Amount", "Status"];
+    const tableColumn = ["Date", "ID", "Entity", "Method", "Amount", "Status"];
     const tableRows: (string | number)[][] = [];
 
     data.forEach(payment => {
@@ -158,6 +173,7 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
         new Date(payment.payment_date).toLocaleDateString(),
         payment.payment_id.substring(0, 8) + '...',
         entity || 'N/A',
+        payment.payment_method || '-',
         formatCurrency(payment.amount),
         payment.status,
       ];
@@ -193,23 +209,23 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
   return (
     <div className="space-y-4">
       {/* Controls Header */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-card p-4 rounded-lg shadow-sm border border-border">
         <div className="flex items-center gap-2 w-full md:w-auto">
           <div className="relative w-full md:w-64">
-            <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">
+            <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[20px]">
               search
             </span>
             <input
               type="text"
               placeholder="Search ID, Name..."
-              className="w-full pl-9 pr-4 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-4 py-2 text-sm border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           
           <select 
-            className="border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -224,14 +240,14 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
         <div className="flex items-center gap-2">
            <button 
             onClick={exportCSV}
-            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-md hover:bg-accent transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">csv</span>
             CSV
           </button>
           <button 
             onClick={exportPDF}
-            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-md hover:bg-accent transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
             PDF
@@ -240,40 +256,48 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-slate-500">
+          <div className="p-8 text-center text-muted-foreground">
             <span className="material-symbols-outlined animate-spin text-3xl mb-2">sync</span>
             <p>Loading payments...</p>
           </div>
         ) : error ? (
-          <div className="p-8 text-center text-red-500">
+          <div className="p-8 text-center text-destructive">
             <span className="material-symbols-outlined text-3xl mb-2">error</span>
             <p>{error}</p>
-            <button onClick={() => fetchPayments()} className="mt-2 text-blue-600 hover:underline">Retry</button>
+            <button onClick={() => fetchPayments()} className="mt-2 text-primary hover:underline">Retry</button>
           </div>
         ) : data.length === 0 ? (
-          <div className="p-8 text-center text-slate-500">
-             <p>No payments found.</p>
+          <div className="p-8 text-center text-muted-foreground">
+             <span className="material-symbols-outlined text-4xl mb-3 opacity-20">payments</span>
+             <p className="text-lg font-medium mb-1">No payments found</p>
+             <p className="text-sm opacity-70">
+               {searchTerm || statusFilter !== 'ALL' || dateRange.start || dateRange.end 
+                 ? "Try adjusting your filters or search term to find what you're looking for." 
+                 : `There are currently no transactions for ${viewMode}.`}
+             </p>
+             {(searchTerm || statusFilter !== 'ALL' || dateRange.start || dateRange.end) && (
+               <button 
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("ALL");
+                  // Note: dateRange reset should happen in parent
+                }}
+                className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors"
+               >
+                 Clear all filters
+               </button>
+             )}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+              <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
                 <tr>
-                  <th className="px-6 py-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('payment_id')}>
+                  <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('booking_id')}>
                     <div className="flex items-center gap-1">
-                      Transaction ID
-                      {sortField === 'payment_id' && (
-                        <span className="material-symbols-outlined text-[16px]">
-                          {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('booking_id')}>
-                    <div className="flex items-center gap-1">
-                      Booking Ref
+                      Booking ID
                       {sortField === 'booking_id' && (
                         <span className="material-symbols-outlined text-[16px]">
                           {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
@@ -281,7 +305,30 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('created_date')}>
+                  <th className="px-6 py-3">
+                     Traveler Names
+                   </th>
+                   <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('contact_person')}>
+                     <div className="flex items-center gap-1">
+                       CP (Contact Person)
+                       {sortField === 'contact_person' && (
+                         <span className="material-symbols-outlined text-[16px]">
+                           {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                         </span>
+                       )}
+                     </div>
+                   </th>
+                   <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('agency_name')}>
+                     <div className="flex items-center gap-1">
+                       Issued Agency
+                       {sortField === 'agency_name' && (
+                         <span className="material-symbols-outlined text-[16px]">
+                           {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                         </span>
+                       )}
+                     </div>
+                   </th>
+                  <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('created_date')}>
                     <div className="flex items-center gap-1">
                       Date
                       {sortField === 'created_date' && (
@@ -292,9 +339,9 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
                     </div>
                   </th>
                   <th className="px-6 py-3">
-                    {viewMode === 'customers' ? 'Customer / Traveller' : 'Agency'}
+                     Method
                   </th>
-                  <th className="px-6 py-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('amount')}>
+                  <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('amount')}>
                      <div className="flex items-center gap-1">
                       Amount
                       {sortField === 'amount' && (
@@ -304,7 +351,7 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-3 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('status')}>
+                  <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('status')}>
                      <div className="flex items-center gap-1">
                       Status
                       {sortField === 'status' && (
@@ -317,50 +364,44 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
                   <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-border">
                 {data.map((row) => (
-                  <tr key={row.payment_id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium text-slate-900">
-                      #{row.payment_id.substring(0, 8)}
-                    </td>
-                    <td className="px-6 py-4 text-slate-900">
+                  <tr key={row.payment_id} className="hover:bg-muted/50">
+                    <td className="px-6 py-4 font-medium text-foreground">
                       BK-{row.booking_id}
                     </td>
-                    <td className="px-6 py-4 text-slate-500">
+                    <td className="px-6 py-4 text-foreground">
+                      {(() => {
+                        if (row.travellers_json && Array.isArray(row.travellers_json) && row.travellers_json.length > 0) {
+                           return row.travellers_json.map((t) => {
+                             const trav = t as Record<string, string>;
+                             return `${trav.firstName || ''} ${trav.lastName || ''}`.trim();
+                           }).filter(Boolean).join(', ');
+                        }
+                        // Fallback to customer name if no travellers
+                        return row.customer_name || 'N/A';
+                      })()}
+                    </td>
+                    <td className="px-6 py-4 text-foreground">
+                      {row.contact_person || row.cp || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 text-foreground">
+                      {row.agency_name || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground">
                       {new Date(row.payment_date).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 text-slate-900">
-                      {(() => {
-                        if (viewMode === 'agencies') return row.agency_name || 'N/A';
-                        
-                        // Fallback logic for customer name
-                        if (row.customer_name && row.customer_name !== 'N/A') return row.customer_name;
-                        
-                        if (row.customer_json) {
-                           const c = row.customer_json as Record<string, string>;
-                           if (c.firstName || c.lastName) return `${c.firstName || ''} ${c.lastName || ''}`.trim();
-                           if (c.email) return c.email;
-                         }
-                         
-                         if (row.travellers_json && Array.isArray(row.travellers_json) && row.travellers_json.length > 0) {
-                           const t = row.travellers_json[0] as Record<string, string>;
-                           if (t.firstName || t.lastName) return `${t.firstName || ''} ${t.lastName || ''}`.trim();
-                         }
-                        
-                        return 'N/A';
-                      })()}
-                      {viewMode === 'agencies' && row.cp && (
-                        <div className="text-xs text-slate-400">{row.cp}</div>
-                      )}
+                    <td className="px-6 py-4 text-foreground">
+                      {row.payment_method || '-'}
                     </td>
-                    <td className="px-6 py-4 font-medium text-slate-900">
+                    <td className="px-6 py-4 font-medium text-foreground">
                       {formatCurrency(row.amount)}
                     </td>
                     <td className="px-6 py-4">
                       {editingId === row.payment_id ? (
                         <select
                           autoFocus
-                          className="border border-blue-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="border border-primary rounded px-2 py-1 text-xs bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                           value={editStatus}
                           onChange={(e) => setEditStatus(e.target.value)}
                           onBlur={() => {
@@ -394,7 +435,7 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="text-slate-400 hover:text-blue-600 transition-colors">
+                      <button className="text-muted-foreground hover:text-primary transition-colors">
                         <span className="material-symbols-outlined text-[20px]">more_vert</span>
                       </button>
                     </td>
@@ -406,13 +447,13 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
         )}
         
         {/* Pagination */}
-        <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-          <div className="text-sm text-slate-500">
+        <div className="bg-muted/50 px-6 py-4 border-t border-border flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
             Showing <span className="font-medium">{Math.min((page - 1) * pageSize + 1, totalCount)}</span> to <span className="font-medium">{Math.min(page * pageSize, totalCount)}</span> of <span className="font-medium">{totalCount}</span> results
           </div>
           <div className="flex items-center gap-2">
             <select
-              className="border border-slate-300 rounded-md text-xs py-1 px-2 focus:outline-none"
+              className="border border-input bg-background text-foreground rounded-md text-xs py-1 px-2 focus:outline-none"
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
@@ -428,14 +469,14 @@ export default function PaymentsTable({ viewMode }: PaymentsTableProps) {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1 rounded hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <span className="material-symbols-outlined text-[20px]">chevron_left</span>
               </button>
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={page * pageSize >= totalCount}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1 rounded hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <span className="material-symbols-outlined text-[20px]">chevron_right</span>
               </button>

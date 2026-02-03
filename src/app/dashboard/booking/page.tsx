@@ -7,6 +7,7 @@ import { Booking } from "@/types";
 import BookingModal from "./BookingModal";
 import BookingRowMenu from "@/components/BookingRowMenu";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import NotificationConfirmModal from "@/components/NotificationConfirmModal";
 
 export default function BookingPage() {
   const router = useRouter();
@@ -27,6 +28,8 @@ export default function BookingPage() {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [bookingToDelete, setBookingToDelete] = useState<number | null>(null);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [notificationBooking, setNotificationBooking] = useState<Booking | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -491,6 +494,11 @@ export default function BookingPage() {
           delete (bookingToSave as unknown as Record<string, unknown>)[field],
       );
 
+      // ADDED: Sync status and bookingstatus
+      if (bookingToSave.status) {
+        (bookingToSave as Record<string, unknown>).bookingstatus = bookingToSave.status;
+      }
+
       if (editingBooking?.id) {
         // Update
         const { error: updateError } = await supabase
@@ -579,6 +587,39 @@ export default function BookingPage() {
       alert("Failed to delete booking");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleIssueBooking = async (booking: Booking) => {
+    if (!booking.id) return;
+    setNotificationBooking(booking);
+    setIsNotificationModalOpen(true);
+  };
+
+  const confirmIssueBooking = async () => {
+    if (!notificationBooking?.id) return;
+
+    try {
+      const { error: updateError } = await supabase
+        .from("bookings")
+        .update({ 
+          status: "Issued",
+          bookingstatus: "Issued"
+        })
+        .eq("id", notificationBooking.id);
+
+      if (updateError) throw updateError;
+
+      // Optimistic update
+      setBookings((prev) =>
+        prev.map((b) => (b.id === notificationBooking.id ? { ...b, status: "Issued", bookingstatus: "Issued" } : b))
+      );
+
+      // Refresh counts
+      fetchCounts();
+    } catch (err: unknown) {
+      console.error("Issue booking error:", err);
+      throw err; // Re-throw so the modal can catch it
     }
   };
 
@@ -1191,25 +1232,34 @@ export default function BookingPage() {
                       <span className="text-slate-600">{booking.tripType}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span
-                          className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
-                            booking.status === "Confirmed"
-                              ? "bg-blue-50 text-blue-700 ring-blue-600/20"
-                              : booking.status === "Issued"
-                              ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
-                              : booking.status === "Pending"
-                              ? "bg-amber-50 text-amber-700 ring-amber-600/20"
-                              : booking.status === "Draft"
-                              ? "bg-slate-50 text-slate-700 ring-slate-600/20"
-                              : booking.status === "Cancelled"
-                              ? "bg-red-50 text-red-700 ring-red-600/20"
-                              : "bg-slate-50 text-slate-700 ring-slate-600/20"
-                          }`}
-                        >
-                          {(booking.status === "Confirmed"
-                            ? "Hold"
-                            : booking.status) || "Draft"}
-                        </span>
+                      <button
+                        type="button"
+                        disabled={booking.status === "Issued" || actionLoading === booking.id}
+                        onClick={() => handleIssueBooking(booking)}
+                        className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset transition-all ${
+                          booking.status === "Confirmed"
+                            ? "bg-blue-50 text-blue-700 ring-blue-600/20 hover:bg-blue-100 cursor-pointer"
+                            : booking.status === "Issued"
+                            ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20 cursor-default"
+                            : booking.status === "Pending"
+                            ? "bg-amber-50 text-amber-700 ring-amber-600/20 hover:bg-amber-100 cursor-pointer"
+                            : booking.status === "Draft"
+                            ? "bg-slate-50 text-slate-700 ring-slate-600/20 hover:bg-slate-100 cursor-pointer"
+                            : booking.status === "Cancelled"
+                            ? "bg-red-50 text-red-700 ring-red-600/20 cursor-default"
+                            : "bg-slate-50 text-slate-700 ring-slate-600/20 hover:bg-slate-100 cursor-pointer"
+                        } ${actionLoading === booking.id ? "opacity-50 cursor-wait" : ""}`}
+                        title={booking.status !== "Issued" && booking.status !== "Cancelled" ? "Click to Issue" : ""}
+                      >
+                        {actionLoading === booking.id ? (
+                          <span className="material-symbols-outlined text-[14px] animate-spin mr-1">
+                            sync
+                          </span>
+                        ) : null}
+                        {(booking.status === "Confirmed"
+                          ? "Hold"
+                          : booking.status) || "Draft"}
+                      </button>
                     </td>
                     <td className="px-6 py-4">
                       <span className="bg-blue-50 text-primary px-2 py-1 rounded text-xs font-bold">
@@ -1365,6 +1415,15 @@ export default function BookingPage() {
           selectedBookingIds.length !== 1 ? "s" : ""
         }`}
       />
+
+      {isNotificationModalOpen && notificationBooking && (
+        <NotificationConfirmModal
+          isOpen={isNotificationModalOpen}
+          onClose={() => setIsNotificationModalOpen(false)}
+          onConfirm={confirmIssueBooking}
+          booking={notificationBooking}
+        />
+      )}
     </div>
   );
 }

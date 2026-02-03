@@ -515,6 +515,34 @@ export default function DashboardLayout({
             </p>
           </Link>
 
+          {/* Ontology */}
+          <Link
+            href="/dashboard/ontology"
+            prefetch={false}
+            className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"} px-3 py-3 rounded-lg transition-all ${
+              pathname.startsWith("/dashboard/ontology")
+                ? "bg-primary text-primary-foreground shadow-md shadow-blue-200 dark:shadow-none"
+                : "text-sidebar-foreground hover:bg-muted hover:text-foreground group"
+            }`}
+            aria-label="Ontology"
+            title="Ontology"
+          >
+            <span
+              className={`material-symbols-outlined ${
+                pathname.startsWith("/dashboard/ontology")
+                  ? "active-icon"
+                  : "group-hover:text-primary transition-colors"
+              }`}
+            >
+              category
+            </span>
+            <p
+              className={`text-sm font-medium leading-normal ${sidebarCollapsed ? "sr-only" : ""}`}
+            >
+              Ontology
+            </p>
+          </Link>
+
           {/* Users */}
           <Link
             href="/dashboard/users"
