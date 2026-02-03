@@ -69,7 +69,11 @@ export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProp
       }
 
       // Apply Sorting
-      query = query.order(sortField, { ascending: sortOrder === 'asc' });
+      const safeSortField = (['selling_price', 'cost_price', 'customer_name'].includes(sortField) && data.length > 0 && !(sortField in data[0])) 
+        ? 'created_date' 
+        : sortField;
+      
+      query = query.order(safeSortField, { ascending: sortOrder === 'asc' });
 
       // Apply Pagination
       const from = (page - 1) * pageSize;
@@ -77,6 +81,12 @@ export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProp
       query = query.range(from, to);
 
       const { data: fetchedData, error: fetchError, count } = await query;
+
+      if (fetchError && String(fetchError.code) === '42703' && (sortField === 'selling_price' || sortField === 'cost_price' || sortField === 'customer_name')) {
+        console.warn(`Sort field ${sortField} missing, falling back to created_date`);
+        setSortField('created_date');
+        return; // useEffect will re-trigger with safe field
+      }
 
       if (fetchError) {
         // Handle missing column error (42703) - likely due to invalid sort field
@@ -140,18 +150,18 @@ export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProp
   };
 
   const exportCSV = () => {
-    const headers = ["ID", "Booking ID", "Date", "Entity", "Method", "Amount", "Status"];
+    const isCustomer = viewMode === 'customers';
+    const headers = ["Booking ID", "Traveller Name", isCustomer ? "Selling Price" : "Cost Price", "Date", "Status"];
     const csvRows = [headers.join(",")];
 
     data.forEach(row => {
-      const entity = viewMode === 'customers' ? row.customer_name : row.agency_name;
+      const name = getTravellerDisplay(row);
+      const price = isCustomer ? (row.selling_price || 0) : (row.cost_price || 0);
       const values = [
-        row.payment_id,
-        row.booking_id,
+        `BK-${row.booking_id}`,
+        `"${name}"`,
+        price,
         new Date(row.payment_date).toLocaleDateString(),
-        `"${entity || ''}"`,
-        `"${row.payment_method || ''}"`,
-        row.amount,
         row.status
       ];
       csvRows.push(values.join(","));
@@ -167,24 +177,25 @@ export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProp
   
   const exportPDF = () => {
     const doc = new jsPDF();
-    doc.text(`${viewMode === 'customers' ? 'Customer' : 'Agency'} Payments Report`, 14, 15);
+    const isCustomer = viewMode === 'customers';
+    doc.text(`${isCustomer ? 'Customer' : 'Agency'} Payments Report`, 14, 15);
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 22);
 
-    const tableColumn = ["Date", "ID", "Entity", "Method", "Amount", "Status"];
+    const tableColumn = ["Booking ID", "Traveller Name", isCustomer ? "Selling Price" : "Cost Price", "Date", "Status"];
     const tableRows: (string | number)[][] = [];
 
-    data.forEach(payment => {
-      const entity = viewMode === 'customers' ? payment.customer_name : payment.agency_name;
-      const paymentData = [
-        new Date(payment.payment_date).toLocaleDateString(),
-        payment.payment_id.substring(0, 8) + '...',
-        entity || 'N/A',
-        payment.payment_method || '-',
-        formatCurrency(payment.amount),
-        payment.status,
+    data.forEach(row => {
+      const name = getTravellerDisplay(row);
+      const price = isCustomer ? (row.selling_price || 0) : (row.cost_price || 0);
+      const rowData = [
+        `BK-${row.booking_id}`,
+        name,
+        formatCurrency(price),
+        new Date(row.payment_date).toLocaleDateString(),
+        row.status,
       ];
-      tableRows.push(paymentData);
+      tableRows.push(rowData);
     });
 
     autoTable(doc, {
@@ -198,6 +209,19 @@ export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProp
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+  };
+
+  const getTravellerDisplay = (row: Payment) => {
+    if (row.travellers_json && Array.isArray(row.travellers_json) && row.travellers_json.length > 0) {
+      return row.travellers_json
+        .map((t) => {
+          const trav = t as Record<string, string>;
+          return `${trav.firstName || ''} ${trav.lastName || ''}`.trim();
+        })
+        .filter(Boolean)
+        .join(', ');
+    }
+    return row.customer_name || 'N/A';
   };
 
   const StatusBadge = ({ status }: { status: string }) => {
@@ -245,6 +269,15 @@ export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProp
         </div>
 
         <div className="flex items-center gap-2">
+          <button 
+            onClick={() => fetchPayments()}
+            disabled={isLoading}
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-md hover:bg-accent transition-colors disabled:opacity-50"
+            title="Refresh Data"
+          >
+            <span className={`material-symbols-outlined text-[18px] ${isLoading ? 'animate-spin' : ''}`}>refresh</span>
+            Refresh
+          </button>
            <button 
             onClick={exportCSV}
             className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-md hover:bg-accent transition-colors"
@@ -312,30 +345,27 @@ export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProp
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-3">
-                     Traveler Names
-                   </th>
-                   <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('contact_person')}>
-                     <div className="flex items-center gap-1">
-                       CP (Contact Person)
-                       {sortField === 'contact_person' && (
-                         <span className="material-symbols-outlined text-[16px]">
-                           {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
-                         </span>
-                       )}
-                     </div>
-                   </th>
-                   <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('agency_name')}>
-                     <div className="flex items-center gap-1">
-                       Issued Agency
-                       {sortField === 'agency_name' && (
-                         <span className="material-symbols-outlined text-[16px]">
-                           {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
-                         </span>
-                       )}
-                     </div>
-                   </th>
-                  <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('created_date')}>
+                  <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort(viewMode === 'customers' ? 'customer_name' : 'agency_name')}>
+                    <div className="flex items-center gap-1">
+                      Traveller&apos;s Name
+                      {(sortField === 'customer_name' || sortField === 'agency_name') && (
+                        <span className="material-symbols-outlined text-[16px]">
+                          {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort(viewMode === 'customers' ? 'selling_price' : 'cost_price')}>
+                    <div className="flex items-center gap-1">
+                      {viewMode === 'customers' ? 'SP (Selling Price)' : 'CP (Cost Price)'}
+                      {(sortField === 'selling_price' || sortField === 'cost_price') && (
+                        <span className="material-symbols-outlined text-[16px]">
+                          {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 cursor-pointer hover:bg-muted hidden md:table-cell" onClick={() => handleSort('created_date')}>
                     <div className="flex items-center gap-1">
                       Date
                       {sortField === 'created_date' && (
@@ -345,22 +375,9 @@ export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProp
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-3">
-                     Method
-                  </th>
-                  <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('amount')}>
-                     <div className="flex items-center gap-1">
-                      Amount
-                      {sortField === 'amount' && (
-                        <span className="material-symbols-outlined text-[16px]">
-                          {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
-                        </span>
-                      )}
-                    </div>
-                  </th>
                   <th className="px-6 py-3 cursor-pointer hover:bg-muted" onClick={() => handleSort('status')}>
                      <div className="flex items-center gap-1">
-                      Status
+                      Payment Status
                       {sortField === 'status' && (
                         <span className="material-symbols-outlined text-[16px]">
                           {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
@@ -378,31 +395,15 @@ export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProp
                       BK-{row.booking_id}
                     </td>
                     <td className="px-6 py-4 text-foreground">
-                      {(() => {
-                        if (row.travellers_json && Array.isArray(row.travellers_json) && row.travellers_json.length > 0) {
-                           return row.travellers_json.map((t) => {
-                             const trav = t as Record<string, string>;
-                             return `${trav.firstName || ''} ${trav.lastName || ''}`.trim();
-                           }).filter(Boolean).join(', ');
-                        }
-                        // Fallback to customer name if no travellers
-                        return row.customer_name || 'N/A';
-                      })()}
-                    </td>
-                    <td className="px-6 py-4 text-foreground">
-                      {row.contact_person || row.cp || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 text-foreground">
-                      {row.agency_name || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {new Date(row.payment_date).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-foreground">
-                      {row.payment_method || '-'}
+                      {getTravellerDisplay(row)}
                     </td>
                     <td className="px-6 py-4 font-medium text-foreground">
-                      {formatCurrency(row.amount)}
+                      {viewMode === 'customers' 
+                        ? formatCurrency(row.selling_price || row.amount || 0) 
+                        : formatCurrency(row.cost_price || row.amount || 0)}
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground hidden md:table-cell">
+                      {new Date(row.payment_date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
                       {editingId === row.payment_id ? (
@@ -435,7 +436,7 @@ export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProp
                                 setEditingId(row.payment_id);
                                 setEditStatus(row.status);
                             }}
-                            title="Click to edit"
+                            title="Click to edit status"
                         >
                             <StatusBadge status={row.status} />
                         </div>

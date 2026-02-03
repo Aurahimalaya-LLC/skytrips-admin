@@ -92,6 +92,7 @@ export default function PaymentsPage() {
           if (dateRange.end) fallbackQuery = fallbackQuery.lte('created_date', dateRange.end);
 
           const res = await fallbackQuery;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data = res.data as any;
           error = res.error;
         }
@@ -109,7 +110,6 @@ export default function PaymentsPage() {
           const isCustomer = viewMode === 'customers';
           const price = isCustomer ? item.selling_price : item.cost_price;
           const amt = (Number(price) || Number(item.amount) || 0);
-          
           const st = item.status?.toUpperCase() || '';
           
           inflow += amt; // Total volume

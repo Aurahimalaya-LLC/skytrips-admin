@@ -1,76 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
-// Initialize Supabase client for middleware (Edge compatible)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-export async function middleware(req: NextRequest) {
+export function middleware(req: NextRequest) {
+  const hostname = req.headers.get("host") || "";
   const { pathname } = req.nextUrl;
+  
+  // Define Allowed Domains
+  const ADMIN_DOMAIN = "admin.skytripsword.com";
+  const ALLOWED_DOMAINS = [ADMIN_DOMAIN, "localhost", "127.0.0.1"];
 
-  // 1. Skip middleware for static files, API routes, and internal Next.js paths
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
-    pathname.startsWith("/static") ||
-    pathname.includes(".")
-  ) {
-    return NextResponse.next();
+  // Check if current host is allowed (includes Vercel preview URLs)
+  const isAllowed = ALLOWED_DOMAINS.some(d => hostname.includes(d)) || hostname.endsWith(".vercel.app");
+
+  // Create Response
+  const response = NextResponse.next();
+
+  // ---------------------------------------------------------
+  // 1. Security Headers (Enhanced Security Measures)
+  // ---------------------------------------------------------
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+
+  // ---------------------------------------------------------
+  // 2. Subdomain Isolation Logic
+  // ---------------------------------------------------------
+  // If the request reaches this app via an incorrect domain (e.g., skytrips.com.np pointing here),
+  // we want to prevent it from serving admin content to the public domain.
+  
+  if (!isAllowed) {
+    // Optional: Log the potential misconfiguration
+    console.warn(`[Middleware] Blocked request from unauthorized host: ${hostname}`);
+    
+    // Return 404 or Redirect to correct admin domain
+    // For strict isolation, we block it or redirect to the primary admin domain
+    // const url = req.nextUrl.clone();
+    // url.host = ADMIN_DOMAIN;
+    // url.port = ""; // Ensure standard port
+    // return NextResponse.redirect(url);
+    
+    // For now, we just warn and proceed, or we could strict block:
+    // return new NextResponse("Unauthorized Host", { status: 403 });
   }
 
-  try {
-    // 2. Fetch Domain Routing Configuration from Supabase
-    const { data: settings } = await supabase
-      .from("settings")
-      .select("domain_routing")
-      .single();
-
-    if (settings?.domain_routing?.enabled) {
-      const config = settings.domain_routing;
-      const currentHost = req.headers.get("host") || "";
-
-      // 0. Check for user preference override (Cookie)
-      const preferredDomain = req.cookies.get("preferred_domain")?.value;
-
-      if (preferredDomain) {
-        // If user has a preference, enforce it
-        if (currentHost !== preferredDomain && !currentHost.includes("localhost")) {
-          const url = req.nextUrl.clone();
-          url.host = preferredDomain;
-          return NextResponse.redirect(url, 302);
-        }
-        // If we are already on the preferred domain, skip geo-routing
-        return NextResponse.next();
-      }
-
-      const country = req.headers.get("x-vercel-ip-country") || "Default";
-
-      // Find mapping for the detected country
-      const mapping = config.mappings.find(
-        (m: any) => m.countryCode.toUpperCase() === country.toUpperCase()
-      );
-
-      const targetDomain = mapping ? mapping.domain : config.fallbackDomain;
-
-      // 3. Perform redirection if current host doesn't match target domain
-      // Note: We check if targetDomain is set and different from currentHost
-      if (targetDomain && currentHost !== targetDomain && !currentHost.includes("localhost")) {
-        const url = req.nextUrl.clone();
-        url.host = targetDomain;
-        
-        // Use 302 (Found) for geo-routing as it's temporary based on location
-        return NextResponse.redirect(url, 302);
-      }
-    }
-  } catch (error) {
-    console.error("Middleware domain routing error:", error);
-  }
-
-  // Allow all other routes to proceed
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
 };

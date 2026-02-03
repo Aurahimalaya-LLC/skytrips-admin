@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 type PaymentMethod = {
   id: string;
@@ -12,32 +13,57 @@ type PaymentMethod = {
   icon: string;
 };
 
-const INITIAL_METHODS: PaymentMethod[] = [
-  {
-    id: "1",
-    type: "credit_card",
-    name: "Visa ending in 4242",
-    details: "**** 4242",
-    expiry: "12/24",
-    isDefault: true,
-    icon: "credit_card",
-  },
-  {
-    id: "2",
-    type: "paypal",
-    name: "PayPal",
-    details: "billing@company.com",
-    isDefault: false,
-    icon: "account_balance_wallet",
-  },
-];
-
 export default function PaymentMethodsManager() {
-  const [methods, setMethods] = useState<PaymentMethod[]>(INITIAL_METHODS);
+  const [methods, setMethods] = useState<PaymentMethod[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState<string | null>(null); // ID or 'new'
   const [formData, setFormData] = useState<Partial<PaymentMethod>>({ type: "credit_card" });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Fetch methods from Supabase
+  useEffect(() => {
+    fetchMethods();
+  }, []);
+
+  const fetchMethods = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+         // If no user, we might be in a dev mode without auth, keep empty or mock? 
+         // For now, let's return to avoid errors if RLS is on.
+         setLoading(false);
+         return;
+      }
+
+      const { data, error } = await supabase
+        .from("payment_methods")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("is_default", { ascending: false });
+
+      if (error) {
+        // If table doesn't exist yet, ignore (or log)
+        console.error("Error fetching payment methods:", error);
+      } else if (data) {
+        setMethods(data.map((m) => ({
+          id: m.id,
+          type: m.type as PaymentMethod["type"],
+          name: m.name,
+          details: m.details,
+          expiry: m.expiry,
+          isDefault: m.is_default,
+          icon: m.type === "paypal" ? "account_balance_wallet" : m.type === "bank_transfer" ? "account_balance" : "credit_card",
+        })));
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddNew = () => {
     setIsEditing("new");
@@ -53,24 +79,49 @@ export default function PaymentMethodsManager() {
     setSuccess(null);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to remove this payment method?")) {
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this payment method?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("payment_methods")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
       setMethods(methods.filter((m) => m.id !== id));
       setSuccess("Payment method removed successfully.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to delete payment method");
     }
   };
 
-  const handleSetDefault = (id: string) => {
-    setMethods(
-      methods.map((m) => ({
-        ...m,
-        isDefault: m.id === id,
-      }))
-    );
-    setSuccess("Default payment method updated.");
+  const handleSetDefault = async (id: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Use RPC for atomic update
+      const { error } = await supabase.rpc('set_default_payment_method', { 
+        method_id: id 
+      });
+
+      if (error) throw error;
+
+      setMethods(
+        methods.map((m) => ({
+          ...m,
+          isDefault: m.id === id,
+        }))
+      );
+      setSuccess("Default payment method updated.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to set default");
+    }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError(null);
     setSuccess(null);
 
@@ -85,33 +136,72 @@ export default function PaymentMethodsManager() {
         return;
     }
 
-    // Simulate secure handling
-    // In a real app, credit card numbers should be tokenized by a provider (Stripe, etc.)
-    
-    if (isEditing === "new") {
-      const newMethod: PaymentMethod = {
-        id: Math.random().toString(36).substr(2, 9),
-        type: formData.type as any,
-        name: formData.name!,
-        details: formData.details!,
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("You must be logged in to save payment methods.");
+
+      const payload = {
+        user_id: user.id,
+        type: formData.type,
+        name: formData.name,
+        details: formData.details,
         expiry: formData.expiry,
-        isDefault: methods.length === 0, // Default if first
-        icon: formData.type === "paypal" ? "account_balance_wallet" : formData.type === "bank_transfer" ? "account_balance" : "credit_card",
+        is_default: formData.isDefault || (methods.length === 0), // Default if first
+        // icon is derived
       };
-      setMethods([...methods, newMethod]);
-      setSuccess("Payment method added successfully.");
-    } else {
-      setMethods(
-        methods.map((m) =>
-          m.id === isEditing
-            ? { ...m, ...formData, icon: formData.type === "paypal" ? "account_balance_wallet" : formData.type === "bank_transfer" ? "account_balance" : "credit_card" } as PaymentMethod
-            : m
-        )
-      );
-      setSuccess("Payment method updated successfully.");
+
+      if (isEditing === "new") {
+        const { data, error } = await supabase
+          .from("payment_methods")
+          .insert(payload)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        
+        if (data) {
+           const newMethod: PaymentMethod = {
+             id: data.id,
+             type: data.type,
+             name: data.name,
+             details: data.details,
+             expiry: data.expiry,
+             isDefault: data.is_default,
+             icon: data.type === "paypal" ? "account_balance_wallet" : data.type === "bank_transfer" ? "account_balance" : "credit_card",
+           };
+           setMethods([...methods, newMethod]);
+           setSuccess("Payment method added successfully.");
+        }
+      } else {
+        const { error } = await supabase
+          .from("payment_methods")
+          .update(payload)
+          .eq("id", isEditing);
+
+        if (error) throw error;
+
+        setMethods(
+          methods.map((m) =>
+            m.id === isEditing
+              ? { ...m, ...formData, isDefault: formData.isDefault || m.isDefault } as PaymentMethod
+              : m
+          )
+        );
+        setSuccess("Payment method updated successfully.");
+      }
+      setIsEditing(null);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save payment method");
     }
-    setIsEditing(null);
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <span className="material-symbols-outlined animate-spin text-primary text-2xl">sync</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

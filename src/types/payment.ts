@@ -24,5 +24,5 @@ export interface PaymentFilters {
   search?: string;
 }
 
-export type SortField = 'created_date' | 'amount' | 'selling_price' | 'payment_date' | 'status' | 'payment_id' | 'booking_id' | 'agency_name' | 'contact_person';
+export type SortField = 'created_date' | 'amount' | 'selling_price' | 'cost_price' | 'customer_name' | 'payment_date' | 'status' | 'payment_id' | 'booking_id' | 'agency_name' | 'contact_person';
 export type SortOrder = 'asc' | 'desc';
