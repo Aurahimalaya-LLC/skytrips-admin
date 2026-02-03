@@ -55,7 +55,7 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon, cla
           const { data, error } = await supabase
             .from("airports")
             .select("id,name,municipality,iata_code,iso_country,popularity")
-            .eq("published_status", true)
+            // .eq("published_status", true) // Removed to allow all airports
             .not("iata_code", "is", null)
             .order("popularity", { ascending: false })
             .limit(50);
@@ -73,7 +73,7 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon, cla
             .from("airports")
             .select("id,name,municipality,iata_code,iso_country,popularity")
             .or(`municipality.ilike.%${q}%,name.ilike.%${q}%,iata_code.ilike.%${q}%`)
-            .eq("published_status", true)
+            // .eq("published_status", true) // Removed to allow all airports
             .limit(50);
           if (error) throw error;
           const options = (data || []).map((row: AirportRow) => ({

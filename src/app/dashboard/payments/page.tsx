@@ -61,31 +61,40 @@ export default function PaymentsPage() {
     async function fetchStats() {
       setStats(prev => ({ ...prev, loading: true, error: null }));
       try {
-        let data: any[] | null = null;
-        let error: { code: string | number; message: string } | null = null;
-
-        const firstTry = await supabase
+        let query = supabase
           .from('view_unified_payments')
-          .select('amount, payment_source, status, selling_price, cost_price')
-          .eq('payment_source', viewMode === 'customers' ? 'Customer' : 'Agency')
-          .gte('created_date', dateRange.start || '1970-01-01')
-          .lte('created_date', dateRange.end || new Date().toISOString());
+          .select('amount, payment_source, status, selling_price, cost_price');
 
-        data = firstTry.data;
-        error = firstTry.error as { code: string | number; message: string } | null;
+        // Apply View Mode Filter
+        const sourceFilter = viewMode === 'customers' ? 'Customer' : 'Agency';
+        query = query.eq('payment_source', sourceFilter);
 
-        // Fallback if cost_price/selling_price don't exist yet in the view
+        // Apply Date Filter
+        if (dateRange.start) {
+          query = query.gte('created_date', dateRange.start);
+        }
+        if (dateRange.end) {
+          query = query.lte('created_date', dateRange.end);
+        }
+
+        let { data, error } = await query;
+
+        // Fallback if cost_price/selling_price don't exist yet in the view (Error 42703)
         if (error && String(error.code) === '42703') {
           console.warn("View missing price columns, falling back to 'amount'");
-          const fallback = await supabase
+          let fallbackQuery = supabase
             .from('view_unified_payments')
             .select('amount, payment_source, status')
-            .eq('payment_source', viewMode === 'customers' ? 'Customer' : 'Agency')
-            .gte('created_date', dateRange.start || '1970-01-01')
-            .lte('created_date', dateRange.end || new Date().toISOString());
-          
-          data = fallback.data;
-          error = fallback.error as { code: string | number; message: string } | null;
+            .eq('payment_source', viewMode === 'customers' ? 'Customer' : 'Agency');
+
+          // Re-apply date filter for fallback
+          if (dateRange.start) fallbackQuery = fallbackQuery.gte('created_date', dateRange.start);
+          if (dateRange.end) fallbackQuery = fallbackQuery.lte('created_date', dateRange.end);
+
+          const res = await fallbackQuery;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          data = res.data as any;
+          error = res.error;
         }
 
         if (error) throw error;
@@ -97,10 +106,10 @@ export default function PaymentsPage() {
         let cCount = 0;
 
         data?.forEach((item) => {
+          // Use selling_price for Customers, cost_price for Agencies, fallback to amount
           const isCustomer = viewMode === 'customers';
-          const amt = isCustomer 
-            ? (Number(item.selling_price) || Number(item.amount) || 0) 
-            : (Number(item.cost_price) || Number(item.amount) || 0);
+          const price = isCustomer ? item.selling_price : item.cost_price;
+          const amt = (Number(price) || Number(item.amount) || 0);
           const st = item.status?.toUpperCase() || '';
           
           inflow += amt; // Total volume

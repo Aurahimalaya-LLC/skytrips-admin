@@ -192,16 +192,33 @@ export default function FlightBookingPage() {
         const f = (typeof document !== "undefined" ? document.getElementById(`fname-${id}`) : null) as HTMLInputElement | null;
         const l = (typeof document !== "undefined" ? document.getElementById(`lname-${id}`) : null) as HTMLInputElement | null;
         
+        // Optional fields
+        const g = (typeof document !== "undefined" ? document.getElementById(`gender-${id}`) : null) as HTMLSelectElement | null;
+        const d = (typeof document !== "undefined" ? document.getElementById(`dob-${id}`) : null) as HTMLInputElement | null;
+        const c = (typeof document !== "undefined" ? document.getElementById(`country-${id}`) : null) as HTMLSelectElement | null;
+        const p = (typeof document !== "undefined" ? document.getElementById(`passport-${id}`) : null) as HTMLInputElement | null;
+        const pc = (typeof document !== "undefined" ? document.getElementById(`passportCountry-${id}`) : null) as HTMLSelectElement | null;
+        const pe = (typeof document !== "undefined" ? document.getElementById(`passportExpiry-${id}`) : null) as HTMLInputElement | null;
+
         const firstName = (f?.value || "").trim() || "Unknown";
         const lastName = (l?.value || "").trim() || "Unknown";
         
-        // Default values for removed fields
-        const passportNumber = "";
-        const gender = "MALE"; // Defaulting to MALE since field is removed
-        const dob = "1990-01-01"; // Default DOB
-        const country = "NP"; // Default Country
-        const passportCountry = "NP";
-        const passportExpiryDate = "";
+        // Use provided values or defaults
+        const genderRaw = (g?.value || "").trim();
+        const gender = genderRaw && genderRaw !== "Select Gender" ? genderRaw : "MALE"; 
+        
+        const dobRaw = (d?.value || "").trim();
+        const dob = dobRaw || "1990-01-01"; 
+
+        const countryRaw = (c?.value || "").trim();
+        const country = countryRaw && countryRaw !== "Select Country" ? getIsoCountry(countryRaw) : "NP";
+
+        const passportNumber = (p?.value || "").trim();
+        
+        const passportCountryRaw = (pc?.value || "").trim();
+        const passportCountry = passportCountryRaw && passportCountryRaw !== "Select Country" ? getIsoCountry(passportCountryRaw) : "NP";
+        
+        const passportExpiryDate = (pe?.value || "").trim();
 
         const passengerType =
           idx < adults ? "ADULT" : idx < adults + children ? "CHILD" : "INFANT";

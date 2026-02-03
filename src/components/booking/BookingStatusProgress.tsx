@@ -29,7 +29,7 @@ const BookingStatusProgress: React.FC<BookingStatusProgressProps> = ({
   const defaultSteps = [
     { id: "draft", name: "New Booking", statuses: ["Draft", "New"] },
     { id: "pending", name: "In Progress", statuses: ["Pending", "Processing", "Send"] },
-    { id: "confirmed", name: "Confirmed", statuses: ["Confirmed", "Hold"] },
+    { id: "confirmed", name: "Confirmed", statuses: ["Confirmed", "Hold", "ON_HOLD", "on_hold"] },
     { id: "issued", name: "Completed", statuses: ["Issued", "Completed", "Finalized"] },
   ];
 
@@ -51,7 +51,7 @@ const BookingStatusProgress: React.FC<BookingStatusProgressProps> = ({
 
       // Fallback logic for linear progression if status is further along
       if (["issued", "completed", "finalized"].includes(normalizedStatus)) currentStepIndex = 3;
-      else if (["confirmed", "hold"].includes(normalizedStatus)) currentStepIndex = 2;
+      else if (["confirmed", "hold", "on_hold"].includes(normalizedStatus)) currentStepIndex = 2;
       else if (["pending", "processing", "send"].includes(normalizedStatus)) currentStepIndex = 1;
       else if (["draft", "new"].includes(normalizedStatus)) currentStepIndex = 0;
       

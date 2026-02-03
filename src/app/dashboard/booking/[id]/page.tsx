@@ -28,6 +28,7 @@ export default function BookingDetailsPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [logs, setLogs] = useState<Record<string, unknown>[]>([]);
 
   const formatDateTime = (value?: string) => {
     if (!value) return "";
@@ -39,6 +40,15 @@ export default function BookingDetailsPage({
   useEffect(() => {
     if (!bookingId) return;
     fetchBookingDetails();
+    // Fetch logs
+    supabase
+      .from("booking_logs")
+      .select("*")
+      .eq("booking_id", bookingId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) setLogs(data);
+      });
 
     // Set up real-time subscription
     const channel = supabase
@@ -197,7 +207,7 @@ export default function BookingDetailsPage({
   const getStatusStage = (status: string) => {
     const s = status?.toLowerCase() || "";
     if (["issued", "completed", "finalized"].includes(s)) return "completed";
-    if (["confirmed", "hold"].includes(s)) return "confirmed";
+    if (["confirmed", "hold", "on_hold"].includes(s)) return "confirmed";
     if (["pending", "processing", "send"].includes(s)) return "in-progress";
     return "new";
   };
@@ -318,7 +328,7 @@ export default function BookingDetailsPage({
                 </div>
               </div>
               <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border ${
-                booking.status === "Confirmed"
+                (booking.status === "Confirmed" || booking.status === "ON_HOLD" || booking.status === "Hold")
                   ? "bg-blue-100 text-blue-700 border-blue-200"
                   : booking.status === "Issued"
                   ? "bg-emerald-100 text-emerald-700 border-emerald-200"
@@ -328,7 +338,7 @@ export default function BookingDetailsPage({
                   ? "bg-amber-100 text-amber-700 border-amber-200"
                   : "bg-slate-100 text-slate-700 border-slate-200"
               }`}>
-                {(booking.status === "Confirmed" ? "Hold" : booking.status) || "Draft"}
+                {((booking.status === "Confirmed" || booking.status === "ON_HOLD") ? "Hold" : booking.status) || "Draft"}
               </span>
             </h1>
             <p className="mt-1 text-sm text-slate-500 font-medium italic">
@@ -797,6 +807,68 @@ export default function BookingDetailsPage({
              <MileageTracker itineraries={booking.itineraries} />
           </div>
 
+        </div>
+      </div>
+
+      {/* Amadeus Logs Section */}
+      <div className="mt-8 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/30">
+          <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span className="material-symbols-outlined text-slate-400">
+              terminal
+            </span>
+            Amadeus Activity Logs
+          </h3>
+        </div>
+        <div className="p-6 space-y-4">
+          {logs.length === 0 ? (
+            <div className="text-center py-8">
+              <span className="material-symbols-outlined text-slate-300 text-[32px] mb-2">
+                content_paste_off
+              </span>
+              <p className="text-slate-500 text-sm font-medium">No activity logs found for this booking.</p>
+            </div>
+          ) : (
+            logs.map((log) => (
+              <div key={log.id as string} className="border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full ${
+                      log.status === 'SUCCESS' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'
+                    }`}>
+                      {log.status as string}
+                    </span>
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      {log.type as string}
+                    </span>
+                  </div>
+                  <span className="text-xs text-slate-400 font-medium">
+                    {new Date(log.created_at as string).toLocaleString()}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Request Payload</p>
+                    <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 overflow-auto max-h-60">
+                      <pre className="text-[10px] font-mono text-slate-600 whitespace-pre-wrap break-all">
+                        {JSON.stringify(log.request_payload, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                      {log.status === 'SUCCESS' ? 'Response Payload' : 'Error Details'}
+                    </p>
+                    <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 overflow-auto max-h-60">
+                      <pre className="text-[10px] font-mono text-slate-600 whitespace-pre-wrap break-all">
+                        {JSON.stringify(log.response_payload || log.error_details, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </main>

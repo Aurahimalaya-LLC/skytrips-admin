@@ -5,15 +5,27 @@ export const runtime = "nodejs";
 
 function parseIata(input?: string): string {
   if (!input) return "";
-  const match = input.match(/\(([^)]+)\)\s*$/);
-  if (match) return match[1].trim();
-  // Fallback: if user typed code directly
-  if (/^[A-Z]{3}$/.test(input.trim())) return input.trim();
-  // Last token may be code
-  const tokens = input.trim().split(/\s+/);
-  const last = tokens[tokens.length - 1];
-  if (/^[A-Z]{3}$/.test(last)) return last;
-  return input.trim();
+  
+  // Decode and trim just in case
+  let clean = input;
+  try {
+    clean = decodeURIComponent(input).trim();
+  } catch {
+    clean = input.trim();
+  }
+
+  // 1. Look for 3 uppercase letters inside parentheses, e.g. "Name (KTM)"
+  const match = clean.match(/\(([A-Z]{3})\)/);
+  if (match) return match[1];
+
+  // 2. Check if the string itself is a 3-letter code (e.g. "KTM")
+  if (/^[A-Z]{3}$/.test(clean)) return clean;
+
+  // 3. Last resort: simple regex for ends with (XXX)
+  const endMatch = clean.match(/\(([^)]+)\)\s*$/);
+  if (endMatch) return endMatch[1].trim();
+
+  return clean;
 }
 
 export async function GET(req: Request) {
@@ -26,7 +38,7 @@ export async function GET(req: Request) {
     const adults = Number(searchParams.get("adults") || "1");
     const children = Number(searchParams.get("children") || "0");
     const infants = Number(searchParams.get("infants") || "0");
-    const travelClass = (searchParams.get("class") || "Economy").toUpperCase().replace(" ", "_");
+    const travelClass = (searchParams.get("class") || "Economy").toUpperCase().replace(/\s+/g, "_");
     const tripType = searchParams.get("type") || "Round Trip";
     const nonStop = searchParams.get("nonStop") === "true" ? "true" : undefined;
 

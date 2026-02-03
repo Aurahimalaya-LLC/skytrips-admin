@@ -11,10 +11,8 @@ export function getAmadeus(): Amadeus {
     throw new Error('Amadeus credentials missing (AMADEUS_CLIENT_ID/AMADEUS_CLIENT_SECRET)');
   }
 
-  const hostname =
-    process.env.AMADEUS_HOSTNAME && process.env.AMADEUS_HOSTNAME.toLowerCase() === 'production'
-      ? 'production'
-      : 'test';
+  const env = process.env.AMADEUS_HOSTNAME || process.env.AMADEUS_ENV || 'test';
+  const hostname = env.toLowerCase() === 'production' ? 'production' : 'test';
 
   singleton = new Amadeus({
     clientId,

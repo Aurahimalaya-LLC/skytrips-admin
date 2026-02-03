@@ -145,7 +145,11 @@ export default function BookingPage() {
       }
 
       if (statusFilter) {
-        query = query.eq("status", statusFilter);
+        if (statusFilter === "Confirmed") {
+          query = query.in("status", ["Confirmed", "ON_HOLD"]);
+        } else {
+          query = query.eq("status", statusFilter);
+        }
       }
 
       if (customerFilter === "linked") {
@@ -705,7 +709,7 @@ export default function BookingPage() {
             }}
           >
             <option value="">All Statuses</option>
-            <option value="Confirmed">Hold</option>
+            <option value="Confirmed">Hold / On Hold</option>
             <option value="Issued">Issued</option>
             <option value="Pending">Pending</option>
             <option value="Draft">Draft</option>
@@ -1195,8 +1199,8 @@ export default function BookingPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-slate-600 text-sm">
-                        {booking.created_at
-                          ? new Date(booking.created_at).toLocaleString()
+                        {(booking.created_at || booking.inserted_at || booking.createdAt)
+                          ? new Date(booking.created_at || booking.inserted_at || booking.createdAt!).toLocaleString()
                           : "N/A"}
                       </span>
                     </td>
@@ -1208,18 +1212,23 @@ export default function BookingPage() {
                             backgroundImage: `url("https://ui-avatars.com/api/?name=${encodeURIComponent(
                               `${
                                 booking.travellers?.[0]?.firstName ||
-                                // booking.travellerFirstName || // REMOVED
+                                booking.contact_details?.name?.firstName ||
+                                (booking as Record<string, any>).flight_data?.travelers?.[0]?.name?.firstName ||
                                 ""
                               } ${
                                 booking.travellers?.[0]?.lastName ||
-                                // booking.travellerLastName || // REMOVED
+                                booking.contact_details?.name?.lastName ||
+                                (booking as Record<string, any>).flight_data?.travelers?.[0]?.name?.lastName ||
                                 ""
                               }`,
                             )}&background=random")`,
                           }}
                         ></div>
                         <span className="text-slate-900 font-medium text-sm">
-                          {booking.travellers?.[0]?.firstName || "N/A"}
+                          {booking.travellers?.[0]?.firstName || 
+                           booking.contact_details?.name?.firstName ||
+                           (booking as Record<string, any>).flight_data?.travelers?.[0]?.name?.firstName || 
+                           "Unknown"}
                         </span>
                       </div>
                     </td>
@@ -1237,7 +1246,7 @@ export default function BookingPage() {
                         disabled={booking.status === "Issued" || actionLoading === booking.id}
                         onClick={() => handleIssueBooking(booking)}
                         className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset transition-all ${
-                          booking.status === "Confirmed"
+                          booking.status === "Confirmed" || booking.status === "ON_HOLD"
                             ? "bg-blue-50 text-blue-700 ring-blue-600/20 hover:bg-blue-100 cursor-pointer"
                             : booking.status === "Issued"
                             ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20 cursor-default"
@@ -1256,14 +1265,14 @@ export default function BookingPage() {
                             sync
                           </span>
                         ) : null}
-                        {(booking.status === "Confirmed"
+                        {(booking.status === "Confirmed" || booking.status === "ON_HOLD"
                           ? "Hold"
                           : booking.status) || "Draft"}
                       </button>
                     </td>
                     <td className="px-6 py-4">
                       <span className="bg-blue-50 text-primary px-2 py-1 rounded text-xs font-bold">
-                        {booking.PNR}
+                        {booking.PNR || booking.pnr || "N/A"}
                       </span>
                     </td>
                     <td className="px-6 py-4">
