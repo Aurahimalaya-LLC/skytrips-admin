@@ -1,6 +1,7 @@
 export interface Booking {
   id?: number;
-  PNR: string;
+  PNR?: string;
+  pnr?: string; // Supabase column name
   airlines: string;
   origin: string;
   transit: string;
@@ -49,9 +50,18 @@ export interface Booking {
   last_invoice_sent_at?: string;
   last_eticket_sent_at?: string;
   created_at?: string;
+  createdAt?: string; // Potential camelCase alias
+  inserted_at?: string; // Potential alias
   updated_at?: string;
   itineraries?: FlightItinerary[];
   notes?: string;
+  contact_details?: {
+    name?: {
+      firstName?: string;
+      lastName?: string;
+    };
+    [key: string]: any;
+  };
 }
 
 export interface Addons {

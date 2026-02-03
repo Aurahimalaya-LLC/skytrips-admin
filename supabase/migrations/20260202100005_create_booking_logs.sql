@@ -14,11 +14,13 @@ CREATE TABLE IF NOT EXISTS public.booking_logs (
 ALTER TABLE public.booking_logs ENABLE ROW LEVEL SECURITY;
 
 -- Create policy for admins (assuming admins can view logs)
+DROP POLICY IF EXISTS "Admins can view booking logs" ON public.booking_logs;
 CREATE POLICY "Admins can view booking logs" ON public.booking_logs
     FOR SELECT
     USING (auth.role() = 'authenticated'); -- Adjust based on actual admin role check if needed
 
 -- Create policy for insertion (server-side mostly, but allow authenticated for now if needed)
+DROP POLICY IF EXISTS "Server can insert booking logs" ON public.booking_logs;
 CREATE POLICY "Server can insert booking logs" ON public.booking_logs
     FOR INSERT
     WITH CHECK (true);

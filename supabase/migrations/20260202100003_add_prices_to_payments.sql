@@ -6,6 +6,10 @@ ADD COLUMN IF NOT EXISTS cost_price DECIMAL(10, 2),
 ADD COLUMN IF NOT EXISTS selling_price DECIMAL(10, 2);
 
 -- Update view to include new columns
+DROP VIEW IF EXISTS view_customer_payments;
+DROP VIEW IF EXISTS view_agency_payments;
+DROP VIEW IF EXISTS view_unified_payments;
+
 CREATE OR REPLACE VIEW view_unified_payments AS
 SELECT 
     p.payment_id,
@@ -32,6 +36,13 @@ LEFT JOIN
     public.agencies a ON b.agency_id = a.uid
 LEFT JOIN 
     public.customers c ON b.customerid = c.id;
+
+-- Recreate dependent views
+CREATE OR REPLACE VIEW view_customer_payments AS
+SELECT * FROM view_unified_payments WHERE payment_source = 'Customer';
+
+CREATE OR REPLACE VIEW view_agency_payments AS
+SELECT * FROM view_unified_payments WHERE payment_source = 'Agency';
 
 -- Notify PostgREST to reload schema
 NOTIFY pgrst, 'reload schema';

@@ -50,14 +50,48 @@ export async function POST(req: Request) {
         
         const price = order.price?.grandTotal || order.price?.total;
         const currency = order.price?.billingCurrency || order.price?.currency;
+
+        // Extract 6-char PNR from associatedRecords (usually GDS PNR)
+        const pnrRecord = order.associatedRecords?.find((r: any) => r.originSystemCode === "GDS");
+        const pnr = pnrRecord?.reference || order.associatedRecords?.[0]?.reference;
+        
+        // Extract Airline Name
+        const validatingAirlineCode = flightOffer?.validatingAirlineCodes?.[0];
+        let airlineName = validatingAirlineCode;
+        if (response.result?.dictionaries?.carriers && validatingAirlineCode) {
+             airlineName = response.result.dictionaries.carriers[validatingAirlineCode] || validatingAirlineCode;
+        }
+
+        // Extract Transit Info
+        const segments = itinerary?.segments || [];
+        const transitAirports: string[] = [];
+        if (segments.length > 1) {
+             for (let i = 0; i < segments.length - 1; i++) {
+                 transitAirports.push(segments[i].arrival.iataCode);
+             }
+        }
+        const transitString = transitAirports.length > 0 ? transitAirports.join(", ") : null;
+
+        // Use requestBody.travelers as it's definitely present
+        const travelersData = requestBody.travelers || order.travelers;
+
+        // Calculate Date Fields
+        const now = new Date();
+        const issueMonth = now.toLocaleString('default', { month: 'long' }); // e.g., "January"
+        const issueDay = String(now.getDate()); // e.g., "30"
+        const issueYear = String(now.getFullYear()); // e.g., "2026"
+
+        // Determine Trip Type for DB
+        const isRoundTrip = requestBody.flightOffers[0].itineraries.length > 1;
+        const tripType = isRoundTrip ? "Round Trip" : "One Way";
         
         // Insert into bookings table
         const { data: bookingData, error } = await supabase
           .from("bookings")
           .insert({
-            pnr: order.id, // Amadeus Order ID
-            booking_reference: order.associatedRecords?.[0]?.reference || order.id,
-            status: "CONFIRMED",
+            pnr: pnr, // The 6-char PNR
+            booking_reference: order.id, // Amadeus Order ID
+            status: "ON_HOLD",
             total_price: price,
             currency: currency,
             flight_data: order,
@@ -65,9 +99,17 @@ export async function POST(req: Request) {
             destination: lastSegment?.arrival?.iataCode,
             travel_date: firstSegment?.departure?.at,
             user_id: null, // We don't have user context easily here without headers/auth check
-            contact_details: order.travelers?.[0]?.contact,
-            trip_type: requestBody.flightOffers[0].itineraries.length > 1 ? "ROUND_TRIP" : "ONE_WAY", // Simple heuristic
-            // Add other fields as best effort
+            contact_details: {
+              ...order.travelers?.[0]?.contact,
+              name: order.travelers?.[0]?.name
+            },
+            tripType: tripType, // camelCase column name as per DB
+            issueMonth: issueMonth,
+            IssueDay: issueDay, // Capital 'I' as per DB
+            issueYear: issueYear,
+            airlines: airlineName,
+            transit: transitString,
+            travellers: travelersData,
           })
           .select()
           .single();
