@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import UserDomainSettings from "@/components/portal/settings/UserDomainSettings";
 
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
@@ -97,8 +98,8 @@ export default function ProfilePage() {
 
         setMessage({ type: 'success', text: "Profile updated successfully!" });
     } catch (e: unknown) {
-        const error = e as Error;
-        setMessage({ type: 'error', text: error.message || "Failed to update profile" });
+        const errMsg = e instanceof Error ? e.message : "Failed to update profile";
+        setMessage({ type: 'error', text: errMsg });
     } finally {
         setSaving(false);
     }
@@ -256,6 +257,8 @@ export default function ProfilePage() {
             </button>
          </div>
       </form>
+
+      <UserDomainSettings />
     </div>
   );
 }

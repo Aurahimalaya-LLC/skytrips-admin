@@ -126,6 +126,14 @@ export async function GET() {
         seo_title: "",
         meta_description: "",
         faqs: [],
+        domain_routing: {
+          enabled: false,
+          mappings: [
+            { region: "Nepal", domain: "skytrips.com.np", countryCode: "NP" },
+            { region: "Australia", domain: "skytrips.com.au", countryCode: "AU" },
+          ],
+          fallbackDomain: "skytripsworld.com",
+        },
         company_profiles: liveCompanyProfiles,
       });
     }
@@ -139,6 +147,14 @@ export async function GET() {
       seo_title: settingsData.seo_title || "",
       meta_description: settingsData.meta_description || "",
       faqs: Array.isArray(settingsData.faqs) ? settingsData.faqs : [],
+      domain_routing: settingsData.domain_routing || {
+        enabled: false,
+        mappings: [
+          { region: "Nepal", domain: "skytrips.com.np", countryCode: "NP" },
+          { region: "Australia", domain: "skytrips.com.au", countryCode: "AU" },
+        ],
+        fallbackDomain: "skytripsworld.com",
+      },
       company_profiles: liveCompanyProfiles,
     });
   } catch (err: unknown) {

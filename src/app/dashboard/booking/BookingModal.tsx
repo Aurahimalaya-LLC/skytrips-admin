@@ -6,6 +6,7 @@ import AirportAutocomplete from "@/components/AirportAutocomplete";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import CustomerSearch from "@/components/CustomerSearch";
 import TravellerSearch from "@/components/TravellerSearch";
+import MultiStepProgress from "@/components/common/MultiStepProgress";
 import countryData from "../../../../libs/shared-utils/constants/country.json";
 import {
   Booking,
@@ -15,12 +16,33 @@ import {
   FlightSegment,
   Addons,
 } from "@/types";
+import NotificationConfirmModal from "@/components/NotificationConfirmModal";
 
 type Agency = {
   uid: string;
   agency_name: string;
   status: string;
 };
+
+interface AppUser {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email: string;
+  role?: string;
+  created_at?: string;
+}
+
+interface DBTraveller {
+  id: string;
+  first_name: string;
+  last_name: string;
+  passport_number?: string;
+  passport_expiry?: string;
+  dob?: string;
+  nationality?: string;
+  customer_id?: string | number;
+}
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -109,8 +131,8 @@ export default function BookingModal({
   );
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [agenciesLoading, setAgenciesLoading] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
   // Fetch current user and set it as handledBy
   useEffect(() => {
@@ -167,6 +189,68 @@ export default function BookingModal({
     fetchCurrentUser();
   }, [booking]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const validateStep = (stepIndex: number): boolean => {
+    if (stepIndex === 0) {
+      // Contact Details Validation
+      if (!formData.email || !formData.phone) {
+        alert("Please provide both email and phone number for the customer.");
+        return false;
+      }
+      if (formData.contactType === "new" && (!formData.customerFirstName || !formData.customerLastName)) {
+        alert("Please provide the customer's first and last name.");
+        return false;
+      }
+    }
+
+    if (stepIndex === 1) {
+      // Traveller Information Validation
+      if (formData.travellers.length === 0) {
+        alert("Please add at least one traveller.");
+        return false;
+      }
+      const invalidTraveller = formData.travellers.find(t => !t.firstName || !t.lastName);
+      if (invalidTraveller) {
+        alert("Please ensure all travellers have a first and last name.");
+        return false;
+      }
+    }
+
+    if (stepIndex === 2) {
+      // Route Details Validation
+      if (!formData.origin || !formData.destination || !formData.travelDate || !formData.airlines) {
+        alert("Please complete all required route details (Origin, Destination, Departure Date, and Airline).");
+        return false;
+      }
+      if (formData.tripType === "Round Trip" && !formData.returnDate) {
+        alert("Please provide a return date for your round trip.");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleStepChange = (newStep: number) => {
+    // Only validate when moving forward
+    if (newStep > currentStep) {
+      // Validate all steps between current and target
+      for (let i = currentStep; i < newStep; i++) {
+        if (!validateStep(i)) return;
+      }
+    }
+    setCurrentStep(newStep);
+  };
+
+  const steps = [
+    { id: "contact", name: "Contact Details" },
+    { id: "traveller", name: "Traveller Info" },
+    { id: "route", name: "Route Details" },
+    { id: "addons", name: "Add-ons" },
+    { id: "review", name: "Review & Save" },
+  ];
 
   const [formData, setFormData] = useState<FormData>({
     email: "sarita.p@example.com",
@@ -283,36 +367,22 @@ export default function BookingModal({
     if (booking) {
       let loadedTravellers: Traveller[] = [];
       if (
-        (booking as any).travellers &&
-        Array.isArray((booking as any).travellers) &&
-        (booking as any).travellers.length > 0
+        booking.travellers &&
+        Array.isArray(booking.travellers) &&
+        booking.travellers.length > 0
       ) {
-        loadedTravellers = (booking as any).travellers.map((t: any) => ({
+        loadedTravellers = booking.travellers.map((t) => ({
           id: t.id || Date.now().toString() + Math.random().toString(),
-          firstName: t.firstName || t.first_name || "",
-          lastName: t.lastName || t.last_name || "",
-          passportNumber: t.passportNumber || t.passport_number || "",
-          passportExpiry: t.passportExpiry || t.passport_expiry || "",
+          firstName: t.firstName || "",
+          lastName: t.lastName || "",
+          passportNumber: t.passportNumber || "",
+          passportExpiry: t.passportExpiry || "",
           dob: t.dob || "",
           nationality: t.nationality || "Nepalese",
-          customerId: t.customerId || t.customer_id,
+          customerId: t.customerId,
           saveToDatabase: t.saveToDatabase || false,
-          eticketNumber: t.eticketNumber || t.eticket_number || "",
+          eticketNumber: t.eticketNumber || "",
         }));
-      } else {
-        // Fallback to flat fields
-        // loadedTravellers = [
-        //   {
-        //     id: Date.now().toString(),
-        //     firstName: booking.travellerFirstName || "",
-        //     lastName: booking.travellerLastName || "",
-        //     passportNumber: booking.passportNumber || "",
-        //     passportExpiry: booking.passportExpiry || "",
-        //     dob: booking.dob || "",
-        //     nationality: booking.nationality || "Nepalese",
-        //     eticketNumber: "",
-        //   },
-        // ];
       }
 
       setFormData((prev) => ({
@@ -327,21 +397,21 @@ export default function BookingModal({
         buyingPrice: booking.buyingPrice || "0.00",
         payment: booking.payment || "Pending",
         paymentDate: booking.dateofpayment || "",
-        customerType: (booking as any).customerType || "existing",
-        contactType: (booking as any).contactType || "existing",
-        addons: (booking as any).addons || prev.addons,
-        prices: (booking as any).prices || prev.prices,
+        customerType: booking.customerType || "existing",
+        contactType: booking.contactType || "existing",
+        addons: booking.addons || prev.addons,
+        prices: (booking.prices as unknown as Prices) || prev.prices,
         stopoverLocation: booking.stopoverLocation || "",
-        agency: (booking as any).issuedthroughagency || booking.agency || "N/A",
+        agency: booking.issuedthroughagency || booking.agency || "N/A",
         customerid:
-          (booking as any).customerid ||
-          (booking as any).customerId ||
+          booking.customerid ||
+          booking.customerId ||
           undefined,
         returnDate: booking.returnDate || "",
         itineraries: booking.itineraries || [{ segments: [] }],
       }));
-      if ((booking as any).customer) {
-        setSelectedCustomer((booking as any).customer as unknown as Customer);
+      if (booking.customer) {
+        setSelectedCustomer(booking.customer as unknown as Customer);
       }
       if (booking.stopoverLocation) {
         setShowStopover(true);
@@ -422,9 +492,10 @@ export default function BookingModal({
 
   if (!isOpen) return null;
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     if (isReadOnly) return;
-    const { name, value, type, checked } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
 
     if (name === "tripType") {
       let newItineraries = [...formData.itineraries];
@@ -523,7 +594,7 @@ export default function BookingModal({
           customerId: customer.id,
         };
 
-        const updates: any = { travellers: newTravellers };
+        const updates: Partial<FormData> = { travellers: newTravellers };
 
         // Sync primary if index 0
         if (searchingTravellerIndex === 0) {
@@ -560,7 +631,7 @@ export default function BookingModal({
     }));
   };
 
-  const handleTravellerSelect = (traveller: any) => {
+  const handleTravellerSelect = (traveller: DBTraveller) => {
     if (searchingTravellerIndex === null) return;
 
     setFormData((prev) => {
@@ -577,7 +648,7 @@ export default function BookingModal({
       };
 
       // Sync primary if index 0
-      const updates: any = { travellers: newTravellers };
+      const updates: Partial<FormData> = { travellers: newTravellers };
       if (searchingTravellerIndex === 0) {
         updates.travellerFirstName = traveller.first_name;
         updates.travellerLastName = traveller.last_name;
@@ -595,7 +666,7 @@ export default function BookingModal({
   const handleTravellerChange = (
     index: number,
     field: keyof Traveller,
-    value: any,
+    value: string | boolean | number | undefined,
   ) => {
     setFormData((prev) => {
       const newTravellers = [...prev.travellers];
@@ -603,7 +674,7 @@ export default function BookingModal({
 
       // Sync primary traveller (index 0) with flat fields
       if (index === 0) {
-        const mapping: any = {
+        const mapping: Record<string, keyof FormData> = {
           firstName: "travellerFirstName",
           lastName: "travellerLastName",
           passportNumber: "passportNumber",
@@ -611,8 +682,10 @@ export default function BookingModal({
           dob: "dob",
           nationality: "nationality",
         };
-        if (mapping[field]) {
-          (prev as any)[mapping[field]] = value;
+        if (mapping[field as string]) {
+          const formDataField = mapping[field as string];
+          // Use type assertion safely for dynamic key access
+          (prev as unknown as Record<string, unknown>)[formDataField] = value;
         }
       }
       return { ...prev, travellers: newTravellers };
@@ -672,9 +745,9 @@ export default function BookingModal({
   const handleSegmentChange = (
     itineraryIndex: number,
     segmentIndex: number,
-    field: string,
-    value: any,
-    nestedField?: string,
+    field: keyof FlightSegment | "departure" | "arrival",
+    value: string | number | { code: string } | undefined,
+    nestedField?: "iataCode" | "terminal" | "at" | "code",
   ) => {
     setFormData((prev) => {
       const newItineraries = [...prev.itineraries];
@@ -682,16 +755,39 @@ export default function BookingModal({
 
       if (nestedField) {
         // Handle nested fields like departure.iataCode
-        (segment as any)[field] = {
-          ...(segment as any)[field],
+        const target = (segment as unknown as Record<string, Record<string, unknown>>)[field];
+        (segment as unknown as Record<string, Record<string, unknown>>)[field] = {
+          ...target,
           [nestedField]: value,
         };
       } else {
-        (segment as any)[field] = value;
+        (segment as unknown as Record<string, unknown>)[field] = value;
       }
 
       return { ...prev, itineraries: newItineraries };
     });
+  };
+
+  const handleConfirmIssue = async () => {
+    if (!booking?.id) return;
+
+    try {
+      const { error: updateError } = await supabase
+        .from("bookings")
+        .update({
+          status: "Issued",
+          bookingstatus: "Issued",
+        })
+        .eq("id", booking.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setFormData((prev) => ({ ...prev, status: "Issued" }));
+    } catch (err) {
+      console.error("Error issuing booking:", err);
+      throw err;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -763,7 +859,11 @@ export default function BookingModal({
 
     // If user explicitly selected Cancelled or Refunded (if available), respect it?
     // But if they try to save as Confirmed/Pending with missing details, force Draft.
-    if ((hasMissingFields || !hasValidTraveller) && finalStatus !== "Cancelled") {
+    // ADDED: Respect "Issued" if manually selected
+    if (
+      (hasMissingFields || !hasValidTraveller) &&
+      !["Cancelled", "Issued"].includes(finalStatus)
+    ) {
       finalStatus = "Draft";
     }
 
@@ -849,7 +949,7 @@ export default function BookingModal({
       ></div>
 
       {/* Modal Container */}
-      <div className="relative bg-white w-full max-w-6xl h-[90vh] flex flex-col rounded-xl shadow-2xl overflow-hidden border border-gray-200 mx-4">
+      <div className="relative bg-white w-full max-w-[95vw] h-[95vh] flex flex-col rounded-xl shadow-2xl overflow-hidden border border-gray-200 mx-4">
         {/* Header */}
         <header className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-6 lg:px-8 z-10 shrink-0">
           <div>
@@ -875,354 +975,101 @@ export default function BookingModal({
         {/* Main Content (Scrollable) */}
         <div className="flex-1 overflow-y-auto bg-gray-50">
           <main className="p-6 lg:p-8">
+            <div className="mb-8">
+              <MultiStepProgress
+                steps={steps}
+                currentStep={currentStep}
+                onStepChange={handleStepChange}
+              />
+            </div>
             <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Columns (Main Form) */}
-                <div className="lg:col-span-2 space-y-6">
-                  {/* Customer Contact Details */}
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
-                    <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                      <h3 className="text-lg font-bold text-slate-900 flex items-center tracking-tight">
-                        <span className="material-symbols-outlined text-primary mr-3">
-                          contact_mail
-                        </span>
-                        Customer Contact Details
-                      </h3>
-                    </div>
-                    <div className="p-8">
-                      <div className="mb-8 p-6 bg-slate-50/50 rounded-xl border border-slate-100">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-                          <div className="flex items-center gap-4 w-full sm:w-auto">
-                            <div className="flex items-center h-6">
-                              <input
-                                checked={formData.contactType === "existing"}
-                                onChange={() =>
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    contactType: "existing",
-                                  }))
-                                }
-                                className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
-                                id="existing-contact"
-                                name="contact-type"
-                                type="radio"
-                                value="existing"
-                              />
-                            </div>
-                            <label
-                              className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
-                              htmlFor="existing-contact"
-                            >
-                              Existing Customer
-                            </label>
-                          </div>
-                          <div className="flex items-center gap-4 w-full sm:w-auto">
-                            <div className="flex items-center h-6">
-                              <input
-                                checked={formData.contactType === "new"}
-                                onChange={() =>
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    contactType: "new",
-                                  }))
-                                }
-                                className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
-                                id="new-contact"
-                                name="contact-type"
-                                type="radio"
-                                value="new"
-                              />
-                            </div>
-                            <label
-                              className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
-                              htmlFor="new-contact"
-                            >
-                              New Customer
-                            </label>
-                          </div>
+              <div className="space-y-6">
+                {/* Main Content Area */}
+                <div className="space-y-6">
+                  {currentStep === 0 && (
+                    <>
+                      {/* Customer Contact Details */}
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
+                        <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                          <h3 className="text-lg font-bold text-slate-900 flex items-center tracking-tight">
+                            <span className="material-symbols-outlined text-primary mr-3">
+                              contact_mail
+                            </span>
+                            Customer Contact Details
+                          </h3>
                         </div>
-
-                        {formData.contactType === "existing" && (
-                          <div className="w-full mt-6 relative">
-                            <CustomerSearch
-                              onSelect={handleCustomerSelect}
-                              className="w-full"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {formData.contactType === "new" && (
-                        <div className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div>
-                              <label
-                                className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
-                                htmlFor="customerFirstName"
-                              >
-                                First Name
-                              </label>
-                              <div className="relative rounded-lg shadow-sm">
-                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                                  <span
-                                    className="material-symbols-outlined text-slate-400"
-                                    style={{ fontSize: "20px" }}
-                                  >
-                                    person
-                                  </span>
-                                </div>
-                                <input
-                                  className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium uppercase"
-                                  id="customerFirstName"
-                                  name="customerFirstName"
-                                  type="text"
-                                  value={formData.customerFirstName}
-                                  onChange={handleChange}
-                                  placeholder="Given Name"
-                                  disabled={isReadOnly}
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <label
-                                className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
-                                htmlFor="customerLastName"
-                              >
-                                Last Name
-                              </label>
-                              <div className="relative rounded-lg shadow-sm">
-                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                                  <span
-                                    className="material-symbols-outlined text-slate-400"
-                                    style={{ fontSize: "20px" }}
-                                  >
-                                    person
-                                  </span>
-                                </div>
-                                <input
-                                  className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium uppercase"
-                                  id="customerLastName"
-                                  name="customerLastName"
-                                  type="text"
-                                  value={formData.customerLastName}
-                                  onChange={handleChange}
-                                  placeholder="Surname"
-                                  disabled={isReadOnly}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div>
-                              <label
-                                className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
-                                htmlFor="email"
-                              >
-                                Email Address
-                              </label>
-                              <div className="relative rounded-lg shadow-sm">
-                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                                  <span
-                                    className="material-symbols-outlined text-slate-400"
-                                    style={{ fontSize: "20px" }}
-                                  >
-                                    email
-                                  </span>
-                                </div>
-                                <input
-                                  className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
-                                  id="email"
-                                  name="email"
-                                  type="email"
-                                  value={formData.email}
-                                  onChange={handleChange}
-                                  placeholder="customer@email.com"
-                                  disabled={isReadOnly}
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <label
-                                className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
-                                htmlFor="phone"
-                              >
-                                Phone Number
-                              </label>
-                              <div className="relative rounded-lg shadow-sm">
-                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                                  <span
-                                    className="material-symbols-outlined text-slate-400"
-                                    style={{ fontSize: "20px" }}
-                                  >
-                                    phone
-                                  </span>
-                                </div>
-                                <input
-                                  className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
-                                  id="phone"
-                                  name="phone"
-                                  type="tel"
-                                  value={formData.phone}
-                                  onChange={handleChange}
-                                  placeholder="+61 XXX XXX XXX"
-                                  disabled={isReadOnly}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Traveller Information */}
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
-                    <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                      <h3 className="text-lg font-bold text-slate-900 flex items-center tracking-tight">
-                        <span className="material-symbols-outlined text-primary mr-3">
-                          person
-                        </span>
-                        Traveller Information
-                      </h3>
-                    </div>
-                    <div className="p-8">
-                      {formData.travellers.map((traveller, index) => (
-                        <div
-                          key={traveller.id || index}
-                          className="mb-8 p-6 bg-slate-50/50 rounded-xl border border-slate-100 relative group"
-                        >
-                          <div className="flex justify-between items-center mb-6">
-                            <h4 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-sm">
-                                {index + 1}
-                              </span>
-                              Traveller Details
-                            </h4>
-                            <div className="flex gap-2">
-                              {formData.travellers.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeTraveller(index)}
-                                  className="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-bold hover:bg-red-100 flex items-center gap-1"
-                                >
-                                  <span className="material-symbols-outlined text-[16px]">
-                                    delete
-                                  </span>
-                                  Remove
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <div className="p-8">
+                          <div className="mb-8 p-6 bg-slate-50/50 rounded-xl border border-slate-100">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-6">
                               <div className="flex items-center gap-4 w-full sm:w-auto">
                                 <div className="flex items-center h-6">
                                   <input
-                                    checked={travellerType === "existing"}
-                                    onChange={() => {
-                                      setTravellerType("existing");
-                                      setSearchingTravellerIndex(index);
-                                    }}
+                                    checked={formData.contactType === "existing"}
+                                    onChange={() =>
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        contactType: "existing",
+                                      }))
+                                    }
                                     className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
-                                    id={`existing-traveller-${index}`}
-                                    name={`traveller-type-${index}`}
+                                    id="existing-contact"
+                                    name="contact-type"
                                     type="radio"
                                     value="existing"
                                   />
                                 </div>
                                 <label
                                   className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
-                                  htmlFor={`existing-traveller-${index}`}
+                                  htmlFor="existing-contact"
                                 >
-                                  Existing Traveller
+                                  Existing Customer
                                 </label>
                               </div>
                               <div className="flex items-center gap-4 w-full sm:w-auto">
                                 <div className="flex items-center h-6">
                                   <input
-                                    checked={travellerType === "new"}
-                                    onChange={() => {
-                                      setTravellerType("new");
-                                      setSearchingTravellerIndex(null);
-                                    }}
+                                    checked={formData.contactType === "new"}
+                                    onChange={() =>
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        contactType: "new",
+                                      }))
+                                    }
                                     className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
-                                    id={`new-traveller-${index}`}
-                                    name={`traveller-type-${index}`}
+                                    id="new-contact"
+                                    name="contact-type"
                                     type="radio"
                                     value="new"
                                   />
                                 </div>
                                 <label
                                   className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
-                                  htmlFor={`new-traveller-${index}`}
+                                  htmlFor="new-contact"
                                 >
-                                  New Traveller
+                                  New Customer
                                 </label>
                               </div>
                             </div>
+
+                            {formData.contactType === "existing" && (
+                              <div className="w-full mt-6 relative">
+                                <CustomerSearch
+                                  onSelect={handleCustomerSelect}
+                                  className="w-full"
+                                />
+                              </div>
+                            )}
                           </div>
 
-                          {travellerType === "existing" && (
-                            <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-200 bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
-                              <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
-                                Search Existing Traveller
-                              </label>
-                              <TravellerSearch
-                                onSelect={(t) => {
-                                  handleTravellerSelect(t);
-                                }}
-                              />
-                              <p className="text-xs text-slate-500 mt-2">
-                                Select a traveller to auto-fill their details.
-                              </p>
-                            </div>
-                          )}
-
-                          {(travellerType === "new" ||
-                            (travellerType === "existing" &&
-                              traveller.firstName)) && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                              <div className="col-span-1">
-                                <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
-                                  First Name
-                                </label>
-                                <input
-                                  className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium pl-4 uppercase"
-                                  value={traveller.firstName}
-                                  onChange={(e) =>
-                                    handleTravellerChange(
-                                      index,
-                                      "firstName",
-                                      e.target.value,
-                                    )
-                                  }
-                                  disabled={isReadOnly}
-                                  placeholder="Given Name"
-                                />
-                              </div>
-                              <div className="col-span-1">
-                                <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
-                                  Last Name
-                                </label>
-                                <input
-                                  className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium pl-4 uppercase"
-                                  value={traveller.lastName}
-                                  onChange={(e) =>
-                                    handleTravellerChange(
-                                      index,
-                                      "lastName",
-                                      e.target.value,
-                                    )
-                                  }
-                                  disabled={isReadOnly}
-                                  placeholder="Surname"
-                                />
-                              </div>
-                              <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8 p-6 bg-slate-50/50 rounded-xl border border-slate-100">
+                          {formData.contactType === "new" && (
+                            <div className="space-y-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div>
-                                  <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
-                                    Passport Number
+                                  <label
+                                    className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
+                                    htmlFor="customerFirstName"
+                                  >
+                                    First Name
                                   </label>
                                   <div className="relative rounded-lg shadow-sm">
                                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
@@ -1230,88 +1077,27 @@ export default function BookingModal({
                                         className="material-symbols-outlined text-slate-400"
                                         style={{ fontSize: "20px" }}
                                       >
-                                        badge
+                                        person
                                       </span>
                                     </div>
                                     <input
                                       className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium uppercase"
-                                      value={traveller.passportNumber || ""}
-                                      onChange={(e) =>
-                                        handleTravellerChange(
-                                          index,
-                                          "passportNumber",
-                                          e.target.value,
-                                        )
-                                      }
+                                      id="customerFirstName"
+                                      name="customerFirstName"
+                                      type="text"
+                                      value={formData.customerFirstName}
+                                      onChange={handleChange}
+                                      placeholder="Given Name"
                                       disabled={isReadOnly}
-                                      placeholder="e.g. A1234567X"
                                     />
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
-                                    Passport Expiry Date
-                                  </label>
-                                  <input
-                                    className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
-                                    type="date"
-                                    value={traveller.passportExpiry || ""}
-                                    onChange={(e) =>
-                                      handleTravellerChange(
-                                        index,
-                                        "passportExpiry",
-                                        e.target.value,
-                                      )
-                                    }
-                                    disabled={isReadOnly}
-                                  />
-                                </div>
-                              </div>
-                              <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8 p-6 bg-slate-50/50 rounded-xl border border-slate-100">
-                                <div>
-                                  <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
-                                    Nationality
-                                  </label>
-                                  <select
-                                    className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
-                                    value={traveller.nationality || "Nepalese"}
-                                    onChange={(e) =>
-                                      handleTravellerChange(
-                                        index,
-                                        "nationality",
-                                        e.target.value,
-                                      )
-                                    }
-                                    disabled={isReadOnly}
+                                  <label
+                                    className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
+                                    htmlFor="customerLastName"
                                   >
-                                    {countryData.countries.map((c) => (
-                                      <option key={c.value} value={c.label}>
-                                        {c.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
-                                    Date of Birth
-                                  </label>
-                                  <input
-                                    className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
-                                    type="date"
-                                    value={traveller.dob || ""}
-                                    onChange={(e) =>
-                                      handleTravellerChange(
-                                        index,
-                                        "dob",
-                                        e.target.value,
-                                      )
-                                    }
-                                    disabled={isReadOnly}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
-                                    E-Ticket Number
+                                    Last Name
                                   </label>
                                   <div className="relative rounded-lg shadow-sm">
                                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
@@ -1319,594 +1105,1103 @@ export default function BookingModal({
                                         className="material-symbols-outlined text-slate-400"
                                         style={{ fontSize: "20px" }}
                                       >
-                                        confirmation_number
+                                        person
+                                      </span>
+                                    </div>
+                                    <input
+                                      className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium uppercase"
+                                      id="customerLastName"
+                                      name="customerLastName"
+                                      type="text"
+                                      value={formData.customerLastName}
+                                      onChange={handleChange}
+                                      placeholder="Surname"
+                                      disabled={isReadOnly}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div>
+                                  <label
+                                    className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
+                                    htmlFor="email"
+                                  >
+                                    Email Address
+                                  </label>
+                                  <div className="relative rounded-lg shadow-sm">
+                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                      <span
+                                        className="material-symbols-outlined text-slate-400"
+                                        style={{ fontSize: "20px" }}
+                                      >
+                                        email
                                       </span>
                                     </div>
                                     <input
                                       className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
-                                      value={traveller.eticketNumber || ""}
+                                      id="email"
+                                      name="email"
+                                      type="email"
+                                      value={formData.email}
+                                      onChange={handleChange}
+                                      placeholder="customer@email.com"
+                                      disabled={isReadOnly}
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label
+                                    className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
+                                    htmlFor="phone"
+                                  >
+                                    Phone Number
+                                  </label>
+                                  <div className="relative rounded-lg shadow-sm">
+                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                      <span
+                                        className="material-symbols-outlined text-slate-400"
+                                        style={{ fontSize: "20px" }}
+                                      >
+                                        phone
+                                      </span>
+                                    </div>
+                                    <input
+                                      className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
+                                      id="phone"
+                                      name="phone"
+                                      type="tel"
+                                      value={formData.phone}
+                                      onChange={handleChange}
+                                      placeholder="+61 XXX XXX XXX"
+                                      disabled={isReadOnly}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {currentStep === 1 && (
+                    <>
+                      {/* Traveller Information */}
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
+                        <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                          <h3 className="text-lg font-bold text-slate-900 flex items-center tracking-tight">
+                            <span className="material-symbols-outlined text-primary mr-3">
+                              person
+                            </span>
+                            Traveller Information
+                          </h3>
+                        </div>
+                        <div className="p-8">
+                          {formData.travellers.map((traveller, index) => (
+                            <div
+                              key={traveller.id || index}
+                              className="mb-8 p-6 bg-slate-50/50 rounded-xl border border-slate-100 relative group"
+                            >
+                              <div className="flex justify-between items-center mb-6">
+                                <h4 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-sm">
+                                    {index + 1}
+                                  </span>
+                                  Traveller Details
+                                </h4>
+                                <div className="flex gap-2">
+                                  {formData.travellers.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeTraveller(index)}
+                                      className="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-bold hover:bg-red-100 flex items-center gap-1"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">
+                                        delete
+                                      </span>
+                                      Remove
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                                  <div className="flex items-center gap-4 w-full sm:w-auto">
+                                    <div className="flex items-center h-6">
+                                      <input
+                                        checked={travellerType === "existing"}
+                                        onChange={() => {
+                                          setTravellerType("existing");
+                                          setSearchingTravellerIndex(index);
+                                        }}
+                                        className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
+                                        id={`existing-traveller-${index}`}
+                                        name={`traveller-type-${index}`}
+                                        type="radio"
+                                        value="existing"
+                                      />
+                                    </div>
+                                    <label
+                                      className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
+                                      htmlFor={`existing-traveller-${index}`}
+                                    >
+                                      Existing Traveller
+                                    </label>
+                                  </div>
+                                  <div className="flex items-center gap-4 w-full sm:w-auto">
+                                    <div className="flex items-center h-6">
+                                      <input
+                                        checked={travellerType === "new"}
+                                        onChange={() => {
+                                          setTravellerType("new");
+                                          setSearchingTravellerIndex(null);
+                                        }}
+                                        className="focus:ring-primary h-5 w-5 text-primary border-slate-300 cursor-pointer"
+                                        id={`new-traveller-${index}`}
+                                        name={`traveller-type-${index}`}
+                                        type="radio"
+                                        value="new"
+                                      />
+                                    </div>
+                                    <label
+                                      className="font-bold text-slate-700 text-sm whitespace-nowrap cursor-pointer hover:text-slate-900"
+                                      htmlFor={`new-traveller-${index}`}
+                                    >
+                                      New Traveller
+                                    </label>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {travellerType === "existing" && (
+                                <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-200 bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
+                                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">
+                                    Search Existing Traveller
+                                  </label>
+                                  <TravellerSearch
+                                    onSelect={(t) => {
+                                      handleTravellerSelect(t);
+                                    }}
+                                  />
+                                  <p className="text-xs text-slate-500 mt-2">
+                                    Select a traveller to auto-fill their details.
+                                  </p>
+                                </div>
+                              )}
+
+                              {(travellerType === "new" ||
+                                (travellerType === "existing" &&
+                                  traveller.firstName)) && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                  <div className="col-span-1">
+                                    <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                                      First Name
+                                    </label>
+                                    <input
+                                      className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium pl-4 uppercase"
+                                      value={traveller.firstName}
                                       onChange={(e) =>
                                         handleTravellerChange(
                                           index,
-                                          "eticketNumber",
+                                          "firstName",
                                           e.target.value,
                                         )
                                       }
                                       disabled={isReadOnly}
-                                      placeholder="E-Ticket No."
+                                      placeholder="Given Name"
                                     />
                                   </div>
-                                </div>
-                                <label className="flex items-start gap-3 cursor-pointer group p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
-                                  <div className="flex items-center h-5 mt-0.5">
+                                  <div className="col-span-1">
+                                    <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                                      Last Name
+                                    </label>
                                     <input
-                                      type="checkbox"
-                                      className="w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary cursor-pointer"
-                                      checked={
-                                        traveller.saveToDatabase || false
-                                      }
+                                      className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium pl-4 uppercase"
+                                      value={traveller.lastName}
                                       onChange={(e) =>
                                         handleTravellerChange(
                                           index,
-                                          "saveToDatabase",
-                                          e.target.checked,
+                                          "lastName",
+                                          e.target.value,
                                         )
                                       }
                                       disabled={isReadOnly}
+                                      placeholder="Surname"
                                     />
                                   </div>
-                                  <div>
-                                    <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">
-                                      Save to Travellers Database
-                                    </span>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                      Add this person to your saved travellers
-                                      list for future bookings.
-                                    </p>
-                                  </div>
-                                </label>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-
-                      <button
-                        type="button"
-                        onClick={addTraveller}
-                        className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-primary hover:text-primary hover:bg-blue-50/50 transition-all flex items-center justify-center gap-2"
-                      >
-                        <span className="material-symbols-outlined">
-                          person_add
-                        </span>
-                        Add Another Traveller
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Route & Trip Details */}
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
-                    <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                      <h3 className="text-lg font-bold text-slate-900 flex items-center tracking-tight">
-                        <span className="material-symbols-outlined text-primary mr-3">
-                          flight_takeoff
-                        </span>
-                        Route & Trip Details
-                      </h3>
-                    </div>
-                    <div className="p-5">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                        <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-1 tracking-tight">
-                            Trip Type
-                          </label>
-                          <select
-                            className="block w-full h-10 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-3"
-                            name="tripType"
-                            value={formData.tripType}
-                            onChange={handleChange}
-                            disabled={isReadOnly}
-                          >
-                            <option>One Way</option>
-                            <option>Round Trip</option>
-                            <option>Multi City</option>
-                          </select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1 tracking-tight">
-                              Departure Date
-                            </label>
-                            <input
-                              className="block w-full h-10 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-3"
-                              name="travelDate"
-                              type="date"
-                              value={formData.travelDate}
-                              onChange={handleChange}
-                              disabled={isReadOnly}
-                            />
-                          </div>
-                          {formData.tripType === "Round Trip" && (
-                            <div>
-                              <label className="block text-sm font-bold text-slate-700 mb-1 tracking-tight">
-                                Return Date
-                              </label>
-                              <input
-                                className="block w-full h-10 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-3"
-                                name="returnDate"
-                                type="date"
-                                value={formData.returnDate}
-                                onChange={handleChange}
-                                disabled={isReadOnly}
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <AirportAutocomplete
-                            label="Origin (From)"
-                            name="origin"
-                            value={formData.origin}
-                            onChange={handleChange}
-                            disabled={isReadOnly}
-                            icon="flight_takeoff"
-                            className="block w-full h-10 pl-12 pr-10 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
-                          />
-                        </div>
-                        <div>
-                          <AirportAutocomplete
-                            label="Destination (To)"
-                            name="destination"
-                            value={formData.destination}
-                            onChange={handleChange}
-                            disabled={isReadOnly}
-                            icon="flight_land"
-                            className="block w-full h-10 pl-12 pr-10 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Detailed Itinerary Segments */}
-                      <div className="space-y-4">
-                        {formData.itineraries?.map((itinerary, itinIndex) => (
-                          <div
-                            key={itinIndex}
-                            className="bg-slate-50 border border-slate-200 rounded-xl p-4"
-                          >
-                            <div className="flex justify-between items-center mb-3">
-                              <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                                {itinIndex === 0
-                                  ? "Outbound Flight Segments"
-                                  : "Return Flight Segments"}
-                              </h4>
-                            </div>
-
-                            <div className="space-y-3">
-                              {itinerary.segments.map((segment, segIndex) => (
-                                <div
-                                  key={segIndex}
-                                  className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm relative group"
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      removeSegment(itinIndex, segIndex)
-                                    }
-                                    className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
-                                  >
-                                    <span className="material-symbols-outlined text-lg">
-                                      delete
-                                    </span>
-                                  </button>
-
-                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-                                    {/* Departure */}
-                                    <div className="col-span-1 md:col-span-2">
-                                      <label className="text-xs font-bold text-slate-500 uppercase">
-                                        Departure
+                                  <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8 p-6 bg-slate-50/50 rounded-xl border border-slate-100">
+                                    <div>
+                                      <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                                        Passport Number
                                       </label>
-                                      <div className="grid grid-cols-3 gap-2 mt-1">
+                                      <div className="relative rounded-lg shadow-sm">
+                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                          <span
+                                            className="material-symbols-outlined text-slate-400"
+                                            style={{ fontSize: "20px" }}
+                                          >
+                                            badge
+                                          </span>
+                                        </div>
                                         <input
-                                          placeholder="IATA"
-                                          className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
-                                          value={segment.departure?.iataCode}
+                                          className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium uppercase"
+                                          value={traveller.passportNumber || ""}
                                           onChange={(e) =>
-                                            handleSegmentChange(
-                                              itinIndex,
-                                              segIndex,
-                                              "departure",
+                                            handleTravellerChange(
+                                              index,
+                                              "passportNumber",
                                               e.target.value,
-                                              "iataCode",
                                             )
                                           }
-                                        />
-                                        <input
-                                          placeholder="Terminal"
-                                          className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
-                                          value={segment.departure?.terminal}
-                                          onChange={(e) =>
-                                            handleSegmentChange(
-                                              itinIndex,
-                                              segIndex,
-                                              "departure",
-                                              e.target.value,
-                                              "terminal",
-                                            )
-                                          }
-                                        />
-                                        <input
-                                          type="datetime-local"
-                                          className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
-                                          value={segment.departure?.at}
-                                          onChange={(e) =>
-                                            handleSegmentChange(
-                                              itinIndex,
-                                              segIndex,
-                                              "departure",
-                                              e.target.value,
-                                              "at",
-                                            )
-                                          }
+                                          disabled={isReadOnly}
+                                          placeholder="e.g. A1234567X"
                                         />
                                       </div>
                                     </div>
-
-                                    {/* Arrival */}
-                                    <div className="col-span-1 md:col-span-2">
-                                      <label className="text-xs font-bold text-slate-500 uppercase">
-                                        Arrival
+                                    <div>
+                                      <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                                        Passport Expiry Date
                                       </label>
-                                      <div className="grid grid-cols-3 gap-2 mt-1">
+                                      <input
+                                        className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
+                                        type="date"
+                                        value={traveller.passportExpiry || ""}
+                                        onChange={(e) =>
+                                          handleTravellerChange(
+                                            index,
+                                            "passportExpiry",
+                                            e.target.value,
+                                          )
+                                        }
+                                        disabled={isReadOnly}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8 p-6 bg-slate-50/50 rounded-xl border border-slate-100">
+                                    <div>
+                                      <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                                        Nationality
+                                      </label>
+                                      <select
+                                        className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
+                                        value={traveller.nationality || "Nepalese"}
+                                        onChange={(e) =>
+                                          handleTravellerChange(
+                                            index,
+                                            "nationality",
+                                            e.target.value,
+                                          )
+                                        }
+                                        disabled={isReadOnly}
+                                      >
+                                        {countryData.countries.map((c) => (
+                                          <option key={c.value} value={c.label}>
+                                            {c.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                                        Date of Birth
+                                      </label>
+                                      <input
+                                        className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
+                                        type="date"
+                                        value={traveller.dob || ""}
+                                        onChange={(e) =>
+                                          handleTravellerChange(
+                                            index,
+                                            "dob",
+                                            e.target.value,
+                                          )
+                                        }
+                                        disabled={isReadOnly}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-sm font-bold text-slate-700 mb-2 tracking-tight">
+                                        E-Ticket Number
+                                      </label>
+                                      <div className="relative rounded-lg shadow-sm">
+                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                          <span
+                                            className="material-symbols-outlined text-slate-400"
+                                            style={{ fontSize: "20px" }}
+                                          >
+                                            confirmation_number
+                                          </span>
+                                        </div>
                                         <input
-                                          placeholder="IATA"
-                                          className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
-                                          value={segment.arrival?.iataCode}
+                                          className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
+                                          value={traveller.eticketNumber || ""}
                                           onChange={(e) =>
-                                            handleSegmentChange(
-                                              itinIndex,
-                                              segIndex,
-                                              "arrival",
+                                            handleTravellerChange(
+                                              index,
+                                              "eticketNumber",
                                               e.target.value,
-                                              "iataCode",
                                             )
                                           }
-                                        />
-                                        <input
-                                          placeholder="Terminal"
-                                          className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
-                                          value={segment.arrival?.terminal}
-                                          onChange={(e) =>
-                                            handleSegmentChange(
-                                              itinIndex,
-                                              segIndex,
-                                              "arrival",
-                                              e.target.value,
-                                              "terminal",
-                                            )
-                                          }
-                                        />
-                                        <input
-                                          type="datetime-local"
-                                          className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
-                                          value={segment.arrival?.at}
-                                          onChange={(e) =>
-                                            handleSegmentChange(
-                                              itinIndex,
-                                              segIndex,
-                                              "arrival",
-                                              e.target.value,
-                                              "at",
-                                            )
-                                          }
+                                          disabled={isReadOnly}
+                                          placeholder="E-Ticket No."
                                         />
                                       </div>
                                     </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    <div>
-                                      <label className="text-xs font-bold text-slate-500 uppercase">
-                                        Carrier
-                                      </label>
-                                      <input
-                                        placeholder="Code (e.g. QF)"
-                                        className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
-                                        value={segment.carrierCode}
-                                        onChange={(e) =>
-                                          handleSegmentChange(
-                                            itinIndex,
-                                            segIndex,
-                                            "carrierCode",
-                                            e.target.value,
-                                          )
-                                        }
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="text-xs font-bold text-slate-500 uppercase">
-                                        Flight No.
-                                      </label>
-                                      <input
-                                        placeholder="Number"
-                                        className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
-                                        value={segment.number}
-                                        onChange={(e) =>
-                                          handleSegmentChange(
-                                            itinIndex,
-                                            segIndex,
-                                            "number",
-                                            e.target.value,
-                                          )
-                                        }
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="text-xs font-bold text-slate-500 uppercase">
-                                        Aircraft
-                                      </label>
-                                      <input
-                                        placeholder="Code"
-                                        className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
-                                        value={segment.aircraft?.code}
-                                        onChange={(e) =>
-                                          handleSegmentChange(
-                                            itinIndex,
-                                            segIndex,
-                                            "aircraft",
-                                            e.target.value,
-                                            "code",
-                                          )
-                                        }
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="text-xs font-bold text-slate-500 uppercase">
-                                        Duration
-                                      </label>
-                                      <input
-                                        placeholder="PTxxHxxM"
-                                        className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
-                                        value={segment.duration}
-                                        onChange={(e) =>
-                                          handleSegmentChange(
-                                            itinIndex,
-                                            segIndex,
-                                            "duration",
-                                            e.target.value,
-                                          )
-                                        }
-                                      />
-                                    </div>
+                                    <label className="flex items-start gap-3 cursor-pointer group p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                                      <div className="flex items-center h-5 mt-0.5">
+                                        <input
+                                          type="checkbox"
+                                          className="w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary cursor-pointer"
+                                          checked={
+                                            traveller.saveToDatabase || false
+                                          }
+                                          onChange={(e) =>
+                                            handleTravellerChange(
+                                              index,
+                                              "saveToDatabase",
+                                              e.target.checked,
+                                            )
+                                          }
+                                          disabled={isReadOnly}
+                                        />
+                                      </div>
+                                      <div>
+                                        <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">
+                                          Save to Travellers Database
+                                        </span>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                          Add this person to your saved travellers
+                                          list for future bookings.
+                                        </p>
+                                      </div>
+                                    </label>
                                   </div>
                                 </div>
-                              ))}
-                              <button
-                                type="button"
-                                onClick={() => addSegment(itinIndex)}
-                                className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 font-bold hover:border-primary hover:text-primary hover:bg-blue-50/50 transition-all flex items-center justify-center gap-2 text-sm"
-                              >
-                                <span className="material-symbols-outlined text-lg">
-                                  add
-                                </span>
-                                Add Flight Segment
-                              </button>
+                              )}
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
 
-                      <div className="mt-5 pt-4 border-t border-slate-100">
-                        <div className="flex justify-between items-center mb-3">
-                          <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
-                            Global Flight Details
-                          </h4>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                          <div className="md:col-span-1">
-                            <AirlineAutocomplete
-                              label="Primary Airline"
-                              name="airlines"
-                              value={formData.airlines}
-                              onChange={handleChange}
-                              disabled={isReadOnly}
-                              icon="airlines"
-                              className="block w-full h-10 pl-12 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
-                            />
-                          </div>
-                          <div className="md:col-span-1">
-                            <label className="block text-sm font-bold text-slate-700 mb-1 tracking-tight">
-                              Class
-                            </label>
-                            <select
-                              className="block w-full h-10 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
-                              name="flightClass"
-                              value={formData.flightClass}
-                              onChange={handleChange}
-                              disabled={isReadOnly}
-                            >
-                              <option>Economy</option>
-                              <option>Premium Economy</option>
-                              <option>Business</option>
-                              <option>First Class</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-6">
-                        <div className="p-3 bg-blue-50 border border-blue-100 rounded-md flex items-start gap-3">
-                          <span className="material-symbols-outlined text-blue-500 mt-0.5">
-                            info
-                          </span>
-                          <div>
-                            <p className="text-sm text-blue-800 font-medium">
-                              Itinerary Modification
-                            </p>
-                            <p className="text-xs text-blue-600 mt-0.5">
-                              Changing origin, destination, or dates may affect
-                              pricing. Ensure to re-calculate fares after
-                              modifying the itinerary.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Add-ons & Services */}
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
-                    <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/50">
-                      <h3 className="text-lg font-bold text-slate-900 flex items-center tracking-tight">
-                        <span className="material-symbols-outlined text-primary mr-3">
-                          extension
-                        </span>
-                        Add-ons & Services
-                      </h3>
-                    </div>
-                    <div className="p-8">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                        <div className="space-y-6">
-                          <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">
-                            Ancillary Services
-                          </h4>
-                          <div className="flex items-center justify-between p-4 bg-slate-50/50 rounded-xl border border-slate-100">
-                            <div className="flex items-center">
-                              <label className="flex items-center space-x-4 cursor-pointer group">
-                                <input
-                                  className="h-5 w-5 text-primary border-slate-300 rounded focus:ring-primary transition-all cursor-pointer"
-                                  type="checkbox"
-                                  name="addon-meals"
-                                  checked={formData.addons.meals}
-                                  onChange={handleChange}
-                                />
-                                <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">
-                                  Meals
-                                </span>
-                              </label>
-                              <button
-                                type="button"
-                                onClick={() => setIsMealModalOpen(true)}
-                                className="ml-4 text-xs font-bold text-primary hover:text-blue-700 cursor-pointer flex items-center gap-1.5 transition-colors px-2 py-1 bg-blue-50 rounded-md"
-                              >
-                                <span className="material-symbols-outlined text-base">
-                                  tune
-                                </span>
-                                Options
-                              </button>
-                            </div>
-                            <div className="relative w-32">
-                              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <span className="text-slate-400 font-bold sm:text-xs">
-                                  $
-                                </span>
-                              </div>
-                              <input
-                                className="block w-full h-10 rounded-lg border-slate-200 pl-7 text-right focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-bold text-slate-700"
-                                name="price-meals"
-                                value={formData.prices?.meals || ""}
-                                onChange={handleChange}
-                                placeholder="0.00"
-                                type="number"
-                              />
-                            </div>
-                          </div>
-                          {/* Simplified remaining addons */}
-                          <div className="flex items-center justify-between p-4 bg-slate-50/50 rounded-xl border border-slate-100">
-                            <label className="flex items-center space-x-4 cursor-pointer group">
-                              <input
-                                className="h-5 w-5 text-primary border-slate-300 rounded focus:ring-primary transition-all cursor-pointer"
-                                type="checkbox"
-                                name="addon-wheelchair"
-                                checked={formData.addons.wheelchair}
-                                onChange={handleChange}
-                              />
-                              <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">
-                                Wheelchair
-                              </span>
-                            </label>
-                            <div className="relative w-32">
-                              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <span className="text-slate-400 font-bold sm:text-xs">
-                                  $
-                                </span>
-                              </div>
-                              <input
-                                className="block w-full h-10 rounded-lg border-slate-200 pl-7 text-right focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-bold text-slate-700"
-                                name="price-wheelchair"
-                                value={formData.prices?.wheelchair || ""}
-                                onChange={handleChange}
-                                placeholder="0.00"
-                                type="number"
-                              />
-                            </div>
-                          </div>
-                          <div className="pt-6 mt-2 border-t border-slate-100 flex items-center justify-between">
-                            <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">
-                              Add-ons Subtotal
+                          <button
+                            type="button"
+                            onClick={addTraveller}
+                            className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-primary hover:text-primary hover:bg-blue-50/50 transition-all flex items-center justify-center gap-2"
+                          >
+                            <span className="material-symbols-outlined">
+                              person_add
                             </span>
-                            <div className="text-xl font-black text-primary">
-                              ${calculateAddonsTotal()}
-                            </div>
-                          </div>
+                            Add Another Traveller
+                          </button>
                         </div>
-                        <div className="space-y-8">
-                          <div>
-                            <label
-                              className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
-                              htmlFor="frequent-flyer"
-                            >
-                              Frequent Flyer Number
-                            </label>
-                            <div className="relative rounded-lg shadow-sm">
-                              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                                <span
-                                  className="material-symbols-outlined text-slate-400"
-                                  style={{ fontSize: "20px" }}
-                                >
-                                  loyalty
-                                </span>
-                              </div>
-                              <input
-                                className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
-                                id="frequent-flyer"
-                                name="frequentFlyer"
-                                placeholder="e.g. AA-12345678"
-                                type="text"
-                                value={formData.frequentFlyer}
+                      </div>
+                    </>
+                  )}
+
+                  {currentStep === 2 && (
+                    <>
+                      {/* Route & Trip Details */}
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
+                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                          <h3 className="text-lg font-bold text-slate-900 flex items-center tracking-tight">
+                            <span className="material-symbols-outlined text-primary mr-3">
+                              flight_takeoff
+                            </span>
+                            Route & Trip Details
+                          </h3>
+                        </div>
+                        <div className="p-5">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                            <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-1 tracking-tight">
+                                Trip Type
+                              </label>
+                              <select
+                                className="block w-full h-10 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-3"
+                                name="tripType"
+                                value={formData.tripType}
                                 onChange={handleChange}
                                 disabled={isReadOnly}
+                              >
+                                <option>One Way</option>
+                                <option>Round Trip</option>
+                                <option>Multi City</option>
+                              </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1 tracking-tight">
+                                  Departure Date
+                                </label>
+                                <input
+                                  className="block w-full h-10 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-3"
+                                  name="travelDate"
+                                  type="date"
+                                  value={formData.travelDate}
+                                  onChange={handleChange}
+                                  disabled={isReadOnly}
+                                />
+                              </div>
+                              {formData.tripType === "Round Trip" && (
+                                <div>
+                                  <label className="block text-sm font-bold text-slate-700 mb-1 tracking-tight">
+                                    Return Date
+                                  </label>
+                                  <input
+                                    className="block w-full h-10 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-3"
+                                    name="returnDate"
+                                    type="date"
+                                    value={formData.returnDate}
+                                    onChange={handleChange}
+                                    disabled={isReadOnly}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <AirportAutocomplete
+                                label="Origin (From)"
+                                name="origin"
+                                value={formData.origin}
+                                onChange={handleChange}
+                                disabled={isReadOnly}
+                                icon="flight_takeoff"
+                                className="block w-full h-10 pl-12 pr-10 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
+                              />
+                            </div>
+                            <div>
+                              <AirportAutocomplete
+                                label="Destination (To)"
+                                name="destination"
+                                value={formData.destination}
+                                onChange={handleChange}
+                                disabled={isReadOnly}
+                                icon="flight_land"
+                                className="block w-full h-10 pl-12 pr-10 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
                               />
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-3 tracking-tight">
-                              Seat Selection
-                            </label>
-                            <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 bg-slate-50/50 flex flex-col items-center justify-center text-center hover:bg-slate-100 hover:border-primary/30 transition-all cursor-pointer group h-28">
-                              <span
-                                className="material-symbols-outlined text-slate-400 group-hover:text-primary mb-2 transition-colors"
-                                style={{ fontSize: "28px" }}
+
+                          {/* Detailed Itinerary Segments */}
+                          <div className="space-y-4">
+                            {formData.itineraries?.map((itinerary, itinIndex) => (
+                              <div
+                                key={itinIndex}
+                                className="bg-slate-50 border border-slate-200 rounded-xl p-4"
                               >
-                                event_seat
+                                <div className="flex justify-between items-center mb-3">
+                                  <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                                    {itinIndex === 0
+                                      ? "Outbound Flight Segments"
+                                      : "Return Flight Segments"}
+                                  </h4>
+                                </div>
+
+                                <div className="space-y-3">
+                                  {itinerary.segments.map((segment, segIndex) => (
+                                    <div
+                                      key={segIndex}
+                                      className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm relative group"
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          removeSegment(itinIndex, segIndex)
+                                        }
+                                        className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
+                                      >
+                                        <span className="material-symbols-outlined text-lg">
+                                          delete
+                                        </span>
+                                      </button>
+
+                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+                                        {/* Departure */}
+                                        <div className="col-span-1 md:col-span-2">
+                                          <label className="text-xs font-bold text-slate-500 uppercase">
+                                            Departure
+                                          </label>
+                                          <div className="grid grid-cols-3 gap-2 mt-1">
+                                            <input
+                                              placeholder="IATA"
+                                              className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
+                                              value={segment.departure?.iataCode}
+                                              onChange={(e) =>
+                                                handleSegmentChange(
+                                                  itinIndex,
+                                                  segIndex,
+                                                  "departure",
+                                                  e.target.value,
+                                                  "iataCode",
+                                                )
+                                              }
+                                            />
+                                            <input
+                                              placeholder="Terminal"
+                                              className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
+                                              value={segment.departure?.terminal}
+                                              onChange={(e) =>
+                                                handleSegmentChange(
+                                                  itinIndex,
+                                                  segIndex,
+                                                  "departure",
+                                                  e.target.value,
+                                                  "terminal",
+                                                )
+                                              }
+                                            />
+                                            <input
+                                              type="datetime-local"
+                                              className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
+                                              value={segment.departure?.at}
+                                              onChange={(e) =>
+                                                handleSegmentChange(
+                                                  itinIndex,
+                                                  segIndex,
+                                                  "departure",
+                                                  e.target.value,
+                                                  "at",
+                                                )
+                                              }
+                                            />
+                                          </div>
+                                        </div>
+
+                                        {/* Arrival */}
+                                        <div className="col-span-1 md:col-span-2">
+                                          <label className="text-xs font-bold text-slate-500 uppercase">
+                                            Arrival
+                                          </label>
+                                          <div className="grid grid-cols-3 gap-2 mt-1">
+                                            <input
+                                              placeholder="IATA"
+                                              className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
+                                              value={segment.arrival?.iataCode}
+                                              onChange={(e) =>
+                                                handleSegmentChange(
+                                                  itinIndex,
+                                                  segIndex,
+                                                  "arrival",
+                                                  e.target.value,
+                                                  "iataCode",
+                                                )
+                                              }
+                                            />
+                                            <input
+                                              placeholder="Terminal"
+                                              className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
+                                              value={segment.arrival?.terminal}
+                                              onChange={(e) =>
+                                                handleSegmentChange(
+                                                  itinIndex,
+                                                  segIndex,
+                                                  "arrival",
+                                                  e.target.value,
+                                                  "terminal",
+                                                )
+                                              }
+                                            />
+                                            <input
+                                              type="datetime-local"
+                                              className="block w-full h-9 rounded-md border-slate-300 text-sm px-2"
+                                              value={segment.arrival?.at}
+                                              onChange={(e) =>
+                                                handleSegmentChange(
+                                                  itinIndex,
+                                                  segIndex,
+                                                  "arrival",
+                                                  e.target.value,
+                                                  "at",
+                                                )
+                                              }
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <div>
+                                          <label className="text-xs font-bold text-slate-500 uppercase">
+                                            Carrier
+                                          </label>
+                                          <input
+                                            placeholder="Code (e.g. QF)"
+                                            className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
+                                            value={segment.carrierCode}
+                                            onChange={(e) =>
+                                              handleSegmentChange(
+                                                itinIndex,
+                                                segIndex,
+                                                "carrierCode",
+                                                e.target.value,
+                                              )
+                                            }
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-xs font-bold text-slate-500 uppercase">
+                                            Flight No.
+                                          </label>
+                                          <input
+                                            placeholder="Number"
+                                            className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
+                                            value={segment.number}
+                                            onChange={(e) =>
+                                              handleSegmentChange(
+                                                itinIndex,
+                                                segIndex,
+                                                "number",
+                                                e.target.value,
+                                              )
+                                            }
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-xs font-bold text-slate-500 uppercase">
+                                            Aircraft
+                                          </label>
+                                          <input
+                                            placeholder="Code"
+                                            className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
+                                            value={segment.aircraft?.code}
+                                            onChange={(e) =>
+                                              handleSegmentChange(
+                                                itinIndex,
+                                                segIndex,
+                                                "aircraft",
+                                                e.target.value,
+                                                "code",
+                                              )
+                                            }
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-xs font-bold text-slate-500 uppercase">
+                                            Duration
+                                          </label>
+                                          <input
+                                            placeholder="PTxxHxxM"
+                                            className="block w-full mt-1 h-9 rounded-md border-slate-300 text-sm px-2"
+                                            value={segment.duration}
+                                            onChange={(e) =>
+                                              handleSegmentChange(
+                                                itinIndex,
+                                                segIndex,
+                                                "duration",
+                                                e.target.value,
+                                              )
+                                            }
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  <button
+                                    type="button"
+                                    onClick={() => addSegment(itinIndex)}
+                                    className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 font-bold hover:border-primary hover:text-primary hover:bg-blue-50/50 transition-all flex items-center justify-center gap-2 text-sm"
+                                  >
+                                    <span className="material-symbols-outlined text-lg">
+                                      add
+                                    </span>
+                                    Add Flight Segment
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-5 pt-4 border-t border-slate-100">
+                            <div className="flex justify-between items-center mb-3">
+                              <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                                Global Flight Details
+                              </h4>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                              <div className="md:col-span-1">
+                                <AirlineAutocomplete
+                                  label="Primary Airline"
+                                  name="airlines"
+                                  value={formData.airlines}
+                                  onChange={handleChange}
+                                  disabled={isReadOnly}
+                                  icon="airlines"
+                                  className="block w-full h-10 pl-12 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
+                                />
+                              </div>
+                              <div className="md:col-span-1">
+                                <label className="block text-sm font-bold text-slate-700 mb-1 tracking-tight">
+                                  Class
+                                </label>
+                                <select
+                                  className="block w-full h-10 rounded-lg border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium px-4"
+                                  name="flightClass"
+                                  value={formData.flightClass}
+                                  onChange={handleChange}
+                                  disabled={isReadOnly}
+                                >
+                                  <option>Economy</option>
+                                  <option>Premium Economy</option>
+                                  <option>Business</option>
+                                  <option>First Class</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-6">
+                            <div className="p-3 bg-blue-50 border border-blue-100 rounded-md flex items-start gap-3">
+                              <span className="material-symbols-outlined text-blue-500 mt-0.5">
+                                info
                               </span>
-                              <span className="text-sm font-bold text-slate-600 group-hover:text-primary transition-colors tracking-tight">
-                                Select Premium Seat
-                              </span>
-                              <span className="text-xs text-primary mt-1 font-black bg-blue-50 px-2 py-0.5 rounded">
-                                FROM $25.00
-                              </span>
+                              <div>
+                                <p className="text-sm text-blue-800 font-medium">
+                                  Itinerary Modification
+                                </p>
+                                <p className="text-xs text-blue-600 mt-0.5">
+                                  Changing origin, destination, or dates may affect
+                                  pricing. Ensure to re-calculate fares after
+                                  modifying the itinerary.
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
+                    </>
+                  )}
+
+                  {currentStep === 3 && (
+                    <>
+                      {/* Add-ons & Services */}
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
+                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/50">
+                          <h3 className="text-lg font-bold text-slate-900 flex items-center tracking-tight">
+                            <span className="material-symbols-outlined text-primary mr-3">
+                              extension
+                            </span>
+                            Add-ons & Services
+                          </h3>
+                        </div>
+                        <div className="p-8">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <div className="space-y-6">
+                              <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">
+                                Ancillary Services
+                              </h4>
+                              <div className="flex items-center justify-between p-4 bg-slate-50/50 rounded-xl border border-slate-100">
+                                <div className="flex items-center">
+                                  <label className="flex items-center space-x-4 cursor-pointer group">
+                                    <input
+                                      className="h-5 w-5 text-primary border-slate-300 rounded focus:ring-primary transition-all cursor-pointer"
+                                      type="checkbox"
+                                      name="addon-meals"
+                                      checked={formData.addons.meals}
+                                      onChange={handleChange}
+                                    />
+                                    <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">
+                                      Meals
+                                    </span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsMealModalOpen(true)}
+                                    className="ml-4 text-xs font-bold text-primary hover:text-blue-700 cursor-pointer flex items-center gap-1.5 transition-colors px-2 py-1 bg-blue-50 rounded-md"
+                                  >
+                                    <span className="material-symbols-outlined text-base">
+                                      tune
+                                    </span>
+                                    Options
+                                  </button>
+                                </div>
+                                <div className="relative w-32">
+                                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                    <span className="text-slate-400 font-bold sm:text-xs">
+                                      $
+                                    </span>
+                                  </div>
+                                  <input
+                                    className="block w-full h-10 rounded-lg border-slate-200 pl-7 text-right focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-bold text-slate-700"
+                                    name="price-meals"
+                                    value={formData.prices?.meals || ""}
+                                    onChange={handleChange}
+                                    placeholder="0.00"
+                                    type="number"
+                                  />
+                                </div>
+                              </div>
+                              {/* Simplified remaining addons */}
+                              <div className="flex items-center justify-between p-4 bg-slate-50/50 rounded-xl border border-slate-100">
+                                <label className="flex items-center space-x-4 cursor-pointer group">
+                                  <input
+                                    className="h-5 w-5 text-primary border-slate-300 rounded focus:ring-primary transition-all cursor-pointer"
+                                    type="checkbox"
+                                    name="addon-wheelchair"
+                                    checked={formData.addons.wheelchair}
+                                    onChange={handleChange}
+                                  />
+                                  <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">
+                                    Wheelchair
+                                  </span>
+                                </label>
+                                <div className="relative w-32">
+                                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                    <span className="text-slate-400 font-bold sm:text-xs">
+                                      $
+                                    </span>
+                                  </div>
+                                  <input
+                                    className="block w-full h-10 rounded-lg border-slate-200 pl-7 text-right focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-bold text-slate-700"
+                                    name="price-wheelchair"
+                                    value={formData.prices?.wheelchair || ""}
+                                    onChange={handleChange}
+                                    placeholder="0.00"
+                                    type="number"
+                                  />
+                                </div>
+                              </div>
+                              <div className="pt-6 mt-2 border-t border-slate-100 flex items-center justify-between">
+                                <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+                                  Add-ons Subtotal
+                                </span>
+                                <div className="text-xl font-black text-primary">
+                                  ${calculateAddonsTotal()}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="space-y-8">
+                              <div>
+                                <label
+                                  className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
+                                  htmlFor="frequent-flyer"
+                                >
+                                  Frequent Flyer Number
+                                </label>
+                                <div className="relative rounded-lg shadow-sm">
+                                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                    <span
+                                      className="material-symbols-outlined text-slate-400"
+                                      style={{ fontSize: "20px" }}
+                                    >
+                                      loyalty
+                                    </span>
+                                  </div>
+                                  <input
+                                    className="block w-full h-12 rounded-lg border-slate-200 pl-11 focus:border-primary focus:ring focus:ring-primary/10 transition-all sm:text-sm font-medium"
+                                    id="frequent-flyer"
+                                    name="frequentFlyer"
+                                    placeholder="e.g. AA-12345678"
+                                    type="text"
+                                    value={formData.frequentFlyer}
+                                    onChange={handleChange}
+                                    disabled={isReadOnly}
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-3 tracking-tight">
+                                  Seat Selection
+                                </label>
+                                <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 bg-slate-50/50 flex flex-col items-center justify-center text-center hover:bg-slate-100 hover:border-primary/30 transition-all cursor-pointer group h-28">
+                                  <span
+                                    className="material-symbols-outlined text-slate-400 group-hover:text-primary mb-2 transition-colors"
+                                    style={{ fontSize: "28px" }}
+                                  >
+                                    event_seat
+                                  </span>
+                                  <span className="text-sm font-bold text-slate-600 group-hover:text-primary transition-colors tracking-tight">
+                                    Select Premium Seat
+                                  </span>
+                                  <span className="text-xs text-primary mt-1 font-black bg-blue-50 px-2 py-0.5 rounded">
+                                    FROM $25.00
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {currentStep === 4 && (
+                    <div className="space-y-6">
+                      {/* Financials Summary relocated to Step 4 */}
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
+                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center">
+                          <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center">
+                            <span className="material-symbols-outlined text-primary mr-3">
+                              payments
+                            </span>
+                            Financials Summary
+                          </h3>
+                        </div>
+                        <div className="p-8">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                            <div>
+                              <label
+                                className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
+                                htmlFor="payment-status"
+                              >
+                                Payment Status
+                              </label>
+                              <select
+                                className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-bold text-slate-700 px-4"
+                                name="paymentStatus"
+                                value={formData.paymentStatus}
+                                onChange={handleChange}
+                                disabled={isReadOnly}
+                              >
+                                <option>Paid</option>
+                                <option>Pending</option>
+                                <option>Refunded</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label
+                                className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
+                                htmlFor="payment-method"
+                              >
+                                Payment Method
+                              </label>
+                              <select
+                                className="block w-full h-12 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-bold text-slate-700 px-4"
+                                name="paymentMethod"
+                                value={formData.paymentMethod}
+                                onChange={handleChange}
+                                disabled={isReadOnly}
+                              >
+                                <option value="">Select Method</option>
+                                <option>Cash</option>
+                                <option>Bank Transfer</option>
+                                <option>Credit Card</option>
+                                <option>PayID</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                            <div>
+                              <label
+                                className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
+                                htmlFor="cost-price"
+                              >
+                                Cost Price ($)
+                              </label>
+                              <div className="relative rounded-lg shadow-sm">
+                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                  <span className="text-slate-400 font-bold">$</span>
+                                </div>
+                                <input
+                                  className="block w-full h-12 rounded-lg border-slate-200 pl-8 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-bold text-slate-700"
+                                  name="costPrice"
+                                  type="number"
+                                  step="0.01"
+                                  value={formData.costPrice}
+                                  onChange={handleChange}
+                                  disabled={isReadOnly}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label
+                                className="block text-sm font-bold text-slate-700 mb-2 tracking-tight"
+                                htmlFor="selling-price"
+                              >
+                                Selling Price ($)
+                              </label>
+                              <div className="relative rounded-lg shadow-sm">
+                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                  <span className="text-slate-400 font-bold">$</span>
+                                </div>
+                                <input
+                                  className="block w-full h-12 rounded-lg border-slate-200 pl-8 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-black text-primary"
+                                  name="sellingPrice"
+                                  type="number"
+                                  step="0.01"
+                                  value={formData.sellingPrice}
+                                  onChange={handleChange}
+                                  disabled={isReadOnly}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-slate-50 rounded-2xl p-8 border border-slate-100">
+                            <div className="flex justify-between items-center mb-4">
+                              <span className="text-base font-bold text-slate-500">
+                                Fare Amount
+                              </span>
+                              <span className="text-base font-black text-slate-900">
+                                ${formData.sellingPrice}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center mb-4">
+                              <span className="text-base font-bold text-slate-500">
+                                Add-ons Total
+                              </span>
+                              <span className="text-base font-black text-slate-900">
+                                + ${calculateAddonsTotal()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center pt-6 border-t-2 border-slate-200">
+                              <div>
+                                <span className="text-lg font-black text-slate-900 block">
+                                  Grand Total
+                                </span>
+                                <span className="text-xs text-slate-400 uppercase font-bold tracking-widest">
+                                  Inclusive of all taxes & fees
+                                </span>
+                              </div>
+                              <span className="text-3xl font-black text-primary tracking-tight">
+                            ${calculateGrandTotal()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* MARK AS ISSUED button moved to Step 4 */}
+                      {!isReadOnly && formData.status !== "Issued" && (
+                        <div className="flex justify-end pt-4">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!booking?.id) {
+                                alert("Please save the booking first before marking it as Issued to send notifications.");
+                                return;
+                              }
+                              setShowNotificationModal(true);
+                            }}
+                            className="px-10 py-4 bg-green-600 hover:bg-green-700 text-white font-black rounded-xl shadow-lg shadow-green-500/20 transition-all flex items-center gap-3 active:scale-95"
+                          >
+                            <span className="material-symbols-outlined">check_circle</span>
+                            MARK AS ISSUED
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
 
-                {/* Right Column (Sidebar) */}
-                <div className="space-y-6">
-                  {/* Booking Details */}
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
+                      {/* Review Section */}
+                      <div className="bg-blue-50 rounded-xl border border-blue-100 p-8 flex items-start gap-6">
+                        <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-blue-600">
+                            verified
+                          </span>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-blue-900">Ready to Save</h3>
+                          <p className="text-blue-700/80 mt-1 leading-relaxed">
+                            Please verify all passenger details, itinerary segments, and financials before completing the booking. Once saved, you can issue the ticket or send notifications to the customer.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                {/* Sidebar Sections (Stacked Full Width) */}
+                {/* Booking Details */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                       <h3 className="text-base font-bold text-slate-900 tracking-tight">
                         Booking Details
@@ -2004,101 +2299,8 @@ export default function BookingModal({
                           <option value="Cancelled">Cancelled</option>
                         </select>
                       </div>
-                    </div>
                   </div>
-
-                  {/* Financials */}
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                      <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                        Financials Summary
-                      </h3>
-                    </div>
-                    <div className="p-6 space-y-5">
-                      <div>
-                        <label
-                          className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2"
-                          htmlFor="payment-status"
-                        >
-                          Payment Status
-                        </label>
-                        <select
-                          className="block w-full h-11 rounded-lg border-slate-200 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-bold text-slate-700 px-4"
-                          name="paymentStatus"
-                          value={formData.paymentStatus}
-                          onChange={handleChange}
-                          disabled={isReadOnly}
-                        >
-                          <option>Paid</option>
-                          <option>Pending</option>
-                          <option>Refunded</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label
-                          className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2"
-                          htmlFor="cost-price"
-                        >
-                          Cost Price ($)
-                        </label>
-                        <div className="relative rounded-lg shadow-sm">
-                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                            <span className="text-slate-400 font-bold">$</span>
-                          </div>
-                          <input
-                            className="block w-full h-11 rounded-lg border-slate-200 pl-8 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-bold text-slate-700"
-                            name="costPrice"
-                            type="number"
-                            step="0.01"
-                            value={formData.costPrice}
-                            onChange={handleChange}
-                            disabled={isReadOnly}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label
-                          className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2"
-                          htmlFor="selling-price"
-                        >
-                          Selling Price ($)
-                        </label>
-                        <div className="relative rounded-lg shadow-sm">
-                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                            <span className="text-slate-400 font-bold">$</span>
-                          </div>
-                          <input
-                            className="block w-full h-11 rounded-lg border-slate-200 pl-8 shadow-sm focus:border-primary focus:ring focus:ring-primary/10 sm:text-sm font-black text-primary"
-                            name="sellingPrice"
-                            type="number"
-                            step="0.01"
-                            value={formData.sellingPrice}
-                            onChange={handleChange}
-                            disabled={isReadOnly}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="bg-slate-50 rounded-xl p-5 mt-4 border border-slate-100">
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-sm font-bold text-slate-500">
-                            Net Cost
-                          </span>
-                          <span className="text-sm font-black text-slate-900">
-                            ${formData.costPrice}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center pt-4 border-t border-slate-200">
-                          <span className="text-base font-black text-slate-900">
-                            Grand Total
-                          </span>
-                          <span className="text-xl font-black text-primary tracking-tight">
-                            ${calculateGrandTotal()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                </div>
 
                   {/* Actions */}
                   <div className="pt-4 flex flex-col gap-3 sticky bottom-0 bg-gray-50 p-2 -mx-2">
@@ -2222,6 +2424,14 @@ export default function BookingModal({
       )}
 
       {/* Material Icons Link Removed */}
+      {showNotificationModal && booking && (
+        <NotificationConfirmModal
+          isOpen={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
+          onConfirm={handleConfirmIssue}
+          booking={booking}
+        />
+      )}
     </div>
   );
 }

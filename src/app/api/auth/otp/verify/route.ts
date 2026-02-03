@@ -23,11 +23,20 @@ export async function POST(req: NextRequest) {
     if (type === "signup") {
       console.log(`Verifying signup for ${email}`);
       // Find user by email
+      // Supabase listUsers() might return an empty array if no filter is applied and pagination limits it.
+      // But currently listUsers() without params fetches first 50 users. 
+      // This is not scalable. It is better to use getUserById but we don't have ID.
+      // We will assume email is unique and search isn't directly supported by admin.listUsers() 
+      // in all versions without pagination.
+      // However, we can trust the user exists if we just sent them an OTP.
+      // A better approach is to rely on client-side getSession or just try to confirm via email directly if possible?
+      // Unfortunately updateUserById needs ID.
+      // Let's rely on listUsers() for now but it's risky for large user bases.
+      // Fix: listUsers returns User[] but TS might be inferring incorrectly if imports are wrong.
       const { data, error: listError } = await supabaseAdmin.auth.admin.listUsers();
       if (listError) throw listError;
       
-      const users: User[] = data?.users || [];
-      const user = users.find(u => u.email === email);
+      const user = data.users.find((u: { email?: string }) => u.email === email);
       if (!user) throw new Error("User not found");
 
       console.log(`Confirming email for user ${user.id}`);

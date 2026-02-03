@@ -13,6 +13,7 @@ export default function NavigationMenu({
     { label: "Airlines", href: "/dashboard/airlines", icon: "airlines", id: "airlines" },
     { label: "Airports", href: "/dashboard/airports", icon: "flight_takeoff", id: "airports" },
     { label: "Agency", href: "/dashboard/agencies", icon: "domain", id: "agency" },
+    { label: "Ontology", href: "/dashboard/ontology", icon: "category", id: "ontology" },
     { label: "Setting", href: "/dashboard/settings", icon: "settings", id: "settings" },
     { label: "Users", href: "/dashboard/users", icon: "group", id: "users" },
   ],
@@ -85,7 +86,7 @@ export default function NavigationMenu({
       >
         <ul role="menubar" className="flex flex-col sm:flex-row">
           {([...items].sort((a, b) => {
-            const order = ["overview", "media", "bookings", "manage-booking", "routes", "airlines", "airports", "agency", "settings", "users"];
+            const order = ["overview", "media", "bookings", "manage-booking", "routes", "airlines", "airports", "agency", "ontology", "settings", "users"];
             const ia = order.indexOf(a.id);
             const ib = order.indexOf(b.id);
             const pa = ia === -1 ? Number.MAX_SAFE_INTEGER : ia;
