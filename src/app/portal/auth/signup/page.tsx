@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
-export default function CustomerSignupPage() {
+function CustomerSignupContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -14,43 +15,137 @@ export default function CustomerSignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [step, setStep] = useState<"signup" | "verify">("signup");
+  const [otp, setOtp] = useState("");
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  useEffect(() => {
+    const emailParam = searchParams.get("email");
+    const stepParam = searchParams.get("step");
+    if (emailParam) {
+      setEmail(emailParam);
+    }
+    if (stepParam === "verify") {
+      setStep("verify");
+    }
+  }, [searchParams]);
+
+  const startCountdown = () => {
+    setResendDisabled(true);
+    setCountdown(60);
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setResendDisabled(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setMessage(null);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            firstName,
-            lastName,
-          },
-        },
+      // 1. Sign up user via our API (avoids default Supabase confirmation email)
+      const signupResponse = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, firstName, lastName }),
       });
 
-      if (error) throw error;
-
-      if (data.user) {
-        setMessage(
-          "Registration successful! If email confirmation is enabled, please check your inbox."
-        );
-        // If email confirmation is disabled, we could redirect to login or portal
-        if (!data.session) {
-            // Email confirmation required
-        } else {
-            // Auto logged in
-            router.push("/portal");
+      const signupResult = await signupResponse.json();
+      if (!signupResponse.ok) {
+        if (signupResult.isConfirmed) {
+          setMessage("This email is already registered and verified. Redirecting to login...");
+          setTimeout(() => {
+            router.push("/portal/auth/login");
+          }, 3000);
+          return;
         }
+        throw new Error(signupResult.error);
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to register");
+
+      // 2. Send OTP via our API
+      const response = await fetch("/api/auth/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, type: "signup" }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      setStep("verify");
+      startCountdown();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to register");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code: otp, type: "signup" }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      console.log(`OTP verified for ${email}. Waiting 1s before auto-login...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 2. Automatically log the user in since we have their credentials
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (loginError) {
+        console.error(`Auto-login failed for ${email}:`, loginError.message);
+        setMessage("Email verified successfully! Please log in with your new password.");
+      } else {
+        console.log(`Auto-login successful for ${email}`);
+        setMessage("Registration successful and email verified! Redirecting to portal...");
+        setTimeout(() => {
+          router.push("/portal");
+        }, 2000);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid verification code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setError(null);
+    try {
+      const response = await fetch("/api/auth/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, type: "signup" }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      startCountdown();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to resend code");
     }
   };
 
@@ -59,10 +154,12 @@ export default function CustomerSignupPage() {
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create Account
+            {step === "signup" ? "Create Account" : "Verify Email"}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Join Sky Trips to manage your travel
+            {step === "signup" 
+              ? "Join Sky Trips to manage your travel" 
+              : `We've sent a 6-digit code to ${email}`}
           </p>
         </div>
 
@@ -72,7 +169,7 @@ export default function CustomerSignupPage() {
           </div>
         )}
 
-        {message && (
+        {message ? (
           <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm">
             {message}
             <div className="mt-2">
@@ -81,9 +178,7 @@ export default function CustomerSignupPage() {
               </Link>
             </div>
           </div>
-        )}
-
-        {!message && (
+        ) : step === "signup" ? (
           <form className="mt-8 space-y-6" onSubmit={handleSignup}>
             <div className="rounded-md shadow-sm -space-y-px">
               <div className="grid grid-cols-2 gap-2 mb-2">
@@ -175,8 +270,64 @@ export default function CustomerSignupPage() {
               </Link>
             </div>
           </form>
+        ) : (
+          <form className="mt-8 space-y-6" onSubmit={handleVerifyOtp}>
+            <div className="rounded-md shadow-sm -space-y-px">
+              <div>
+                <label htmlFor="otp" className="sr-only">
+                  Verification Code
+                </label>
+                <input
+                  id="otp"
+                  name="otp"
+                  type="text"
+                  maxLength={6}
+                  required
+                  className="appearance-none rounded-md relative block w-full px-3 py-4 border border-gray-300 placeholder-gray-500 text-gray-900 text-center text-2xl tracking-widest focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10"
+                  placeholder="000000"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col space-y-4">
+              <button
+                type="submit"
+                disabled={loading || otp.length !== 6}
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {loading ? "Verifying..." : "Verify Code"}
+              </button>
+              
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resendDisabled}
+                className="text-sm text-blue-600 hover:text-blue-500 disabled:text-gray-400 font-medium"
+              >
+                {resendDisabled ? `Resend code in ${countdown}s` : "Didn't receive a code? Resend"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStep("signup")}
+                className="text-xs text-gray-500 hover:text-gray-700"
+              >
+                Change email address
+              </button>
+            </div>
+          </form>
         )}
       </div>
     </div>
+  );
+}
+
+export default function CustomerSignupPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CustomerSignupContent />
+    </Suspense>
   );
 }

@@ -24,6 +24,7 @@ export default function BookingDetailsPage({
   const bookingId = id;
 
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [payments, setPayments] = useState<BookingPaymentDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);

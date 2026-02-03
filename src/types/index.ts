@@ -173,6 +173,9 @@ export interface Customer {
   profileImage?: string | null;
   readableTemporaryPassword?: string | null;
   auth_user_id?: string | null;
+  public_profile_enabled?: boolean;
+  company_name?: string | null;
+  public_bio?: string | null;
 }
 
 export interface Reason {

@@ -8,6 +8,7 @@ import { RouteMultiSelect } from "@/components/RouteMultiSelect";
 import { AirportSelect } from "@/components/airports/AirportSelect";
 import { MediaSelectorModal } from "@/components/media/MediaSelectorModal";
 import { MediaFile } from "@/lib/media-service";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/Accordion";
 
 interface RouteFormProps {
   initialData?: Partial<Route>;
@@ -107,12 +108,12 @@ export default function RouteForm({ initialData, isEdit }: RouteFormProps) {
     if (formData.departure_airport && formData.arrival_airport) {
       const dep = formData.departure_airport.toLowerCase();
       const arr = formData.arrival_airport.toLowerCase();
-      const suggestedSlug = `flights-from-${dep}-to-${arr}`;
+      const suggestedSlug = `flights/from-${dep}-to-${arr}`;
       
       // Only update if slug is empty or matches the pattern (user hasn't customized it yet)
       // Or if the user wants auto-updates. For now, let's update if empty or it looks auto-generated.
-      // A simple heuristic: if the current slug is empty or starts with "flights-from-", update it.
-      if (!formData.slug || formData.slug.startsWith("flights-from-")) {
+      // A simple heuristic: if the current slug is empty or starts with "flights/from-", update it.
+      if (!formData.slug || formData.slug.startsWith("flights/from-")) {
         setFormData(prev => ({ ...prev, slug: suggestedSlug }));
       }
     }
@@ -120,17 +121,6 @@ export default function RouteForm({ initialData, isEdit }: RouteFormProps) {
 
   const handleMediaSelect = (file: MediaFile | MediaFile[]) => {
     if (Array.isArray(file)) return; // Should be single select
-    // Assuming file has a public_url or we construct it. 
-    // If MediaFile doesn't have public_url, we might need to use a helper.
-    // For now, let's use the file_path or assume there's a url field if the component provides it.
-    // Looking at MediaList, it uses MediaThumbnail which likely uses a URL.
-    // Let's assume we store the public URL.
-    // If the MediaFile object from the selector has a 'public_url' property, use it.
-    // Otherwise, we might need to construct it or use file_path.
-    // Let's check if we can get the public URL.
-    // The MediaFile type import is available.
-    // For now, I'll store the file_path or public_url if available.
-    // Let's assume we store the URL.
     
     const url = file.url || file.file_path; 
     setFormData((prev) => ({ ...prev, featured_image: url }));
@@ -197,323 +187,342 @@ export default function RouteForm({ initialData, isEdit }: RouteFormProps) {
           </div>
         </div>
 
-        {/* Hero Section */}
-        <div className="pt-4 border-t border-slate-200">
-          <h3 className="text-md font-semibold text-slate-800 mb-4">Hero Section</h3>
-          <div className="grid grid-cols-1 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Hero Headline
-              </label>
-              <input
-                type="text"
-                name="hero_headline"
-                value={formData.hero_headline || ""}
-                onChange={handleChange}
-                placeholder="e.g. Cheap Flights to London"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Hero Sub-title
-              </label>
-              <input
-                type="text"
-                name="hero_subtitle"
-                value={formData.hero_subtitle || ""}
-                onChange={handleChange}
-                placeholder="e.g. Book now and save big on your next trip"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Route Information */}
-        <div className="pt-4 border-t border-slate-200">
-          <h3 className="text-md font-semibold text-slate-800 mb-4">Route Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Average Flight Time
-              </label>
-              <input
-                type="text"
-                name="average_flight_time"
-                value={formData.average_flight_time || ""}
-                onChange={handleChange}
-                placeholder="e.g. 2h 30m"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Distance
-              </label>
-              <input
-                type="text"
-                name="distance"
-                value={formData.distance || ""}
-                onChange={handleChange}
-                placeholder="e.g. 1,200 km"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Cheapest Month(s)
-              </label>
-              <div className="border border-slate-300 rounded-lg p-2 max-h-48 overflow-y-auto">
-                {MONTHS.map((month) => (
-                  <label key={month} className="flex items-center gap-2 py-1 px-2 hover:bg-slate-50 rounded cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={(formData.cheapest_month || "").split(",").map(m => m.trim()).filter(Boolean).includes(month)}
-                      onChange={(e) => {
-                        const currentMonths = (formData.cheapest_month || "").split(",").map(m => m.trim()).filter(Boolean);
-                        let newMonths;
-                        if (e.target.checked) {
-                          newMonths = [...currentMonths, month];
-                        } else {
-                          newMonths = currentMonths.filter(m => m !== month);
-                        }
-                        // Sort by month index to keep order consistent
-                        newMonths.sort((a, b) => MONTHS.indexOf(a) - MONTHS.indexOf(b));
-                        setFormData(prev => ({ ...prev, cheapest_month: newMonths.join(",") }));
-                      }}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-slate-700">{month}</span>
+        <Accordion type="multiple" defaultValue={["hero", "route-info"]} className="w-full">
+          {/* Hero Section */}
+          <AccordionItem value="hero">
+            <AccordionTrigger>Hero Section</AccordionTrigger>
+            <AccordionContent>
+              <div className="grid grid-cols-1 gap-6 pt-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Hero Headline
                   </label>
-                ))}
-              </div>
-              <p className="text-xs text-slate-500 mt-1">Select one or more months</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Daily Flights
-              </label>
-              <input
-                type="number"
-                name="daily_flights"
-                value={formData.daily_flights || ""}
-                onChange={handleChange}
-                min="0"
-                placeholder="e.g. 5"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Media & Description */}
-        <div className="pt-4 border-t border-slate-200">
-          <h3 className="text-md font-semibold text-slate-800 mb-4">Media & Description</h3>
-          <div className="grid grid-cols-1 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Featured Image
-              </label>
-              <div className="flex gap-4 items-center">
-                <input
-                  type="text"
-                  name="featured_image"
-                  value={formData.featured_image || ""}
-                  onChange={handleChange}
-                  placeholder="Select image from media library"
-                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsMediaModalOpen(true)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-                >
-                  Select Media
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description || ""}
-                onChange={handleChange}
-                rows={4}
-                placeholder="Enter route description..."
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* FAQs Section */}
-        <div className="pt-4 border-t border-slate-200">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-md font-semibold text-slate-800">FAQs</h3>
-            <button
-              type="button"
-              onClick={handleAddFaq}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              + Add FAQ
-            </button>
-          </div>
-          <div className="space-y-4">
-            {formData.faqs?.map((faq, index) => (
-              <div key={index} className="bg-slate-50 p-4 rounded-lg border border-slate-200 relative">
-                <button
-                  type="button"
-                  onClick={() => handleRemoveFaq(index)}
-                  className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
-                >
-                  <span className="material-symbols-outlined text-lg">close</span>
-                </button>
-                <div className="grid grid-cols-1 gap-3">
                   <input
                     type="text"
-                    value={faq.question}
-                    onChange={(e) => handleFaqChange(index, "question", e.target.value)}
-                    placeholder="Question"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    name="hero_headline"
+                    value={formData.hero_headline || ""}
+                    onChange={handleChange}
+                    placeholder="e.g. Cheap Flights to London"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Hero Sub-title
+                  </label>
+                  <input
+                    type="text"
+                    name="hero_subtitle"
+                    value={formData.hero_subtitle || ""}
+                    onChange={handleChange}
+                    placeholder="e.g. Book now and save big on your next trip"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Route Information */}
+          <AccordionItem value="route-info">
+            <AccordionTrigger>Route Information</AccordionTrigger>
+            <AccordionContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Average Flight Time
+                  </label>
+                  <input
+                    type="text"
+                    name="average_flight_time"
+                    value={formData.average_flight_time || ""}
+                    onChange={handleChange}
+                    placeholder="e.g. 2h 30m"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Distance
+                  </label>
+                  <input
+                    type="text"
+                    name="distance"
+                    value={formData.distance || ""}
+                    onChange={handleChange}
+                    placeholder="e.g. 1,200 km"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Cheapest Month(s)
+                  </label>
+                  <div className="border border-slate-300 rounded-lg p-2 max-h-48 overflow-y-auto">
+                    {MONTHS.map((month) => (
+                      <label key={month} className="flex items-center gap-2 py-1 px-2 hover:bg-slate-50 rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={(formData.cheapest_month || "").split(",").map(m => m.trim()).filter(Boolean).includes(month)}
+                          onChange={(e) => {
+                            const currentMonths = (formData.cheapest_month || "").split(",").map(m => m.trim()).filter(Boolean);
+                            let newMonths;
+                            if (e.target.checked) {
+                              newMonths = [...currentMonths, month];
+                            } else {
+                              newMonths = currentMonths.filter(m => m !== month);
+                            }
+                            // Sort by month index to keep order consistent
+                            newMonths.sort((a, b) => MONTHS.indexOf(a) - MONTHS.indexOf(b));
+                            setFormData(prev => ({ ...prev, cheapest_month: newMonths.join(",") }));
+                          }}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-slate-700">{month}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Select one or more months</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Daily Flights
+                  </label>
+                  <input
+                    type="number"
+                    name="daily_flights"
+                    value={formData.daily_flights || ""}
+                    onChange={handleChange}
+                    min="0"
+                    placeholder="e.g. 5"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Media & Description */}
+          <AccordionItem value="media">
+            <AccordionTrigger>Media & Description</AccordionTrigger>
+            <AccordionContent>
+              <div className="grid grid-cols-1 gap-6 pt-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Featured Image
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="text"
+                      name="featured_image"
+                      value={formData.featured_image || ""}
+                      onChange={handleChange}
+                      placeholder="Select image from media library"
+                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsMediaModalOpen(true)}
+                      className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                    >
+                      Select Media
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Description
+                  </label>
                   <textarea
-                    value={faq.answer}
-                    onChange={(e) => handleFaqChange(index, "answer", e.target.value)}
-                    placeholder="Answer"
-                    rows={2}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-y"
+                    name="description"
+                    value={formData.description || ""}
+                    onChange={handleChange}
+                    rows={4}
+                    placeholder="Enter route description..."
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
                   />
                 </div>
               </div>
-            ))}
-            {(!formData.faqs || formData.faqs.length === 0) && (
-              <p className="text-sm text-slate-500 italic">No FAQs added yet.</p>
-            )}
-          </div>
-        </div>
+            </AccordionContent>
+          </AccordionItem>
 
-        {/* SEO Section */}
-        <div className="pt-4 border-t border-slate-200">
-          <h3 className="text-md font-semibold text-slate-800 mb-4">SEO Settings</h3>
-          <div className="grid grid-cols-1 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                SEO Title
-              </label>
-              <input
-                type="text"
-                name="seo_title"
-                value={formData.seo_title || ""}
-                onChange={handleChange}
-                placeholder="SEO Title"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Meta Description
-              </label>
-              <textarea
-                name="meta_description"
-                value={formData.meta_description || ""}
-                onChange={handleChange}
-                rows={3}
-                placeholder="Meta Description"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Slug
-                </label>
-                <div className="flex rounded-lg shadow-sm border border-slate-300 focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
-                  <span className="flex select-none items-center px-3 text-slate-500 bg-slate-50 border-r border-slate-300 text-sm">
-                    flights-
-                  </span>
+          {/* FAQs Section */}
+          <AccordionItem value="faqs">
+            <AccordionTrigger>FAQs</AccordionTrigger>
+            <AccordionContent>
+              <div className="pt-2">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-sm font-medium text-slate-700">Frequently Asked Questions</h4>
+                  <button
+                    type="button"
+                    onClick={handleAddFaq}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    + Add FAQ
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {formData.faqs?.map((faq, index) => (
+                    <div key={index} className="bg-slate-50 p-4 rounded-lg border border-slate-200 relative">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFaq(index)}
+                        className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
+                      >
+                        <span className="material-symbols-outlined text-lg">close</span>
+                      </button>
+                      <div className="grid grid-cols-1 gap-3">
+                        <input
+                          type="text"
+                          value={faq.question}
+                          onChange={(e) => handleFaqChange(index, "question", e.target.value)}
+                          placeholder="Question"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                        />
+                        <textarea
+                          value={faq.answer}
+                          onChange={(e) => handleFaqChange(index, "answer", e.target.value)}
+                          placeholder="Answer"
+                          rows={2}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-y"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  {(!formData.faqs || formData.faqs.length === 0) && (
+                    <p className="text-sm text-slate-500 italic">No FAQs added yet.</p>
+                  )}
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* SEO Section */}
+          <AccordionItem value="seo">
+            <AccordionTrigger>SEO Settings</AccordionTrigger>
+            <AccordionContent>
+              <div className="grid grid-cols-1 gap-6 pt-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    SEO Title
+                  </label>
                   <input
                     type="text"
-                    name="slug"
-                    value={formData.slug?.startsWith("flights-") ? formData.slug.slice(8) : formData.slug || ""}
-                    onChange={(e) => setFormData(prev => ({ ...prev, slug: `flights-${e.target.value}` }))}
-                    placeholder="from-jfk-to-lhr"
-                    className="flex-1 block w-full px-4 py-2 bg-white border-0 focus:ring-0 outline-none text-slate-900 placeholder-slate-400"
+                    name="seo_title"
+                    value={formData.seo_title || ""}
+                    onChange={handleChange}
+                    placeholder="SEO Title"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Canonical URL
-                </label>
-                <input
-                  type="text"
-                  name="canonical_url"
-                  value={formData.canonical_url || ""}
-                  onChange={handleChange}
-                  placeholder="https://..."
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Schema Markup (JSON-LD)
-              </label>
-              <textarea
-                name="schema_markup"
-                value={formData.schema_markup || ""}
-                onChange={handleChange}
-                rows={4}
-                placeholder='{"@context": "https://schema.org", ...}'
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-xs"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-3">
-                Robots Meta Tag Settings
-              </label>
-              <div className="flex flex-wrap gap-4">
-                {[
-                  { key: "no_index", label: "No Index" },
-                  { key: "no_follow", label: "No Follow" },
-                  { key: "no_archive", label: "No Archive" },
-                  { key: "no_image_index", label: "No Image Index" },
-                  { key: "no_snippet", label: "No Snippet" },
-                ].map((item) => (
-                  <label key={item.key} className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={!!formData.robots_meta?.[item.key as keyof typeof formData.robots_meta]}
-                      onChange={() => handleRobotsChange(item.key)}
-                      className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-slate-700">{item.label}</span>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Meta Description
                   </label>
-                ))}
+                  <textarea
+                    name="meta_description"
+                    value={formData.meta_description || ""}
+                    onChange={handleChange}
+                    rows={3}
+                    placeholder="Meta Description"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Slug
+                    </label>
+                    <div className="flex rounded-lg shadow-sm border border-slate-300 focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
+                      <span className="flex select-none items-center px-3 text-slate-500 bg-slate-50 border-r border-slate-300 text-sm">
+                        flights/
+                      </span>
+                      <input
+                        type="text"
+                        name="slug"
+                        value={formData.slug?.startsWith("flights/") ? formData.slug.slice(8) : formData.slug || ""}
+                        onChange={(e) => setFormData(prev => ({ ...prev, slug: `flights/${e.target.value}` }))}
+                        placeholder="from-jfk-to-lhr"
+                        className="flex-1 block w-full px-4 py-2 bg-white border-0 focus:ring-0 outline-none text-slate-900 placeholder-slate-400"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Canonical URL
+                    </label>
+                    <input
+                      type="text"
+                      name="canonical_url"
+                      value={formData.canonical_url || ""}
+                      onChange={handleChange}
+                      placeholder="https://..."
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Schema Markup (JSON-LD)
+                  </label>
+                  <textarea
+                    name="schema_markup"
+                    value={formData.schema_markup || ""}
+                    onChange={handleChange}
+                    rows={4}
+                    placeholder='{"@context": "https://schema.org", ...}'
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-xs"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-3">
+                    Robots Meta Tag Settings
+                  </label>
+                  <div className="flex flex-wrap gap-4">
+                    {[
+                      { key: "no_index", label: "No Index" },
+                      { key: "no_follow", label: "No Follow" },
+                      { key: "no_archive", label: "No Archive" },
+                      { key: "no_image_index", label: "No Image Index" },
+                      { key: "no_snippet", label: "No Snippet" },
+                    ].map((item) => (
+                      <label key={item.key} className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!formData.robots_meta?.[item.key as keyof typeof formData.robots_meta]}
+                          onChange={() => handleRobotsChange(item.key)}
+                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-slate-700">{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
+            </AccordionContent>
+          </AccordionItem>
 
-        {/* Related Routes Section */}
-        <div className="pt-4 border-t border-slate-200">
-          <h3 className="text-md font-semibold text-slate-800 mb-4">Related</h3>
-          <div className="col-span-2">
-            <RouteMultiSelect
-              label="Other Popular Routes"
-              value={formData.other_popular_routes || []}
-              onChange={(val) => setFormData((prev) => ({ ...prev, other_popular_routes: val }))}
-              excludeIds={isEdit && initialData?.id ? [initialData.id] : []}
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Select other routes that are popular or related to this one.
-            </p>
-          </div>
-        </div>
+          {/* Related Routes Section */}
+          <AccordionItem value="related">
+            <AccordionTrigger>Related</AccordionTrigger>
+            <AccordionContent>
+              <div className="pt-2">
+                <div className="col-span-2">
+                  <RouteMultiSelect
+                    label="Other Popular Routes"
+                    value={formData.other_popular_routes || []}
+                    onChange={(val) => setFormData((prev) => ({ ...prev, other_popular_routes: val }))}
+                    excludeIds={isEdit && initialData?.id ? [initialData.id] : []}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Select other routes that are popular or related to this one.
+                  </p>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
 
         <div className="flex justify-end pt-4">
           <button

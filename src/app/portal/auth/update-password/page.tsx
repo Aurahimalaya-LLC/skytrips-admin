@@ -9,6 +9,21 @@ export default function UpdatePasswordPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
+  const [otpVerified, setOtpVerified] = useState(false);
+
+  useEffect(() => {
+    const storedEmail = sessionStorage.getItem("reset_email");
+    const verified = sessionStorage.getItem("reset_otp_verified") === "true";
+    
+    if (!storedEmail || !verified) {
+      router.push("/portal/auth/forgot-password");
+      return;
+    }
+    
+    setEmail(storedEmail);
+    setOtpVerified(verified);
+  }, [router]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,9 +31,24 @@ export default function UpdatePasswordPage() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
-      router.push("/portal");
+      const response = await fetch("/api/auth/update-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          email, 
+          password, 
+          otpVerified 
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      // Clear session storage
+      sessionStorage.removeItem("reset_email");
+      sessionStorage.removeItem("reset_otp_verified");
+      
+      router.push("/portal/auth/login?message=Password updated successfully. Please log in.");
     } catch (err: any) {
       setError(err.message || "Failed to update password");
     } finally {

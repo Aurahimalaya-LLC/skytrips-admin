@@ -186,7 +186,7 @@ export async function sendWelcomeUser(data: { email: string; fullName?: string; 
   });
 }
 
-export async function sendCustomerInvite(data: { email: string; firstName: string; lastName: string }) {
+export async function sendCustomerInvite(data: { email: string; firstName: string; lastName: string; acceptUrl?: string }) {
   const name = `${data.firstName || ""} ${data.lastName || ""}`.trim() || "Customer";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_PUBLIC_APP_URL || "";
   const html = `
@@ -196,7 +196,11 @@ export async function sendCustomerInvite(data: { email: string; firstName: strin
         <div style="padding:24px;">
           <h2 style="margin:0 0 4px; font-size:22px;">Invitation</h2>
           <p style="margin:0 0 12px;">Hello ${name}, you are invited to use SkyTrips services.</p>
-          ${appUrl ? `
+          ${data.acceptUrl ? `
+          <div style="margin-top:12px;">
+            <a href="${data.acceptUrl}" class="btn" style="display:inline-block; background:#059669; color:#ffffff; text-decoration:none; font-weight:700; padding:10px 16px; border-radius:10px;">Accept Invitation</a>
+          </div>
+          ` : appUrl ? `
           <div style="margin-top:12px;">
             <a href="${appUrl}" class="btn" style="display:inline-block; background:#2563eb; color:#ffffff; text-decoration:none; font-weight:700; padding:10px 16px; border-radius:10px;">Open SkyTrips</a>
           </div>
@@ -215,6 +219,37 @@ export async function sendCustomerInvite(data: { email: string; firstName: strin
   await sendEmail({
     to: data.email,
     subject: "You're invited to SkyTrips",
+    html,
+  });
+}
+
+export async function sendOTPEmail(data: { email: string; otp: string; type: "signup" | "reset_password" }) {
+  const isSignup = data.type === "signup";
+  const subject = isSignup ? "Verify your SkyTrips account" : "Reset your SkyTrips password";
+  const title = isSignup ? "Verification Code" : "Password Reset Code";
+  const message = isSignup 
+    ? "Please use the following code to complete your registration." 
+    : "You requested a password reset. Use the code below to proceed.";
+
+  const html = `
+    <div style="background:#f1f5f9; padding:24px;">
+      <div class="container" style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#0f172a; max-width:600px; margin:0 auto; background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden;">
+        <div style="height:6px; background:linear-gradient(90deg,#0ea5e9,#2563eb);"></div>
+        <div style="padding:24px; text-align: center;">
+          <h2 style="margin:0 0 16px; font-size:22px;">${title}</h2>
+          <p style="margin:0 0 24px; color: #64748b;">${message}</p>
+          <div style="margin:24px 0; padding:24px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
+            <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:32px; font-weight:700; letter-spacing:8px; color:#2563eb;">${data.otp}</span>
+          </div>
+          <p style="margin:24px 0 0; font-size:14px; color:#94a3b8;">This code will expire in 10 minutes. If you didn't request this, please ignore this email.</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  await sendEmail({
+    to: data.email,
+    subject,
     html,
   });
 }
