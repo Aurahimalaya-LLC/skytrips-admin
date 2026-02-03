@@ -51,6 +51,7 @@ export interface Booking {
   created_at?: string;
   updated_at?: string;
   itineraries?: FlightItinerary[];
+  notes?: string;
 }
 
 export interface Addons {
@@ -105,6 +106,7 @@ export interface ManageBooking {
     adjustment_reason?: string;
     agency_refunded_cp?: number;
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
