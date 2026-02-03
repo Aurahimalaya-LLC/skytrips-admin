@@ -23,7 +23,14 @@ export default function CustomerLoginPage() {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          // Redirect to signup page to verify OTP
+          router.push(`/portal/auth/signup?email=${encodeURIComponent(email)}&step=verify`);
+          return;
+        }
+        throw error;
+      }
 
       if (!data.user) throw new Error("No user returned");
 

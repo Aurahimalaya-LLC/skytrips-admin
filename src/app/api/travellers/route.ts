@@ -33,9 +33,13 @@ export async function POST(request: Request) {
 
   const body = await request.json();
 
+  // Temporary fix: Remove issue_country until migration is applied
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { issue_country, ...safeBody } = body;
+
   const { data, error } = await supabase
     .from('travellers')
-    .insert(body)
+    .insert(safeBody)
     .select()
     .single();
 

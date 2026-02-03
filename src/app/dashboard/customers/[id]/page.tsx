@@ -1247,14 +1247,14 @@ export default function CustomerDetailsPage() {
                           <span className="material-symbols-outlined text-[16px]">
                             verified
                           </span>
-                          Verified
+                          Verified: {customer.email}
                         </span>
                       ) : (
                         <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-sm font-medium flex items-center gap-1">
                           <span className="material-symbols-outlined text-[16px]">
                             warning
                           </span>
-                          Unverified
+                          Unverified: {customer.email}
                         </span>
                       )}
                     </div>

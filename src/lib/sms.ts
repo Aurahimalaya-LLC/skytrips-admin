@@ -59,3 +59,15 @@ export async function sendSMS(input: SendSMSInput) {
     throw error;
   }
 }
+
+export async function sendOTPSMS(data: { phone: string; otp: string; type: "signup" | "reset_password" }) {
+  const isSignup = data.type === "signup";
+  const message = isSignup 
+    ? `Your SkyTrips verification code is: ${data.otp}. Valid for 10 minutes.`
+    : `Your SkyTrips password reset code is: ${data.otp}. Valid for 10 minutes.`;
+
+  return await sendSMS({
+    to: data.phone,
+    message,
+  });
+}
