@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 
 export type ApiResponse<T = unknown> = {
   success: boolean;
+  message?: string;
   data?: T;
   error?: {
     code: string;
@@ -18,12 +19,18 @@ export type ApiResponse<T = unknown> = {
 };
 
 export const apiHandler = {
-  success: <T>(data: T, meta?: ApiResponse['meta']): NextResponse<ApiResponse<T>> => {
+  success: <T>(
+    data: T, 
+    meta?: ApiResponse['meta'] | null, 
+    message?: string, 
+    status: number = 200
+  ): NextResponse<ApiResponse<T>> => {
     return NextResponse.json({
       success: true,
+      message,
       data,
-      meta,
-    });
+      meta: meta || undefined,
+    }, { status });
   },
 
   error: (message: string, status: number = 500, code: string = 'INTERNAL_ERROR', details?: unknown): NextResponse<ApiResponse> => {

@@ -24,8 +24,9 @@ const updateFlightFareSchema = z.object({
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const supabase = createRouteHandlerClient({ cookies });
     const { id } = params;
@@ -47,8 +48,9 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const supabase = createRouteHandlerClient({ cookies });
     const { id } = params;
@@ -91,8 +93,9 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const supabase = createRouteHandlerClient({ cookies });
     const { id } = params;
