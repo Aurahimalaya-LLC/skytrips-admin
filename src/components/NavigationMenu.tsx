@@ -6,6 +6,7 @@ import Link from "next/link";
 export default function NavigationMenu({
   items = [
     { label: "Overview", href: "/dashboard/admin#overview", icon: "home", id: "overview" },
+    { label: "Inquiry CRM", href: "/dashboard/inquiry-crm", icon: "dashboard_customize", id: "inquiry-crm" },
     { label: "Media Management", href: "/dashboard/admin#media", icon: "video_library", id: "media" },
     { label: "Bookings", href: "/dashboard/booking", icon: "confirmation_number", id: "bookings" },
     { label: "Manage Booking", href: "/dashboard/manage-booking", icon: "edit_calendar", id: "manage-booking" },
@@ -86,7 +87,7 @@ export default function NavigationMenu({
       >
         <ul role="menubar" className="flex flex-col sm:flex-row">
           {([...items].sort((a, b) => {
-            const order = ["overview", "media", "bookings", "manage-booking", "routes", "airlines", "airports", "agency", "ontology", "settings", "users"];
+            const order = ["overview", "inquiry-crm", "media", "bookings", "manage-booking", "routes", "airlines", "airports", "agency", "ontology", "settings", "users"];
             const ia = order.indexOf(a.id);
             const ib = order.indexOf(b.id);
             const pa = ia === -1 ? Number.MAX_SAFE_INTEGER : ia;
