@@ -1,17 +1,16 @@
 import { NextRequest } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase-ssr';
 import { apiHandler } from '@/lib/api-handler';
 
 export const dynamic = 'force-dynamic';
 
 export async function PATCH(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createRouteHandlerClient({ cookies });
-        const { id } = params;
+        const supabase = await createClient();
+        const { id } = await params;
         const body = await req.json();
 
         const { data, error } = await supabase
@@ -23,7 +22,7 @@ export async function PATCH(
 
         if (error) throw error;
 
-        return apiHandler.success(data, undefined, 'Inquiry updated successfully');
+        return apiHandler.success(data);
     } catch (error) {
         return apiHandler.handleError(error);
     }
@@ -31,11 +30,11 @@ export async function PATCH(
 
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createRouteHandlerClient({ cookies });
-        const { id } = params;
+        const supabase = await createClient();
+        const { id } = await params;
 
         const { error } = await supabase
             .from('flight_inquiries')
@@ -44,7 +43,7 @@ export async function DELETE(
 
         if (error) throw error;
 
-        return apiHandler.success(null, undefined, 'Inquiry deleted successfully');
+        return apiHandler.success(null);
     } catch (error) {
         return apiHandler.handleError(error);
     }

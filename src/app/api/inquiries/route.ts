@@ -1,13 +1,12 @@
-import { NextRequest } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase-ssr';
 import { apiHandler } from '@/lib/api-handler';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
     try {
-        const supabase = createRouteHandlerClient({ cookies });
+        const supabase = await createClient();
         const { searchParams } = new URL(req.url);
         const status = searchParams.get('status');
         const search = searchParams.get('search');
@@ -39,7 +38,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        const supabase = createRouteHandlerClient({ cookies });
+        const supabase = await createClient();
         const body = await req.json();
         
         const { data, error } = await supabase
@@ -50,7 +49,11 @@ export async function POST(req: NextRequest) {
 
         if (error) throw error;
 
-        return apiHandler.success(data, undefined, 'Inquiry created successfully', 201);
+        return NextResponse.json({
+            success: true,
+            data,
+            message: 'Inquiry created successfully'
+        }, { status: 201 });
     } catch (error) {
         return apiHandler.handleError(error);
     }

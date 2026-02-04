@@ -1,10 +1,10 @@
 import { GET, POST } from "../route";
-import { PATCH, DELETE } from "./[id]/route";
+import { PATCH, DELETE } from "../[id]/route";
 import { NextRequest } from "next/server";
 
 // Mock Supabase
-jest.mock("@supabase/auth-helpers-nextjs", () => ({
-    createRouteHandlerClient: jest.fn(() => ({
+jest.mock("@/lib/supabase-ssr", () => ({
+    createClient: jest.fn(async () => ({
         from: jest.fn(() => ({
             select: jest.fn().mockReturnThis(),
             insert: jest.fn().mockReturnThis(),
@@ -59,7 +59,7 @@ describe("Inquiry API", () => {
             body: JSON.stringify(body),
         });
 
-        const response = await PATCH(nextReq, { params: { id: "1" } });
+        const response = await PATCH(nextReq, { params: Promise.resolve({ id: "1" }) });
         expect(response.status).toBe(200);
     });
 });
