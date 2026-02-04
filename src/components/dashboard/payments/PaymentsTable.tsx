@@ -50,9 +50,27 @@ export default function PaymentsTable({ viewMode, dateRange }: PaymentsTableProp
       // Apply Search
       if (searchTerm) {
         const searchPattern = `%${searchTerm}%`;
-        // Use a raw filter or simple OR if possible. 
-        // Supabase JS .or() expects strict syntax.
-        query = query.or(`customer_name.ilike.${searchPattern},agency_name.ilike.${searchPattern},payment_id.ilike.${searchPattern},contact_person.ilike.${searchPattern}`);
+        // Supabase JS .or() expects strict syntax and doesn't support casting (::text) inside the string.
+        // We handle IDs by checking the format of the search term.
+        
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(searchTerm);
+        const isNumeric = /^\d+$/.test(searchTerm);
+
+        const orConditions = [
+            `customer_name.ilike.${searchPattern}`,
+            `agency_name.ilike.${searchPattern}`,
+            `contact_person.ilike.${searchPattern}`
+        ];
+
+        if (isUUID) {
+            orConditions.push(`payment_id.eq.${searchTerm}`);
+        }
+
+        if (isNumeric) {
+             orConditions.push(`booking_id.eq.${searchTerm}`);
+        }
+
+        query = query.or(orConditions.join(','));
       }
 
       // Apply Status Filter
