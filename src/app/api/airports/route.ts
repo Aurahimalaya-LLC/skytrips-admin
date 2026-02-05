@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+import { env } from "@/lib/env";
 import { Airport, AirportDBRow, CreateAirportDTO } from "@/types/airport";
+
+const supabaseAdmin = createClient(
+  env.supabase.url,
+  env.supabase.serviceRoleKey || env.supabase.anonKey
+);
 
 /**
  * @swagger
@@ -61,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit;
 
-    let query = supabase
+    let query = supabaseAdmin
       .from("airports")
       .select("*", { count: "exact" });
 
@@ -95,9 +101,9 @@ export async function GET(request: NextRequest) {
     const dbSortField = sortFieldMap[sortBy] || "name";
     
     // Get stats
-    const { count: totalCount } = await supabase.from("airports").select("*", { count: "exact", head: true });
-    const { count: activeCount } = await supabase.from("airports").select("*", { count: "exact", head: true }).eq("published_status", true);
-    const { count: inactiveCount } = await supabase.from("airports").select("*", { count: "exact", head: true }).eq("published_status", false);
+    const { count: totalCount } = await supabaseAdmin.from("airports").select("*", { count: "exact", head: true });
+    const { count: activeCount } = await supabaseAdmin.from("airports").select("*", { count: "exact", head: true }).eq("published_status", true);
+    const { count: inactiveCount } = await supabaseAdmin.from("airports").select("*", { count: "exact", head: true }).eq("published_status", false);
 
     query = query.order(dbSortField, { ascending: order === "asc" })
       .range(offset, offset + limit - 1);
@@ -232,7 +238,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for duplicate IATA code
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from("airports")
       .select("id")
       .eq("iata_code", iata_code)
@@ -246,7 +252,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert new airport
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("airports")
       .insert({
         iata_code,

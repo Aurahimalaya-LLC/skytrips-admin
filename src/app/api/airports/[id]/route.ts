@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+import { env } from "@/lib/env";
 import { Airport, AirportDBRow, UpdateAirportDTO } from "@/types/airport";
+
+const supabaseAdmin = createClient(
+  env.supabase.url,
+  env.supabase.serviceRoleKey || env.supabase.anonKey
+);
 
 /**
  * @swagger
@@ -29,7 +35,7 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("airports")
       .select("*")
       .eq("id", id)
@@ -180,7 +186,7 @@ export async function PUT(
       );
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("airports")
       .update(updateData)
       .eq("id", id)
@@ -268,7 +274,7 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("airports")
       .delete()
       .eq("id", id);
