@@ -40,6 +40,26 @@ export default function RouteForm({ initialData, isEdit }: RouteFormProps) {
     cheapest_month: "",
     daily_flights: undefined,
 
+    // Things to Note
+    things_to_note_origin_airport: "",
+    things_to_note_time_diff: "",
+    things_to_note_currency: "",
+    things_to_note_power_plugs: "",
+
+    // Travel Guide
+    travel_guide_heading: "",
+    travel_guide_description: "",
+    travel_guide_image: "",
+    travel_guide_tags: [],
+    travel_guide_places: "",
+    travel_guide_getting_around: "",
+
+    // Content Section
+    content_section_title: "",
+    content_section_description: "",
+    content_section_best_time: "",
+    content_section_duration_stopovers: "",
+
     // Media & Description
     featured_image: "",
     description: "",
@@ -119,11 +139,22 @@ export default function RouteForm({ initialData, isEdit }: RouteFormProps) {
     }
   }, [formData.departure_airport, formData.arrival_airport]);
 
-  const handleMediaSelect = (file: MediaFile | MediaFile[]) => {
+  const handleMediaSelect = (file: MediaFile | MediaFile[], targetField: "featured_image" | "travel_guide_image" = "featured_image") => {
     if (Array.isArray(file)) return; // Should be single select
     
     const url = file.url || file.file_path; 
-    setFormData((prev) => ({ ...prev, featured_image: url }));
+    setFormData((prev) => ({ ...prev, [targetField]: url }));
+  };
+
+  const [activeMediaField, setActiveMediaField] = useState<"featured_image" | "travel_guide_image">("featured_image");
+
+  const openMediaModal = (field: "featured_image" | "travel_guide_image") => {
+    setActiveMediaField(field);
+    setIsMediaModalOpen(true);
+  };
+
+  const handleMediaSelectWrapper = (file: MediaFile | MediaFile[]) => {
+    handleMediaSelect(file, activeMediaField);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -187,7 +218,7 @@ export default function RouteForm({ initialData, isEdit }: RouteFormProps) {
           </div>
         </div>
 
-        <Accordion type="multiple" defaultValue={["hero", "route-info"]} className="w-full">
+        <Accordion type="multiple" defaultValue={["hero", "route-info", "things-to-note", "travel-guide", "content-section"]} className="w-full">
           {/* Hero Section */}
           <AccordionItem value="hero">
             <AccordionTrigger>Hero Section</AccordionTrigger>
@@ -302,6 +333,309 @@ export default function RouteForm({ initialData, isEdit }: RouteFormProps) {
             </AccordionContent>
           </AccordionItem>
 
+          {/* Things to Note Section */}
+          <AccordionItem value="things-to-note">
+            <AccordionTrigger>Things to Note</AccordionTrigger>
+            <AccordionContent>
+              <div className="pt-2 space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-100">
+                  <h4 className="text-sm font-bold text-blue-900 mb-1">
+                    Preview: Things to Note Going from {formData.departure_airport || "[Origin]"} to {formData.arrival_airport || "[Destination]"}
+                  </h4>
+                  <p className="text-xs text-blue-700">
+                    Enter the details below to populate the information card for travelers.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      {formData.departure_airport ? `${formData.departure_airport} Airport` : "Origin Airport"}
+                    </label>
+                    <textarea
+                      name="things_to_note_origin_airport"
+                      value={formData.things_to_note_origin_airport || ""}
+                      onChange={handleChange}
+                      rows={3}
+                      placeholder="e.g. Arrive at least 3 hours before departure for international flights."
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Time Difference
+                    </label>
+                    <textarea
+                      name="things_to_note_time_diff"
+                      value={formData.things_to_note_time_diff || ""}
+                      onChange={handleChange}
+                      rows={3}
+                      placeholder="e.g. Check the local time difference upon arrival in Kathmandu."
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Currency
+                    </label>
+                    <textarea
+                      name="things_to_note_currency"
+                      value={formData.things_to_note_currency || ""}
+                      onChange={handleChange}
+                      rows={3}
+                      placeholder="e.g. Check the local currency in Kathmandu before traveling."
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Power Plugs
+                    </label>
+                    <textarea
+                      name="things_to_note_power_plugs"
+                      value={formData.things_to_note_power_plugs || ""}
+                      onChange={handleChange}
+                      rows={3}
+                      placeholder="e.g. Ensure you have the correct travel adapter for devices in Kathmandu."
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                    />
+                  </div>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Travel Guide Section */}
+          <AccordionItem value="travel-guide">
+            <AccordionTrigger>Travel Guide</AccordionTrigger>
+            <AccordionContent>
+              <div className="pt-2 space-y-6">
+                <div className="bg-purple-50 p-4 rounded-lg mb-4 border border-purple-100 flex items-center gap-3">
+                  <span className="material-symbols-outlined text-purple-600">travel_explore</span>
+                  <div>
+                    <h4 className="text-sm font-bold text-purple-900 mb-1">
+                      {formData.travel_guide_heading || `Discover ${formData.arrival_airport || "Destination"}`}
+                    </h4>
+                    <p className="text-xs text-purple-700">
+                      Create a rich travel guide for the destination city.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Guide Heading
+                    </label>
+                    <input
+                      type="text"
+                      name="travel_guide_heading"
+                      value={formData.travel_guide_heading || ""}
+                      onChange={handleChange}
+                      placeholder={`e.g. Discover Kathmandu`}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Cover Image
+                    </label>
+                    <div className="flex gap-4 items-center">
+                      <div className="flex-1 relative">
+                        <input
+                          type="text"
+                          name="travel_guide_image"
+                          value={formData.travel_guide_image || ""}
+                          onChange={handleChange}
+                          placeholder="Select cover image..."
+                          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none pr-24"
+                        />
+                        {formData.travel_guide_image && (
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded overflow-hidden border border-slate-200">
+                            <img src={formData.travel_guide_image} alt="Preview" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openMediaModal("travel_guide_image")}
+                        className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors font-medium text-sm"
+                      >
+                        Select Image
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Guide Description
+                    </label>
+                    <textarea
+                      name="travel_guide_description"
+                      value={formData.travel_guide_description || ""}
+                      onChange={handleChange}
+                      rows={4}
+                      placeholder="e.g. Kathmandu, the capital of Nepal, is a vibrant city steeped in history and culture..."
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none resize-y"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Tags
+                    </label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {(formData.travel_guide_tags || []).map((tag, index) => (
+                        <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newTags = [...(formData.travel_guide_tags || [])];
+                              newTags.splice(index, 1);
+                              setFormData(prev => ({ ...prev, travel_guide_tags: newTags }));
+                            }}
+                            className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-purple-400 hover:bg-purple-200 hover:text-purple-600 focus:outline-none"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                      <input
+                        type="text"
+                        placeholder={formData.travel_guide_tags?.length ? "+ Add tag" : "Type tag and press Enter"}
+                        className="inline-flex w-32 px-2 py-0.5 text-sm border-0 border-b-2 border-slate-200 focus:border-purple-500 focus:ring-0 bg-transparent outline-none placeholder-slate-400"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const val = e.currentTarget.value.trim();
+                            if (val && !formData.travel_guide_tags?.includes(val)) {
+                              setFormData(prev => ({
+                                ...prev,
+                                travel_guide_tags: [...(prev.travel_guide_tags || []), val]
+                              }));
+                              e.currentTarget.value = "";
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500">Press Enter to add tags (e.g. History, Nature, Culture)</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Places of Interest (JSON/Text)
+                      </label>
+                      <textarea
+                        name="travel_guide_places"
+                        value={formData.travel_guide_places || ""}
+                        onChange={handleChange}
+                        rows={4}
+                        placeholder="Enter places of interest description or data..."
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none resize-y"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Getting Around (JSON/Text)
+                      </label>
+                      <textarea
+                        name="travel_guide_getting_around"
+                        value={formData.travel_guide_getting_around || ""}
+                        onChange={handleChange}
+                        rows={4}
+                        placeholder="Enter transportation tips..."
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none resize-y"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Content Section (Rich Text/Accordion) */}
+          <AccordionItem value="content-section">
+            <AccordionTrigger>Content Section</AccordionTrigger>
+            <AccordionContent>
+              <div className="pt-2 space-y-6">
+                <div className="bg-indigo-50 p-4 rounded-lg mb-4 border border-indigo-100 flex items-center gap-3">
+                  <span className="material-symbols-outlined text-indigo-600">article</span>
+                  <div>
+                    <h4 className="text-sm font-bold text-indigo-900 mb-1">
+                      {formData.content_section_title || `Cheap flights from ${formData.departure_airport || "Origin"} to ${formData.arrival_airport || "Destination"}`}
+                    </h4>
+                    <p className="text-xs text-indigo-700">
+                      Add detailed content for SEO and user information. This appears as an accordion on the frontend.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Section Title
+                    </label>
+                    <input
+                      type="text"
+                      name="content_section_title"
+                      value={formData.content_section_title || ""}
+                      onChange={handleChange}
+                      placeholder={`e.g. Cheap flights from Sydney to Kathmandu`}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Main Description
+                    </label>
+                    <textarea
+                      name="content_section_description"
+                      value={formData.content_section_description || ""}
+                      onChange={handleChange}
+                      rows={4}
+                      placeholder="e.g. Booking your flights early is the best way to get cheap tickets..."
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Best time to visit (Content)
+                      </label>
+                      <textarea
+                        name="content_section_best_time"
+                        value={formData.content_section_best_time || ""}
+                        onChange={handleChange}
+                        rows={4}
+                        placeholder="Enter details about the best time to visit..."
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Flight Duration & Stopovers (Content)
+                      </label>
+                      <textarea
+                        name="content_section_duration_stopovers"
+                        value={formData.content_section_duration_stopovers || ""}
+                        onChange={handleChange}
+                        rows={4}
+                        placeholder="Enter details about flight duration and stopovers..."
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
           {/* Media & Description */}
           <AccordionItem value="media">
             <AccordionTrigger>Media & Description</AccordionTrigger>
@@ -322,7 +656,7 @@ export default function RouteForm({ initialData, isEdit }: RouteFormProps) {
                     />
                     <button
                       type="button"
-                      onClick={() => setIsMediaModalOpen(true)}
+                      onClick={() => openMediaModal("featured_image")}
                       className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
                     >
                       Select Media
@@ -545,7 +879,7 @@ export default function RouteForm({ initialData, isEdit }: RouteFormProps) {
       <MediaSelectorModal
         isOpen={isMediaModalOpen}
         onClose={() => setIsMediaModalOpen(false)}
-        onSelect={handleMediaSelect}
+        onSelect={handleMediaSelectWrapper}
       />
     </form>
   );
