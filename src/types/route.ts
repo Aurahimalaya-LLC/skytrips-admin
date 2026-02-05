@@ -21,6 +21,26 @@ export interface Route {
   description?: string;
   other_popular_routes?: any[]; // JSONB array
 
+  // Things to Note Section
+  things_to_note_origin_airport?: string;
+  things_to_note_time_diff?: string;
+  things_to_note_currency?: string;
+  things_to_note_power_plugs?: string;
+
+  // Travel Guide Section
+  travel_guide_heading?: string;
+  travel_guide_description?: string;
+  travel_guide_image?: string;
+  travel_guide_tags?: string[];
+  travel_guide_places?: string;
+  travel_guide_getting_around?: string;
+
+  // Content Section (Accordion Style)
+  content_section_title?: string;
+  content_section_description?: string;
+  content_section_best_time?: string;
+  content_section_duration_stopovers?: string;
+
   // Hero Section
   hero_headline?: string;
   hero_subtitle?: string;
