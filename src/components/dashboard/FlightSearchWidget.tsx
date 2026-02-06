@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import { useRouter } from "next/navigation";
+import { useRecentSearches, type RecentSearchItem } from "@/hooks/useRecentSearches";
 
 interface FlightSearchWidgetProps {
   className?: string;
@@ -10,6 +11,7 @@ interface FlightSearchWidgetProps {
 
 export default function FlightSearchWidget({ className = "" }: FlightSearchWidgetProps) {
   const router = useRouter();
+  const { recentSearches, addSearch, removeSearch } = useRecentSearches();
   const [loading, setLoading] = useState(false);
   const [tripType, setTripType] = useState("Round Trip");
   const departRef = useRef<HTMLInputElement>(null);
@@ -34,6 +36,31 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
     { origin: "", destination: "", date: "" },
   ]);
   const segmentDateRefs = useRef<HTMLInputElement[]>([]);
+
+  const handleSelectRecentSearch = (item: RecentSearchItem) => {
+    setTripType(item.tripType);
+    if (item.tripType === "Multi-city" && item.segments) {
+      setMultiSegments(item.segments);
+    } else {
+      setFormData({
+        origin: item.origin,
+        destination: item.destination,
+        departureDate: item.departureDate,
+        returnDate: item.returnDate,
+      });
+    }
+    setPassengers({
+      adults: item.passengers.adults,
+      children: item.passengers.children,
+      infants: item.passengers.infants,
+      class: item.travelClass,
+    });
+  };
+
+  const handleDeleteRecentSearch = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent selection
+    removeSearch(id);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -117,6 +144,22 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
 
   const handleSearch = async () => {
     if (!validate()) return;
+
+    // Add to recent searches
+    addSearch({
+      origin: formData.origin,
+      destination: formData.destination,
+      departureDate: formData.departureDate,
+      returnDate: formData.returnDate,
+      passengers: {
+        adults: passengers.adults,
+        children: passengers.children,
+        infants: passengers.infants,
+      },
+      travelClass: passengers.class,
+      tripType,
+      segments: tripType === "Multi-city" ? multiSegments : undefined,
+    });
 
     setLoading(true);
     
@@ -205,6 +248,9 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
                 value={formData.origin}
                 onChange={handleChange}
                 icon="flight_takeoff"
+                recentSearches={recentSearches}
+                onSelectRecentSearch={handleSelectRecentSearch}
+                onDeleteRecentSearch={handleDeleteRecentSearch}
               />
               {errors.origin && <p className="text-red-500 text-xs mt-1 absolute">{errors.origin}</p>}
             </div>
@@ -225,6 +271,9 @@ export default function FlightSearchWidget({ className = "" }: FlightSearchWidge
                 value={formData.destination}
                 onChange={handleChange}
                 icon="flight_land"
+                recentSearches={recentSearches}
+                onSelectRecentSearch={handleSelectRecentSearch}
+                onDeleteRecentSearch={handleDeleteRecentSearch}
               />
               {errors.destination && <p className="text-red-500 text-xs mt-1 absolute">{errors.destination}</p>}
             </div>

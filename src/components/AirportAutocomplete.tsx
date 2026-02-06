@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent } from "react";
 import { supabase } from "@/lib/supabase";
+import type { RecentSearchItem } from "@/hooks/useRecentSearches";
 
 interface AirportRow {
   id: string;
@@ -13,11 +14,19 @@ interface AirportRow {
 }
 
 interface AirportOption {
+  type: "airport";
   name: string;
   city: string;
   country?: string;
   IATA: string;
 }
+
+interface RecentSearchOption {
+  type: "recent";
+  item: RecentSearchItem;
+}
+
+type AutocompleteOption = AirportOption | RecentSearchOption;
 
 interface AirportAutocompleteProps {
   label: string;
@@ -26,11 +35,24 @@ interface AirportAutocompleteProps {
   onChange: (e: ChangeEvent<HTMLInputElement> | { target: { name: string; value: string } }) => void;
   disabled?: boolean;
   icon: string;
+  recentSearches?: RecentSearchItem[];
+  onSelectRecentSearch?: (item: RecentSearchItem) => void;
+  onDeleteRecentSearch?: (id: string, e: React.MouseEvent) => void;
 }
 
-const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: AirportAutocompleteProps) => {
+const AirportAutocomplete = ({ 
+  label, 
+  name, 
+  value, 
+  onChange, 
+  disabled, 
+  icon,
+  recentSearches = [],
+  onSelectRecentSearch,
+  onDeleteRecentSearch
+}: AirportAutocompleteProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [filteredOptions, setFilteredOptions] = useState<AirportOption[]>([]);
+  const [filteredOptions, setFilteredOptions] = useState<AutocompleteOption[]>([]);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listboxId = `${name}-listbox`;
@@ -46,9 +68,12 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
   }, []);
 
   useEffect(() => {
+    // Re-calculate options when value, isOpen, or recentSearches changes
     if (!isOpen) return;
 
     const runSearch = async () => {
+      let airportOptions: AirportOption[] = [];
+      
       try {
         if (!value || value.trim().length < 1) {
           const { data, error } = await supabase
@@ -57,15 +82,15 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
             .eq("published_status", true)
             .not("iata_code", "is", null)
             .order("popularity", { ascending: false })
-            .limit(50);
+            .limit(10); // Limit to 10 for popular
           if (error) throw error;
-          const options = (data || []).map((row: AirportRow) => ({
+          airportOptions = (data || []).map((row: AirportRow) => ({
+            type: "airport",
             name: row.name || "",
             city: row.municipality || "",
             country: row.iso_country || undefined,
             IATA: row.iata_code || "",
           }));
-          setFilteredOptions(options);
         } else {
           const q = value.trim();
           const { data, error } = await supabase
@@ -75,23 +100,36 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
             .eq("published_status", true)
             .limit(50);
           if (error) throw error;
-          const options = (data || []).map((row: AirportRow) => ({
+          airportOptions = (data || []).map((row: AirportRow) => ({
+            type: "airport",
             name: row.name || "",
             city: row.municipality || "",
             country: row.iso_country || undefined,
             IATA: row.iata_code || "",
           }));
-          setFilteredOptions(options);
         }
       } catch (e) {
         console.error("Airport search failed:", e);
-        setFilteredOptions([]);
       }
+
+      // Merge Recent Searches if input is empty
+      let mergedOptions: AutocompleteOption[] = [];
+      if ((!value || value.trim().length === 0) && recentSearches.length > 0) {
+        const recents: RecentSearchOption[] = recentSearches.slice(0, 5).map(item => ({
+          type: "recent",
+          item
+        }));
+        mergedOptions = [...recents, ...airportOptions];
+      } else {
+        mergedOptions = airportOptions;
+      }
+      
+      setFilteredOptions(mergedOptions);
     };
 
     const timer = setTimeout(runSearch, 200);
     return () => clearTimeout(timer);
-  }, [value, isOpen]);
+  }, [value, isOpen, recentSearches]);
 
   const highlight = (text: string, query: string) => {
     const idx = text.toLowerCase().indexOf(query.toLowerCase());
@@ -117,12 +155,16 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
       e.preventDefault();
       if (activeIndex >= 0) {
         const option = filteredOptions[activeIndex];
-        onChange({
-          target: {
-            name,
-            value: `${option.name} (${option.IATA})`,
-          },
-        });
+        if (option.type === "recent") {
+           onSelectRecentSearch?.(option.item);
+        } else {
+           onChange({
+            target: {
+              name,
+              value: `${option.name} (${option.IATA})`,
+            },
+          });
+        }
         setIsOpen(false);
         setActiveIndex(-1);
       }
@@ -182,40 +224,84 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon }: A
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-auto"
+          className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-80 overflow-auto"
         >
-          {filteredOptions.map((option, index) => (
-            <li
-              role="option"
-              aria-selected={activeIndex === index}
-              key={`${option.IATA}-${index}`}
-              className={`px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-none group ${activeIndex === index ? "bg-slate-50" : ""}`}
-              onClick={() => {
-                onChange({
-                  target: {
-                    name,
-                    value: `${option.name} (${option.IATA})`,
-                  },
-                });
-                setIsOpen(false);
-                setActiveIndex(-1);
-              }}
-            >
-              <div className="flex justify-between items-start">
-                <div className="min-w-0 pr-3">
-                  <div className="font-bold text-slate-700 text-sm group-hover:text-primary transition-colors break-words whitespace-normal">
-                    {highlight(option.city || option.name, value)}
+          {filteredOptions.map((option, index) => {
+            if (option.type === "recent") {
+               const item = option.item;
+               return (
+                 <li
+                    role="option"
+                    aria-selected={activeIndex === index}
+                    key={`recent-${item.id}`}
+                    className={`px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-none group flex justify-between items-center ${activeIndex === index ? "bg-slate-50" : ""}`}
+                    onClick={() => {
+                      onSelectRecentSearch?.(item);
+                      setIsOpen(false);
+                      setActiveIndex(-1);
+                    }}
+                 >
+                   <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-slate-400">history</span>
+                      <div>
+                         <p className="font-bold text-slate-900 text-sm">
+                           {item.origin.split("(")[1]?.replace(")", "") || item.origin} <span className="text-slate-400 mx-1">→</span> {item.destination.split("(")[1]?.replace(")", "") || item.destination}
+                         </p>
+                         <p className="text-xs text-slate-500">
+                           {item.departureDate} {item.returnDate ? `- ${item.returnDate}` : ""} • {item.passengers.adults + item.passengers.children + item.passengers.infants} Pax
+                         </p>
+                      </div>
+                   </div>
+                   {onDeleteRecentSearch && (
+                     <button
+                        onClick={(e) => {
+                           e.stopPropagation();
+                           onDeleteRecentSearch(item.id, e);
+                        }}
+                        className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                        aria-label="Delete recent search"
+                     >
+                        <span className="material-symbols-outlined text-[18px]">close</span>
+                     </button>
+                   )}
+                 </li>
+               );
+            }
+            
+            // Airport Option
+            return (
+              <li
+                role="option"
+                aria-selected={activeIndex === index}
+                key={`${option.IATA}-${index}`}
+                className={`px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-none group ${activeIndex === index ? "bg-slate-50" : ""}`}
+                onClick={() => {
+                  onChange({
+                    target: {
+                      name,
+                      value: `${option.name} (${option.IATA})`,
+                    },
+                  });
+                  setIsOpen(false);
+                  setActiveIndex(-1);
+                }}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="min-w-0 pr-3">
+                    <div className="font-bold text-slate-700 text-sm group-hover:text-primary transition-colors break-words whitespace-normal">
+                      {highlight(option.city || option.name, value)}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-0.5 break-words whitespace-normal">
+                      {highlight(option.name, value)}
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5 break-words whitespace-normal">
-                    {highlight(option.name, value)}
+                  <div className="bg-slate-100 px-2 py-1 rounded text-xs font-black text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors shrink-0">
+                    {highlight(option.IATA, value)}
                   </div>
                 </div>
-                <div className="bg-slate-100 px-2 py-1 rounded text-xs font-black text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors shrink-0">
-                  {highlight(option.IATA, value)}
-                </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

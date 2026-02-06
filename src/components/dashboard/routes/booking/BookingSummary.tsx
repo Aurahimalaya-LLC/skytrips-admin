@@ -1,6 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { FlightOffer } from "@/types/flight-search";
+import AgencySelector from "./AgencySelector";
+import { Agency } from "@/hooks/useAgencies";
+import AgencySQDeduction from "@/components/agency/AgencySQDeduction";
 
 interface BookingSummaryProps {
   offer: FlightOffer;
@@ -16,6 +20,8 @@ interface BookingSummaryProps {
 }
 
 export default function BookingSummary({ offer, netFare, taxes, total, passengers }: BookingSummaryProps) {
+  const [selectedAgency, setSelectedAgency] = useState<Agency | null>(null);
+
   const netFareValue = netFare;
   const taxesValue = taxes;
   const totalValue = total;
@@ -24,6 +30,17 @@ export default function BookingSummary({ offer, netFare, taxes, total, passenger
   const arrivalDate = offer.arrival.date || "";
   const departureTime = offer.departure.time || "";
   const arrivalTime = offer.arrival.time || "";
+
+  const commissionRate = selectedAgency?.commission_rate ?? 0;
+  
+  // Commission calculation: Assuming commission is based on Total Price (Net + Taxes) or just Net?
+  // Standard practice varies. Let's base it on (Net + Taxes) as per the previous static example logic
+  // (Total - 25 = Net Payable implies Total includes commission or commission is deducted)
+  // Let's assume commission is an earning for the agency, so it is deducted from the amount payable to the airline/consolidator.
+  // Commission Amount = (Net + Taxes) * Rate / 100
+  const baseAmount = (Number(netFareValue || 0) + Number(taxesValue || 0));
+  const commissionAmount = (baseAmount * commissionRate) / 100;
+  const netPayable = baseAmount - commissionAmount;
 
   const hasFullSchedule =
     departureDate !== "" &&
@@ -72,27 +89,11 @@ export default function BookingSummary({ offer, netFare, taxes, total, passenger
             Issue Through Agency
           </label>
           <div className="relative">
-            <select className="w-full h-10 pl-3 pr-8 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:border-[#0EA5E9] appearance-none">
-              <option>Global Travel Solutions</option>
-            </select>
-            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">
-              unfold_more
-            </span>
-          </div>
-        </div>
-
-        {/* Agency Commission */}
-        <div className="bg-[#F0FDF9] border border-[#CCFBF1] rounded-lg p-3">
-          <div className="flex justify-between items-start mb-1">
-            <span className="text-[10px] font-bold text-[#0F766E] uppercase">Agency Commission</span>
-            <div className="text-right">
-              <span className="text-lg font-bold text-[#0F766E]">$25.00</span>
-              <span className="text-xs font-medium text-[#0F766E] ml-1">(2.5%)</span>
-            </div>
-          </div>
-          <div className="flex justify-between items-end">
-             <span className="text-[10px] font-medium text-[#0F766E]">Partner profile<br/>calculation</span>
-             <span className="text-[9px] font-bold text-[#0F766E]/60 uppercase">Percentage / Fixed<br/>Rate</span>
+            <AgencySelector 
+              airlineCode={offer.airline.code}
+              selectedAgencyId={selectedAgency?.uid || ""}
+              onSelect={setSelectedAgency}
+            />
           </div>
         </div>
 
@@ -116,13 +117,20 @@ export default function BookingSummary({ offer, netFare, taxes, total, passenger
             </div>
           )}
 
+          <div className="flex justify-between text-sm font-medium text-slate-600 pt-2 border-t border-slate-50">
+            <span>Total Amount</span>
+            <span className="font-bold text-slate-900">
+              {currency} {baseAmount.toFixed(2)}
+            </span>
+          </div>
+
           <div className="flex justify-between items-center p-2 bg-[#F0FDF9] rounded text-sm font-medium text-[#0F766E] border border-[#CCFBF1]">
             <div className="flex items-center gap-1">
               <span>Net Payable to Agency</span>
               <span className="material-symbols-outlined text-[14px]">info</span>
             </div>
             <span className="font-bold">
-               {currency} {(Number(netFareValue || 0) + Number(taxesValue || 0) - 25).toFixed(2)}
+               {currency} {netPayable.toFixed(2)}
             </span>
           </div>
 
@@ -132,6 +140,18 @@ export default function BookingSummary({ offer, netFare, taxes, total, passenger
                {currency} 40.00
             </span>
           </div>
+
+          {selectedAgency && (
+            <div className="flex flex-col pt-2 border-t border-slate-50">
+              <div className="flex justify-between text-sm font-medium text-slate-600 mb-1">
+                <span className="flex items-center gap-1">
+                  SQ Deductions
+                  <span className="material-symbols-outlined text-[14px] text-slate-400" title="Deductions processed via SQuAD">remove_circle</span>
+                </span>
+                <AgencySQDeduction agencyUid={selectedAgency.uid} />
+              </div>
+            </div>
+          )}
 
           {/* Adjusted Amount */}
           <div className="space-y-1 pt-2">

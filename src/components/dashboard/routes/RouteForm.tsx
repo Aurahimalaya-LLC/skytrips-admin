@@ -8,7 +8,7 @@ import { RouteMultiSelect } from "@/components/RouteMultiSelect";
 import { AirportSelect } from "@/components/airports/AirportSelect";
 import { MediaSelectorModal } from "@/components/media/MediaSelectorModal";
 import { MediaFile } from "@/lib/media-service";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/Accordion";
+import { transformRouteInfoData } from "@/utils/transformRouteInfoData";
 
 interface RouteFormProps {
   initialData?: Partial<Route>;
@@ -167,6 +167,25 @@ export default function RouteForm({ initialData, isEdit }: RouteFormProps) {
         daily_flights: formData.daily_flights ? Number(formData.daily_flights) : null,
       };
 
+      // Transform Route Info data to array format (using the utility function)
+      // This is a demonstration of how to use the utility. 
+      // In a real scenario, you might be constructing this from a dynamic list.
+      // Here we map the single form state to an array of 1 item for the 'route_info_list' column if it exists.
+      if (formData.departure_airport && formData.arrival_airport) {
+        const routeInfoArray = transformRouteInfoData([{
+          departure_airport_code: formData.departure_airport,
+          arrival_airport_code: formData.arrival_airport,
+          average_flight_time: formData.average_flight_time || "",
+          distance: formData.distance || "",
+          cheapest_months: formData.cheapest_month || "",
+          daily_flights: formData.daily_flights || 0
+        }]);
+        
+        // If we had a column 'route_info_list' (JSONB array), we would attach it here:
+        // payload.route_info = routeInfoArray[0]; // Or the full array if the schema expects it
+        // However, we are currently updating flat columns.
+      }
+
       if (isEdit && initialData?.id) {
         const { error } = await supabase
           .from("routes")
@@ -218,645 +237,625 @@ export default function RouteForm({ initialData, isEdit }: RouteFormProps) {
           </div>
         </div>
 
-        <Accordion type="multiple" defaultValue={["hero", "route-info", "things-to-note", "travel-guide", "content-section"]} className="w-full">
-          {/* Hero Section */}
-          <AccordionItem value="hero">
-            <AccordionTrigger>Hero Section</AccordionTrigger>
-            <AccordionContent>
-              <div className="grid grid-cols-1 gap-6 pt-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Hero Headline
+        {/* Hero Section */}
+        <div className="border-2 border-slate-200 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Hero Section</h3>
+          <div className="grid grid-cols-1 gap-6 pt-2">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Hero Headline
+              </label>
+              <input
+                type="text"
+                name="hero_headline"
+                value={formData.hero_headline || ""}
+                onChange={handleChange}
+                placeholder="e.g. Cheap Flights to London"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Hero Sub-title
+              </label>
+              <input
+                type="text"
+                name="hero_subtitle"
+                value={formData.hero_subtitle || ""}
+                onChange={handleChange}
+                placeholder="e.g. Book now and save big on your next trip"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Route Information */}
+        <div className="border-2 border-slate-200 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Route Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Average Flight Time
+              </label>
+              <input
+                type="text"
+                name="average_flight_time"
+                value={formData.average_flight_time || ""}
+                onChange={handleChange}
+                placeholder="e.g. 2h 30m"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Distance
+              </label>
+              <input
+                type="text"
+                name="distance"
+                value={formData.distance || ""}
+                onChange={handleChange}
+                placeholder="e.g. 1,200 km"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Cheapest Month(s)
+              </label>
+              <div className="border border-slate-300 rounded-lg p-2 max-h-48 overflow-y-auto">
+                {MONTHS.map((month) => (
+                  <label key={month} className="flex items-center gap-2 py-1 px-2 hover:bg-slate-50 rounded cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(formData.cheapest_month || "").split(",").map(m => m.trim()).filter(Boolean).includes(month)}
+                      onChange={(e) => {
+                        const currentMonths = (formData.cheapest_month || "").split(",").map(m => m.trim()).filter(Boolean);
+                        let newMonths;
+                        if (e.target.checked) {
+                          newMonths = [...currentMonths, month];
+                        } else {
+                          newMonths = currentMonths.filter(m => m !== month);
+                        }
+                        // Sort by month index to keep order consistent
+                        newMonths.sort((a, b) => MONTHS.indexOf(a) - MONTHS.indexOf(b));
+                        setFormData(prev => ({ ...prev, cheapest_month: newMonths.join(",") }));
+                      }}
+                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-slate-700">{month}</span>
                   </label>
-                  <input
-                    type="text"
-                    name="hero_headline"
-                    value={formData.hero_headline || ""}
-                    onChange={handleChange}
-                    placeholder="e.g. Cheap Flights to London"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Hero Sub-title
-                  </label>
-                  <input
-                    type="text"
-                    name="hero_subtitle"
-                    value={formData.hero_subtitle || ""}
-                    onChange={handleChange}
-                    placeholder="e.g. Book now and save big on your next trip"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
+                ))}
               </div>
-            </AccordionContent>
-          </AccordionItem>
+              <p className="text-xs text-slate-500 mt-1">Select one or more months</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Daily Flights
+              </label>
+              <input
+                type="number"
+                name="daily_flights"
+                value={formData.daily_flights || ""}
+                onChange={handleChange}
+                min="0"
+                placeholder="e.g. 5"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+          </div>
+        </div>
 
-          {/* Route Information */}
-          <AccordionItem value="route-info">
-            <AccordionTrigger>Route Information</AccordionTrigger>
-            <AccordionContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Average Flight Time
-                  </label>
-                  <input
-                    type="text"
-                    name="average_flight_time"
-                    value={formData.average_flight_time || ""}
-                    onChange={handleChange}
-                    placeholder="e.g. 2h 30m"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Distance
-                  </label>
-                  <input
-                    type="text"
-                    name="distance"
-                    value={formData.distance || ""}
-                    onChange={handleChange}
-                    placeholder="e.g. 1,200 km"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Cheapest Month(s)
-                  </label>
-                  <div className="border border-slate-300 rounded-lg p-2 max-h-48 overflow-y-auto">
-                    {MONTHS.map((month) => (
-                      <label key={month} className="flex items-center gap-2 py-1 px-2 hover:bg-slate-50 rounded cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={(formData.cheapest_month || "").split(",").map(m => m.trim()).filter(Boolean).includes(month)}
-                          onChange={(e) => {
-                            const currentMonths = (formData.cheapest_month || "").split(",").map(m => m.trim()).filter(Boolean);
-                            let newMonths;
-                            if (e.target.checked) {
-                              newMonths = [...currentMonths, month];
-                            } else {
-                              newMonths = currentMonths.filter(m => m !== month);
-                            }
-                            // Sort by month index to keep order consistent
-                            newMonths.sort((a, b) => MONTHS.indexOf(a) - MONTHS.indexOf(b));
-                            setFormData(prev => ({ ...prev, cheapest_month: newMonths.join(",") }));
-                          }}
-                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-slate-700">{month}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">Select one or more months</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Daily Flights
-                  </label>
-                  <input
-                    type="number"
-                    name="daily_flights"
-                    value={formData.daily_flights || ""}
-                    onChange={handleChange}
-                    min="0"
-                    placeholder="e.g. 5"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
+        {/* Things to Note Section */}
+        <div className="border-2 border-slate-200 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Things to Note</h3>
+          <div className="pt-2 space-y-4">
+            <div className="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-100">
+              <h4 className="text-sm font-bold text-blue-900 mb-1">
+                Preview: Things to Note Going from {formData.departure_airport || "[Origin]"} to {formData.arrival_airport || "[Destination]"}
+              </h4>
+              <p className="text-xs text-blue-700">
+                Enter the details below to populate the information card for travelers.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  {formData.departure_airport ? `${formData.departure_airport} Airport` : "Origin Airport"}
+                </label>
+                <textarea
+                  name="things_to_note_origin_airport"
+                  value={formData.things_to_note_origin_airport || ""}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="e.g. Arrive at least 3 hours before departure for international flights."
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                />
               </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Things to Note Section */}
-          <AccordionItem value="things-to-note">
-            <AccordionTrigger>Things to Note</AccordionTrigger>
-            <AccordionContent>
-              <div className="pt-2 space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-100">
-                  <h4 className="text-sm font-bold text-blue-900 mb-1">
-                    Preview: Things to Note Going from {formData.departure_airport || "[Origin]"} to {formData.arrival_airport || "[Destination]"}
-                  </h4>
-                  <p className="text-xs text-blue-700">
-                    Enter the details below to populate the information card for travelers.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      {formData.departure_airport ? `${formData.departure_airport} Airport` : "Origin Airport"}
-                    </label>
-                    <textarea
-                      name="things_to_note_origin_airport"
-                      value={formData.things_to_note_origin_airport || ""}
-                      onChange={handleChange}
-                      rows={3}
-                      placeholder="e.g. Arrive at least 3 hours before departure for international flights."
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Time Difference
-                    </label>
-                    <textarea
-                      name="things_to_note_time_diff"
-                      value={formData.things_to_note_time_diff || ""}
-                      onChange={handleChange}
-                      rows={3}
-                      placeholder="e.g. Check the local time difference upon arrival in Kathmandu."
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Currency
-                    </label>
-                    <textarea
-                      name="things_to_note_currency"
-                      value={formData.things_to_note_currency || ""}
-                      onChange={handleChange}
-                      rows={3}
-                      placeholder="e.g. Check the local currency in Kathmandu before traveling."
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Power Plugs
-                    </label>
-                    <textarea
-                      name="things_to_note_power_plugs"
-                      value={formData.things_to_note_power_plugs || ""}
-                      onChange={handleChange}
-                      rows={3}
-                      placeholder="e.g. Ensure you have the correct travel adapter for devices in Kathmandu."
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
-                    />
-                  </div>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Time Difference
+                </label>
+                <textarea
+                  name="things_to_note_time_diff"
+                  value={formData.things_to_note_time_diff || ""}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="e.g. Check the local time difference upon arrival in Kathmandu."
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                />
               </div>
-            </AccordionContent>
-          </AccordionItem>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Currency
+                </label>
+                <textarea
+                  name="things_to_note_currency"
+                  value={formData.things_to_note_currency || ""}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="e.g. Check the local currency in Kathmandu before traveling."
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Power Plugs
+                </label>
+                <textarea
+                  name="things_to_note_power_plugs"
+                  value={formData.things_to_note_power_plugs || ""}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="e.g. Ensure you have the correct travel adapter for devices in Kathmandu."
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
-          {/* Travel Guide Section */}
-          <AccordionItem value="travel-guide">
-            <AccordionTrigger>Travel Guide</AccordionTrigger>
-            <AccordionContent>
-              <div className="pt-2 space-y-6">
-                <div className="bg-purple-50 p-4 rounded-lg mb-4 border border-purple-100 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-purple-600">travel_explore</span>
-                  <div>
-                    <h4 className="text-sm font-bold text-purple-900 mb-1">
-                      {formData.travel_guide_heading || `Discover ${formData.arrival_airport || "Destination"}`}
-                    </h4>
-                    <p className="text-xs text-purple-700">
-                      Create a rich travel guide for the destination city.
-                    </p>
-                  </div>
-                </div>
+        {/* Travel Guide Section */}
+        <div className="border-2 border-slate-200 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Travel Guide</h3>
+          <div className="pt-2 space-y-6">
+            <div className="bg-purple-50 p-4 rounded-lg mb-4 border border-purple-100 flex items-center gap-3">
+              <span className="material-symbols-outlined text-purple-600">travel_explore</span>
+              <div>
+                <h4 className="text-sm font-bold text-purple-900 mb-1">
+                  {formData.travel_guide_heading || `Discover ${formData.arrival_airport || "Destination"}`}
+                </h4>
+                <p className="text-xs text-purple-700">
+                  Create a rich travel guide for the destination city.
+                </p>
+              </div>
+            </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Guide Heading
-                    </label>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Guide Heading
+                </label>
+                <input
+                  type="text"
+                  name="travel_guide_heading"
+                  value={formData.travel_guide_heading || ""}
+                  onChange={handleChange}
+                  placeholder={`e.g. Discover Kathmandu`}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Cover Image
+                </label>
+                <div className="flex gap-4 items-center">
+                  <div className="flex-1 relative">
                     <input
                       type="text"
-                      name="travel_guide_heading"
-                      value={formData.travel_guide_heading || ""}
+                      name="travel_guide_image"
+                      value={formData.travel_guide_image || ""}
                       onChange={handleChange}
-                      placeholder={`e.g. Discover Kathmandu`}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                      placeholder="Select cover image..."
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none pr-24"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Cover Image
-                    </label>
-                    <div className="flex gap-4 items-center">
-                      <div className="flex-1 relative">
-                        <input
-                          type="text"
-                          name="travel_guide_image"
-                          value={formData.travel_guide_image || ""}
-                          onChange={handleChange}
-                          placeholder="Select cover image..."
-                          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none pr-24"
-                        />
-                        {formData.travel_guide_image && (
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded overflow-hidden border border-slate-200">
-                            <img src={formData.travel_guide_image} alt="Preview" className="w-full h-full object-cover" />
-                          </div>
-                        )}
+                    {formData.travel_guide_image && (
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded overflow-hidden border border-slate-200">
+                        <img src={formData.travel_guide_image} alt="Preview" className="w-full h-full object-cover" />
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => openMediaModal("travel_guide_image")}
-                        className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors font-medium text-sm"
-                      >
-                        Select Image
-                      </button>
-                    </div>
+                    )}
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Guide Description
-                    </label>
-                    <textarea
-                      name="travel_guide_description"
-                      value={formData.travel_guide_description || ""}
-                      onChange={handleChange}
-                      rows={4}
-                      placeholder="e.g. Kathmandu, the capital of Nepal, is a vibrant city steeped in history and culture..."
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none resize-y"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Tags
-                    </label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {(formData.travel_guide_tags || []).map((tag, index) => (
-                        <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          {tag}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newTags = [...(formData.travel_guide_tags || [])];
-                              newTags.splice(index, 1);
-                              setFormData(prev => ({ ...prev, travel_guide_tags: newTags }));
-                            }}
-                            className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-purple-400 hover:bg-purple-200 hover:text-purple-600 focus:outline-none"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                      <input
-                        type="text"
-                        placeholder={formData.travel_guide_tags?.length ? "+ Add tag" : "Type tag and press Enter"}
-                        className="inline-flex w-32 px-2 py-0.5 text-sm border-0 border-b-2 border-slate-200 focus:border-purple-500 focus:ring-0 bg-transparent outline-none placeholder-slate-400"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const val = e.currentTarget.value.trim();
-                            if (val && !formData.travel_guide_tags?.includes(val)) {
-                              setFormData(prev => ({
-                                ...prev,
-                                travel_guide_tags: [...(prev.travel_guide_tags || []), val]
-                              }));
-                              e.currentTarget.value = "";
-                            }
-                          }
-                        }}
-                      />
-                    </div>
-                    <p className="text-xs text-slate-500">Press Enter to add tags (e.g. History, Nature, Culture)</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Places of Interest (JSON/Text)
-                      </label>
-                      <textarea
-                        name="travel_guide_places"
-                        value={formData.travel_guide_places || ""}
-                        onChange={handleChange}
-                        rows={4}
-                        placeholder="Enter places of interest description or data..."
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none resize-y"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Getting Around (JSON/Text)
-                      </label>
-                      <textarea
-                        name="travel_guide_getting_around"
-                        value={formData.travel_guide_getting_around || ""}
-                        onChange={handleChange}
-                        rows={4}
-                        placeholder="Enter transportation tips..."
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none resize-y"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Content Section (Rich Text/Accordion) */}
-          <AccordionItem value="content-section">
-            <AccordionTrigger>Content Section</AccordionTrigger>
-            <AccordionContent>
-              <div className="pt-2 space-y-6">
-                <div className="bg-indigo-50 p-4 rounded-lg mb-4 border border-indigo-100 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-indigo-600">article</span>
-                  <div>
-                    <h4 className="text-sm font-bold text-indigo-900 mb-1">
-                      {formData.content_section_title || `Cheap flights from ${formData.departure_airport || "Origin"} to ${formData.arrival_airport || "Destination"}`}
-                    </h4>
-                    <p className="text-xs text-indigo-700">
-                      Add detailed content for SEO and user information. This appears as an accordion on the frontend.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Section Title
-                    </label>
-                    <input
-                      type="text"
-                      name="content_section_title"
-                      value={formData.content_section_title || ""}
-                      onChange={handleChange}
-                      placeholder={`e.g. Cheap flights from Sydney to Kathmandu`}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Main Description
-                    </label>
-                    <textarea
-                      name="content_section_description"
-                      value={formData.content_section_description || ""}
-                      onChange={handleChange}
-                      rows={4}
-                      placeholder="e.g. Booking your flights early is the best way to get cheap tickets..."
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Best time to visit (Content)
-                      </label>
-                      <textarea
-                        name="content_section_best_time"
-                        value={formData.content_section_best_time || ""}
-                        onChange={handleChange}
-                        rows={4}
-                        placeholder="Enter details about the best time to visit..."
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Flight Duration & Stopovers (Content)
-                      </label>
-                      <textarea
-                        name="content_section_duration_stopovers"
-                        value={formData.content_section_duration_stopovers || ""}
-                        onChange={handleChange}
-                        rows={4}
-                        placeholder="Enter details about flight duration and stopovers..."
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Media & Description */}
-          <AccordionItem value="media">
-            <AccordionTrigger>Media & Description</AccordionTrigger>
-            <AccordionContent>
-              <div className="grid grid-cols-1 gap-6 pt-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Featured Image
-                  </label>
-                  <div className="flex gap-4 items-center">
-                    <input
-                      type="text"
-                      name="featured_image"
-                      value={formData.featured_image || ""}
-                      onChange={handleChange}
-                      placeholder="Select image from media library"
-                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => openMediaModal("featured_image")}
-                      className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-                    >
-                      Select Media
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description || ""}
-                    onChange={handleChange}
-                    rows={4}
-                    placeholder="Enter route description..."
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
-                  />
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* FAQs Section */}
-          <AccordionItem value="faqs">
-            <AccordionTrigger>FAQs</AccordionTrigger>
-            <AccordionContent>
-              <div className="pt-2">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="text-sm font-medium text-slate-700">Frequently Asked Questions</h4>
                   <button
                     type="button"
-                    onClick={handleAddFaq}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    onClick={() => openMediaModal("travel_guide_image")}
+                    className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors font-medium text-sm"
                   >
-                    + Add FAQ
+                    Select Image
                   </button>
                 </div>
-                <div className="space-y-4">
-                  {formData.faqs?.map((faq, index) => (
-                    <div key={index} className="bg-slate-50 p-4 rounded-lg border border-slate-200 relative">
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Guide Description
+                </label>
+                <textarea
+                  name="travel_guide_description"
+                  value={formData.travel_guide_description || ""}
+                  onChange={handleChange}
+                  rows={4}
+                  placeholder="e.g. Kathmandu, the capital of Nepal, is a vibrant city steeped in history and culture..."
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none resize-y"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Tags
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {(formData.travel_guide_tags || []).map((tag, index) => (
+                    <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      {tag}
                       <button
                         type="button"
-                        onClick={() => handleRemoveFaq(index)}
-                        className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
+                        onClick={() => {
+                          const newTags = [...(formData.travel_guide_tags || [])];
+                          newTags.splice(index, 1);
+                          setFormData(prev => ({ ...prev, travel_guide_tags: newTags }));
+                        }}
+                        className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-purple-400 hover:bg-purple-200 hover:text-purple-600 focus:outline-none"
                       >
-                        <span className="material-symbols-outlined text-lg">close</span>
+                        ×
                       </button>
-                      <div className="grid grid-cols-1 gap-3">
-                        <input
-                          type="text"
-                          value={faq.question}
-                          onChange={(e) => handleFaqChange(index, "question", e.target.value)}
-                          placeholder="Question"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                        />
-                        <textarea
-                          value={faq.answer}
-                          onChange={(e) => handleFaqChange(index, "answer", e.target.value)}
-                          placeholder="Answer"
-                          rows={2}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-y"
-                        />
-                      </div>
-                    </div>
+                    </span>
                   ))}
-                  {(!formData.faqs || formData.faqs.length === 0) && (
-                    <p className="text-sm text-slate-500 italic">No FAQs added yet.</p>
-                  )}
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* SEO Section */}
-          <AccordionItem value="seo">
-            <AccordionTrigger>SEO Settings</AccordionTrigger>
-            <AccordionContent>
-              <div className="grid grid-cols-1 gap-6 pt-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    SEO Title
-                  </label>
                   <input
                     type="text"
-                    name="seo_title"
-                    value={formData.seo_title || ""}
+                    placeholder={formData.travel_guide_tags?.length ? "+ Add tag" : "Type tag and press Enter"}
+                    className="inline-flex w-32 px-2 py-0.5 text-sm border-0 border-b-2 border-slate-200 focus:border-purple-500 focus:ring-0 bg-transparent outline-none placeholder-slate-400"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const val = e.currentTarget.value.trim();
+                        if (val && !formData.travel_guide_tags?.includes(val)) {
+                          setFormData(prev => ({
+                            ...prev,
+                            travel_guide_tags: [...(prev.travel_guide_tags || []), val]
+                          }));
+                          e.currentTarget.value = "";
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-slate-500">Press Enter to add tags (e.g. History, Nature, Culture)</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Places of Interest (JSON/Text)
+                  </label>
+                  <textarea
+                    name="travel_guide_places"
+                    value={formData.travel_guide_places || ""}
                     onChange={handleChange}
-                    placeholder="SEO Title"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    rows={4}
+                    placeholder="Enter places of interest description or data..."
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none resize-y"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Meta Description
+                    Getting Around (JSON/Text)
                   </label>
                   <textarea
-                    name="meta_description"
-                    value={formData.meta_description || ""}
+                    name="travel_guide_getting_around"
+                    value={formData.travel_guide_getting_around || ""}
                     onChange={handleChange}
-                    rows={3}
-                    placeholder="Meta Description"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                    rows={4}
+                    placeholder="Enter transportation tips..."
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none resize-y"
                   />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Slug
-                    </label>
-                    <div className="flex rounded-lg shadow-sm border border-slate-300 focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
-                      <span className="flex select-none items-center px-3 text-slate-500 bg-slate-50 border-r border-slate-300 text-sm">
-                        flights/
-                      </span>
-                      <input
-                        type="text"
-                        name="slug"
-                        value={formData.slug?.startsWith("flights/") ? formData.slug.slice(8) : formData.slug || ""}
-                        onChange={(e) => setFormData(prev => ({ ...prev, slug: `flights/${e.target.value}` }))}
-                        placeholder="from-jfk-to-lhr"
-                        className="flex-1 block w-full px-4 py-2 bg-white border-0 focus:ring-0 outline-none text-slate-900 placeholder-slate-400"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Canonical URL
-                    </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Section (Rich Text) */}
+        <div className="border-2 border-slate-200 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Content Section</h3>
+          <div className="pt-2 space-y-6">
+            <div className="bg-indigo-50 p-4 rounded-lg mb-4 border border-indigo-100 flex items-center gap-3">
+              <span className="material-symbols-outlined text-indigo-600">article</span>
+              <div>
+                <h4 className="text-sm font-bold text-indigo-900 mb-1">
+                  {formData.content_section_title || `Cheap flights from ${formData.departure_airport || "Origin"} to ${formData.arrival_airport || "Destination"}`}
+                </h4>
+                <p className="text-xs text-indigo-700">
+                  Add detailed content for SEO and user information.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Section Title
+                </label>
+                <input
+                  type="text"
+                  name="content_section_title"
+                  value={formData.content_section_title || ""}
+                  onChange={handleChange}
+                  placeholder={`e.g. Cheap flights from Sydney to Kathmandu`}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Main Description
+                </label>
+                <textarea
+                  name="content_section_description"
+                  value={formData.content_section_description || ""}
+                  onChange={handleChange}
+                  rows={4}
+                  placeholder="e.g. Booking your flights early is the best way to get cheap tickets..."
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Best time to visit (Content)
+                  </label>
+                  <textarea
+                    name="content_section_best_time"
+                    value={formData.content_section_best_time || ""}
+                    onChange={handleChange}
+                    rows={4}
+                    placeholder="Enter details about the best time to visit..."
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Flight Duration & Stopovers (Content)
+                  </label>
+                  <textarea
+                    name="content_section_duration_stopovers"
+                    value={formData.content_section_duration_stopovers || ""}
+                    onChange={handleChange}
+                    rows={4}
+                    placeholder="Enter details about flight duration and stopovers..."
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Media & Description */}
+        <div className="border-2 border-slate-200 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Media & Description</h3>
+          <div className="grid grid-cols-1 gap-6 pt-2">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Featured Image
+              </label>
+              <div className="flex gap-4 items-center">
+                <input
+                  type="text"
+                  name="featured_image"
+                  value={formData.featured_image || ""}
+                  onChange={handleChange}
+                  placeholder="Select image from media library"
+                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => openMediaModal("featured_image")}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                >
+                  Select Media
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Description
+              </label>
+              <textarea
+                name="description"
+                value={formData.description || ""}
+                onChange={handleChange}
+                rows={4}
+                placeholder="Enter route description..."
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* FAQs Section */}
+        <div className="border-2 border-slate-200 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-slate-900 mb-4">FAQs</h3>
+          <div className="pt-2">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-sm font-medium text-slate-700">Frequently Asked Questions</h4>
+              <button
+                type="button"
+                onClick={handleAddFaq}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                + Add FAQ
+              </button>
+            </div>
+            <div className="space-y-4">
+              {formData.faqs?.map((faq, index) => (
+                <div key={index} className="bg-slate-50 p-4 rounded-lg border border-slate-200 relative">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFaq(index)}
+                    className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
+                  >
+                    <span className="material-symbols-outlined text-lg">close</span>
+                  </button>
+                  <div className="grid grid-cols-1 gap-3">
                     <input
                       type="text"
-                      name="canonical_url"
-                      value={formData.canonical_url || ""}
-                      onChange={handleChange}
-                      placeholder="https://..."
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={faq.question}
+                      onChange={(e) => handleFaqChange(index, "question", e.target.value)}
+                      placeholder="Question"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    />
+                    <textarea
+                      value={faq.answer}
+                      onChange={(e) => handleFaqChange(index, "answer", e.target.value)}
+                      placeholder="Answer"
+                      rows={2}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-y"
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Schema Markup (JSON-LD)
-                  </label>
-                  <textarea
-                    name="schema_markup"
-                    value={formData.schema_markup || ""}
-                    onChange={handleChange}
-                    rows={4}
-                    placeholder='{"@context": "https://schema.org", ...}'
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-xs"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-3">
-                    Robots Meta Tag Settings
-                  </label>
-                  <div className="flex flex-wrap gap-4">
-                    {[
-                      { key: "no_index", label: "No Index" },
-                      { key: "no_follow", label: "No Follow" },
-                      { key: "no_archive", label: "No Archive" },
-                      { key: "no_image_index", label: "No Image Index" },
-                      { key: "no_snippet", label: "No Snippet" },
-                    ].map((item) => (
-                      <label key={item.key} className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={!!formData.robots_meta?.[item.key as keyof typeof formData.robots_meta]}
-                          onChange={() => handleRobotsChange(item.key)}
-                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-slate-700">{item.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+              ))}
+              {(!formData.faqs || formData.faqs.length === 0) && (
+                <p className="text-sm text-slate-500 italic">No FAQs added yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
 
-          {/* Related Routes Section */}
-          <AccordionItem value="related">
-            <AccordionTrigger>Related</AccordionTrigger>
-            <AccordionContent>
-              <div className="pt-2">
-                <div className="col-span-2">
-                  <RouteMultiSelect
-                    label="Other Popular Routes"
-                    value={formData.other_popular_routes || []}
-                    onChange={(val) => setFormData((prev) => ({ ...prev, other_popular_routes: val }))}
-                    excludeIds={isEdit && initialData?.id ? [initialData.id] : []}
+        {/* SEO Section */}
+        <div className="border-2 border-slate-200 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-slate-900 mb-4">SEO Settings</h3>
+          <div className="grid grid-cols-1 gap-6 pt-2">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                SEO Title
+              </label>
+              <input
+                type="text"
+                name="seo_title"
+                value={formData.seo_title || ""}
+                onChange={handleChange}
+                placeholder="SEO Title"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Meta Description
+              </label>
+              <textarea
+                name="meta_description"
+                value={formData.meta_description || ""}
+                onChange={handleChange}
+                rows={3}
+                placeholder="Meta Description"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Slug
+                </label>
+                <div className="flex rounded-lg shadow-sm border border-slate-300 focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
+                  <span className="flex select-none items-center px-3 text-slate-500 bg-slate-50 border-r border-slate-300 text-sm">
+                    flights/
+                  </span>
+                  <input
+                    type="text"
+                    name="slug"
+                    value={formData.slug?.startsWith("flights/") ? formData.slug.slice(8) : formData.slug || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, slug: `flights/${e.target.value}` }))}
+                    placeholder="from-jfk-to-lhr"
+                    className="flex-1 block w-full px-4 py-2 bg-white border-0 focus:ring-0 outline-none text-slate-900 placeholder-slate-400"
                   />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Select other routes that are popular or related to this one.
-                  </p>
                 </div>
               </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Canonical URL
+                </label>
+                <input
+                  type="text"
+                  name="canonical_url"
+                  value={formData.canonical_url || ""}
+                  onChange={handleChange}
+                  placeholder="https://..."
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Schema Markup (JSON-LD)
+              </label>
+              <textarea
+                name="schema_markup"
+                value={formData.schema_markup || ""}
+                onChange={handleChange}
+                rows={4}
+                placeholder='{"@context": "https://schema.org", ...}'
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-xs"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-3">
+                Robots Meta Tag Settings
+              </label>
+              <div className="flex flex-wrap gap-4">
+                {[
+                  { key: "no_index", label: "No Index" },
+                  { key: "no_follow", label: "No Follow" },
+                  { key: "no_archive", label: "No Archive" },
+                  { key: "no_image_index", label: "No Image Index" },
+                  { key: "no_snippet", label: "No Snippet" },
+                ].map((item) => (
+                  <label key={item.key} className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!formData.robots_meta?.[item.key as keyof typeof formData.robots_meta]}
+                      onChange={() => handleRobotsChange(item.key)}
+                      className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-slate-700">{item.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Related Routes Section */}
+        <div className="border-2 border-slate-200 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Related</h3>
+          <div className="pt-2">
+            <div className="col-span-2">
+              <RouteMultiSelect
+                label="Other Popular Routes"
+                value={formData.other_popular_routes || []}
+                onChange={(val) => setFormData((prev) => ({ ...prev, other_popular_routes: val }))}
+                excludeIds={isEdit && initialData?.id ? [initialData.id] : []}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Select other routes that are popular or related to this one.
+              </p>
+            </div>
+          </div>
+        </div>
 
         <div className="flex justify-end pt-4">
           <button
