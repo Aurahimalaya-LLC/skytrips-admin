@@ -1,0 +1,10 @@
+{
+  "summary": {
+    "total_routes": 0,
+    "active_routes": 0,
+    "orphaned_routes": 0,
+    "missing_data": 0
+  },
+  "routes": [],
+  "inconsistencies": []
+}

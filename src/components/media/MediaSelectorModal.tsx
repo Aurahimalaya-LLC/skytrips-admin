@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { MediaList } from "./MediaList";
-import { mediaService, MediaFile } from "@/lib/media-service";
+import { mediaService, MediaFile } from "../../lib/media-service";
 
 interface MediaSelectorModalProps {
   isOpen: boolean;

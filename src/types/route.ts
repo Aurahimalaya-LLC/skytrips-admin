@@ -12,11 +12,20 @@ export interface Route {
   capacity?: number;
   available_seats?: number;
   
-  // New fields
-  average_flight_time?: string;
-  distance?: string;
-  cheapest_month?: string;
-  daily_flights?: number;
+  // New fields (moved to route_info JSONB)
+  route_info?: {
+    average_flight_time?: string;
+    distance?: string;
+    cheapest_month?: string;
+    daily_flights?: number;
+  };
+
+  // Deprecated flat fields (kept for type safety during migration if needed, but should be removed)
+  // average_flight_time?: string;
+  // distance?: string;
+  // cheapest_month?: string;
+  // daily_flights?: number;
+  
   featured_image?: string;
   description?: string;
   other_popular_routes?: any[]; // JSONB array
@@ -36,17 +45,50 @@ export interface Route {
   travel_guide_getting_around?: string;
 
   // Content Section (Accordion Style)
-  content_section_title?: string;
-  content_section_description?: string;
-  content_section_best_time?: string;
-  content_section_duration_stopovers?: string;
+  content_sections?: {
+    title?: string;
+    description?: string;
+    best_time?: string;
+    duration_stopovers?: string;
+  };
+  // Deprecated flat content fields
+  // content_section_title?: string;
+  // content_section_description?: string;
+  // content_section_best_time?: string;
+  // content_section_duration_stopovers?: string;
 
   // Hero Section
   hero_headline?: string;
   hero_subtitle?: string;
+  hero_sections?: { 
+    headline: string; 
+    subtitle: string;
+    cta_text?: string;
+    cta_url?: string;
+  }[];
 
   // FAQs
   faqs?: { question: string; answer: string }[];
+
+  // Media Gallery (New)
+  media_gallery?: {
+    id: string;
+    url: string;
+    type: 'image' | 'video';
+    alt?: string;
+    thumbnail?: string;
+  }[];
+
+  // Rich Text Description (New)
+  rich_description?: {
+    content: string; // HTML/Markdown
+    sections?: {
+      heading: string;
+      content: string;
+      image?: string;
+      expanded?: boolean;
+    }[];
+  };
 
   // SEO Section
   seo_title?: string;
@@ -60,6 +102,20 @@ export interface Route {
     no_archive?: boolean;
     no_image_index?: boolean;
     no_snippet?: boolean;
+  };
+
+  seo_settings?: {
+    title?: string;
+    description?: string;
+    canonical_url?: string;
+    schema_markup?: string;
+    robots?: {
+      no_index?: boolean;
+      no_follow?: boolean;
+      no_archive?: boolean;
+      no_image_index?: boolean;
+      no_snippet?: boolean;
+    };
   };
 
   created_at?: string;

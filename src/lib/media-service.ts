@@ -1,5 +1,5 @@
-import { supabase } from "@/lib/supabase";
-import { mockMediaFiles } from "@/utils/mockMediaData";
+import { supabase } from "./supabase";
+import { mockMediaFiles } from "../utils/mockMediaData";
 
 export type MediaFile = {
   media_id: string;
