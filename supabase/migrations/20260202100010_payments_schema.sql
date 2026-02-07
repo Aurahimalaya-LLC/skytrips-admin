@@ -9,7 +9,7 @@ ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS agency_id UUID REFERENCES p
 -- Note: booking_id is BIGINT to match public.bookings(id)
 CREATE TABLE IF NOT EXISTS public.payments (
     payment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    booking_id BIGINT NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
+    booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
     payment_date TIMESTAMPTZ DEFAULT now(),
     amount DECIMAL(10, 2) NOT NULL,
     payment_status VARCHAR(50) DEFAULT 'Pending',

@@ -5,3 +5,14 @@ dist
 .trae
 .log
 .figma
+.next
+.vercel
+out
+*.sql
+*.json
+*.js
+*.py
+*.md
+supabase/
+scripts/
+tests/

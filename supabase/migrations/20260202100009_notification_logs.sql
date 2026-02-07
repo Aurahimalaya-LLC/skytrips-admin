@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS public.notification_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    booking_id BIGINT REFERENCES public.bookings(id) ON DELETE CASCADE,
+    booking_id UUID REFERENCES public.bookings(id) ON DELETE CASCADE,
     type VARCHAR(20) NOT NULL, -- 'Email' or 'SMS'
     recipient TEXT NOT NULL,
     subject TEXT,

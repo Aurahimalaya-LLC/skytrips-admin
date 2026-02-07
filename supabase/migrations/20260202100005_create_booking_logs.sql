@@ -1,7 +1,7 @@
 -- Create booking_logs table to store raw Amadeus request/response
 CREATE TABLE IF NOT EXISTS public.booking_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    booking_id BIGINT REFERENCES public.bookings(id) ON DELETE SET NULL,
+    booking_id UUID REFERENCES public.bookings(id) ON DELETE SET NULL,
     type TEXT NOT NULL DEFAULT 'AMADEUS_BOOKING',
     request_payload JSONB,
     response_payload JSONB,
