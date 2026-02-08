@@ -116,10 +116,10 @@ export default function AirportForm({ initialData, isEditing = false }: AirportF
              setFormData(prev => ({
                ...prev,
                name: prev.name || data.name, // Only fill if empty? Or overwrite? Previous logic overwrote.
-               city: prev.city || data.municipality || "",
-               country: prev.country || data.iso_country || "",
-               latitude: prev.latitude ?? data.latitude_deg,
-               longitude: prev.longitude ?? data.longitude_deg,
+               city: prev.city || data.city || "",
+               country: prev.country || data.country || "",
+               latitude: prev.latitude ?? data.latitude,
+               longitude: prev.longitude ?? data.longitude,
                timezone: prev.timezone || data.timezone || ""
              }));
            }
@@ -157,10 +157,10 @@ export default function AirportForm({ initialData, isEditing = false }: AirportF
            setFormData(prev => ({
              ...prev,
              name: data.name,
-             city: data.municipality || "",
-             country: data.iso_country || "",
-             latitude: data.latitude_deg || undefined,
-             longitude: data.longitude_deg || undefined,
+             city: data.city || "",
+             country: data.country || "",
+             latitude: data.latitude || undefined,
+             longitude: data.longitude || undefined,
              timezone: data.timezone || ""
            }));
         }

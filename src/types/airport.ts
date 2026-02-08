@@ -42,12 +42,11 @@ export interface AirportDBRow {
   id: string;
   iata_code: string;
   name: string;
-  municipality: string | null;
-  iso_country: string | null;
-  latitude_deg: number | null;
-  longitude_deg: number | null;
+  city: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
   timezone: string | null;
-  popularity?: number;
   published_status?: boolean;
   featured_image_url?: string;
   description?: string;

@@ -18,8 +18,8 @@ interface AirportDBRow {
   id: string | number;
   name: string;
   iata_code: string;
-  municipality: string | null;
-  iso_country: string | null;
+  city: string | null;
+  country: string | null;
 }
 
 interface Airline {
@@ -154,8 +154,8 @@ export default function AddCommissionModal({
       try {
         const { data, error } = await supabase
           .from('airports')
-          .select('id, name, iata_code, municipality, iso_country')
-          .or(`name.ilike.%${originInput}%,iata_code.ilike.%${originInput}%,municipality.ilike.%${originInput}%`)
+          .select('id, name, iata_code, city, country')
+          .or(`name.ilike.%${originInput}%,iata_code.ilike.%${originInput}%,city.ilike.%${originInput}%`)
           .limit(5);
         
         if (error) throw error;
@@ -164,8 +164,8 @@ export default function AddCommissionModal({
           id: item.id,
           name: item.name,
           iata_code: item.iata_code,
-          city: item.municipality || "",
-          country: item.iso_country || ""
+          city: item.city || "",
+          country: item.country || ""
         }));
         
         setOriginResults(mappedResults);
@@ -192,8 +192,8 @@ export default function AddCommissionModal({
       try {
         const { data, error } = await supabase
           .from('airports')
-          .select('id, name, iata_code, municipality, iso_country')
-          .or(`name.ilike.%${destinationInput}%,iata_code.ilike.%${destinationInput}%,municipality.ilike.%${destinationInput}%`)
+          .select('id, name, iata_code, city, country')
+          .or(`name.ilike.%${destinationInput}%,iata_code.ilike.%${destinationInput}%,city.ilike.%${destinationInput}%`)
           .limit(5);
         
         if (error) throw error;
@@ -202,8 +202,8 @@ export default function AddCommissionModal({
           id: item.id,
           name: item.name,
           iata_code: item.iata_code,
-          city: item.municipality || "",
-          country: item.iso_country || ""
+          city: item.city || "",
+          country: item.country || ""
         }));
         
         setDestinationResults(mappedResults);

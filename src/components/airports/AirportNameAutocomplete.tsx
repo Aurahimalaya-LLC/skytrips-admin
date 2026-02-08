@@ -45,29 +45,23 @@ export default function AirportNameAutocomplete({
     const fetchAirports = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("airports")
-          .select("*")
-          .ilike("name", `%${value}%`)
-          .limit(10);
+        const res = await fetch(`/api/v1/airports?search=${encodeURIComponent(value)}&limit=10`);
+        const result = await res.json();
 
-        if (error) throw error;
-
-        // Map DB rows to Airport type (simplified mapping for needed fields)
-        const mappedAirports: Airport[] = (data || []).map(row => ({
-          id: row.id,
-          iata_code: row.iata_code,
-          name: row.name,
-          city: row.municipality || "",
-          country: row.iso_country || "",
-          latitude: row.latitude_deg || null,
-          longitude: row.longitude_deg || null,
-          timezone: row.timezone || null,
-          active: row.published_status ?? false,
-          // Other fields as needed, but these are the main ones for auto-fill
-        }));
-
-        setOptions(mappedAirports);
+        if (result.success && result.data) {
+          const mappedAirports: Airport[] = result.data.map((row: any) => ({
+            id: row.id,
+            iata_code: row.iata_code,
+            name: row.name,
+            city: row.city || "",
+            country: row.country || "",
+            latitude: row.latitude || null,
+            longitude: row.longitude || null,
+            timezone: row.timezone || null,
+            active: row.published_status ?? true,
+          }));
+          setOptions(mappedAirports);
+        }
       } catch (err) {
         console.error("Error fetching airports by name:", err);
       } finally {

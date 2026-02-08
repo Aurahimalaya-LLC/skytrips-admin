@@ -34,15 +34,15 @@ export default function CountryAutocomplete({ value, onChange, placeholder, clas
       try {
         const { data, error } = await supabase
           .from("airports")
-          .select("iso_country")
-          .not("iso_country", "is", null)
-          .ilike("iso_country", `%${value}%`)
+          .select("country")
+          .not("country", "is", null)
+          .ilike("country", `%${value}%`)
           .limit(20);
 
         if (error) throw error;
 
         // Extract unique countries
-        const uniqueCountries = Array.from(new Set((data || []).map(item => item.iso_country))) as string[];
+        const uniqueCountries = Array.from(new Set((data || []).map(item => item.country))) as string[];
         setOptions(uniqueCountries);
       } catch (err) {
         console.error("Error fetching countries:", err);

@@ -6,10 +6,9 @@ import { supabase } from "@/lib/supabase";
 interface AirportRow {
   id: string;
   name: string | null;
-  municipality: string | null;
+  city: string | null;
   iata_code: string | null;
-  iso_country: string | null;
-  popularity: number | null;
+  country: string | null;
 }
 
 interface AirportOption {
@@ -54,16 +53,16 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon, cla
         if (!value || value.trim().length < 1) {
           const { data, error } = await supabase
             .from("airports")
-            .select("id,name,municipality,iata_code,iso_country,popularity")
+            .select("id,name,city,iata_code,country")
             // .eq("published_status", true) // Removed to allow all airports
             .not("iata_code", "is", null)
-            .order("popularity", { ascending: false })
+            .order("name", { ascending: true })
             .limit(50);
           if (error) throw error;
           const options = (data || []).map((row: AirportRow) => ({
             name: row.name || "",
-            city: row.municipality || "",
-            country: row.iso_country || undefined,
+            city: row.city || "",
+            country: row.country || undefined,
             IATA: row.iata_code || "",
           }));
           setFilteredOptions(options);
@@ -71,15 +70,15 @@ const AirportAutocomplete = ({ label, name, value, onChange, disabled, icon, cla
           const q = value.trim();
           const { data, error } = await supabase
             .from("airports")
-            .select("id,name,municipality,iata_code,iso_country,popularity")
-            .or(`municipality.ilike.%${q}%,name.ilike.%${q}%,iata_code.ilike.%${q}%`)
+            .select("id,name,city,iata_code,country")
+            .or(`city.ilike.%${q}%,name.ilike.%${q}%,iata_code.ilike.%${q}%`)
             // .eq("published_status", true) // Removed to allow all airports
             .limit(50);
           if (error) throw error;
           const options = (data || []).map((row: AirportRow) => ({
             name: row.name || "",
-            city: row.municipality || "",
-            country: row.iso_country || undefined,
+            city: row.city || "",
+            country: row.country || undefined,
             IATA: row.iata_code || "",
           }));
           setFilteredOptions(options);

@@ -60,12 +60,12 @@ export async function GET(
       id: row.id,
       iata_code: row.iata_code,
       name: row.name,
-      city: row.municipality || "",
-      country: row.iso_country || "",
-      latitude: row.latitude_deg || null,
-      longitude: row.longitude_deg || null,
+      city: row.city || "",
+      country: row.country || "",
+      latitude: row.latitude || null,
+      longitude: row.longitude || null,
       timezone: row.timezone || null,
-      active: row.published_status ?? false,
+      active: (row as any).published_status ?? true,
       featured_image_url: row.featured_image_url,
       description: row.description,
       fast_facts: row.fast_facts,
@@ -143,7 +143,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { 
+    const {
       iata_code, name, city, country, latitude, longitude, timezone, active,
       featured_image_url, description, fast_facts, top_airlines, gallery_urls, faqs, map_embed_code,
       seo_title, meta_description, seo_image_url, slug, canonical_url, schema_markup,
@@ -154,12 +154,12 @@ export async function PUT(
     const updateData: Partial<AirportDBRow> = {};
     if (iata_code) updateData.iata_code = iata_code;
     if (name) updateData.name = name;
-    if (city) updateData.municipality = city;
-    if (country) updateData.iso_country = country;
-    if (latitude !== undefined) updateData.latitude_deg = latitude;
-    if (longitude !== undefined) updateData.longitude_deg = longitude;
+    if (city) updateData.city = city;
+    if (country) updateData.country = country;
+    if (latitude !== undefined) updateData.latitude = latitude;
+    if (longitude !== undefined) updateData.longitude = longitude;
     if (timezone) updateData.timezone = timezone;
-    if (active !== undefined) updateData.published_status = active;
+    // if (active !== undefined) (updateData as any).published_status = active;
     if (featured_image_url !== undefined) updateData.featured_image_url = featured_image_url;
     if (description !== undefined) updateData.description = description;
     if (fast_facts !== undefined) updateData.fast_facts = fast_facts;
@@ -211,12 +211,12 @@ export async function PUT(
       id: data.id,
       iata_code: data.iata_code,
       name: data.name,
-      city: data.municipality || "",
-      country: data.iso_country || "",
-      latitude: data.latitude_deg || null,
-      longitude: data.longitude_deg || null,
+      city: data.city || "",
+      country: data.country || "",
+      latitude: data.latitude || null,
+      longitude: data.longitude || null,
       timezone: data.timezone || null,
-      active: data.published_status ?? false,
+      active: (data as any).published_status ?? true,
       featured_image_url: data.featured_image_url,
       description: data.description,
       fast_facts: data.fast_facts,

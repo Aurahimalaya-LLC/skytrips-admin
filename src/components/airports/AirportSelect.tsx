@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase";
 
 interface AirportOption {
-  id: number;
+  id: number | string;
   iata_code: string;
   name: string;
-  municipality: string;
-  iso_country: string;
+  city: string;
+  country: string;
 }
 
 interface AirportSelectProps {
@@ -60,26 +59,20 @@ export const AirportSelect = ({
   }, [value, searchTerm]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !searchTerm || searchTerm.length < 2) return;
 
     const fetchAirports = async () => {
       setLoading(true);
       try {
-        let query = supabase
-          .from("airports")
-          .select("id, iata_code, name, municipality, iso_country")
-          .eq("published_status", true)
-          .limit(20);
-
-        if (searchTerm) {
-          query = query.or(`iata_code.ilike.%${searchTerm}%,name.ilike.%${searchTerm}%,municipality.ilike.%${searchTerm}%`);
+        const response = await fetch(`/api/v1/airports?search=${searchTerm}`);
+        if (!response.ok) {
+            console.error("Failed to fetch airports");
+            return;
         }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        setOptions(data || []);
+        const result = await response.json();
+        // v1/airports returns { success: true, data: [...], meta: ... }
+        // So we need result.data
+        setOptions(Array.isArray(result.data) ? result.data : []);
       } catch (err) {
         console.error("Error fetching airports:", err);
       } finally {
@@ -87,7 +80,7 @@ export const AirportSelect = ({
       }
     };
 
-    const timer = setTimeout(fetchAirports, 300);
+    const timer = setTimeout(fetchAirports, 500);
     return () => clearTimeout(timer);
   }, [searchTerm, isOpen]);
 
@@ -147,9 +140,9 @@ export const AirportSelect = ({
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-900 w-12">{airport.iata_code}</span>
                     <span className="text-sm text-slate-600 truncate flex-1 mx-2">
-                      {airport.municipality}, {airport.name}
+                      {airport.city}, {airport.name}
                     </span>
-                    <span className="text-xs text-slate-400">{airport.iso_country}</span>
+                    <span className="text-xs text-slate-400">{airport.country}</span>
                   </div>
                 </li>
               ))}

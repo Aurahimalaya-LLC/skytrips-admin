@@ -30,20 +30,17 @@ export default function CityAutocomplete({ value, onChange, placeholder, classNa
     if (!isOpen) return;
 
     const fetchCities = async () => {
+      if (!value) return;
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("airports")
-          .select("municipality")
-          .not("municipality", "is", null)
-          .ilike("municipality", `%${value}%`)
-          .limit(20);
+        const res = await fetch(`/api/v1/airports?search=${encodeURIComponent(value)}&limit=20`);
+        const result = await res.json();
 
-        if (error) throw error;
-
-        // Extract unique municipalities
-        const uniqueCities = Array.from(new Set((data || []).map(item => item.municipality))) as string[];
-        setOptions(uniqueCities);
+        if (result.success && result.data) {
+          // Extract unique city names from the response
+          const uniqueCities = Array.from(new Set(result.data.map((item: any) => item.city || item.municipality))) as string[];
+          setOptions(uniqueCities.filter(Boolean));
+        }
       } catch (err) {
         console.error("Error fetching cities:", err);
       } finally {
