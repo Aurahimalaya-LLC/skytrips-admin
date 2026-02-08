@@ -12,14 +12,21 @@ export async function GET() {
   const supabase = getAdminClient();
   if (!supabase) return NextResponse.json({ error: "Server config missing" }, { status: 500 });
 
-  // 1. Fetch all agencies to get their names and UIDs
-  const { data: agencies, error: agenciesError } = await supabase
-    .from("agencies")
-    .select("uid, agency_name, status")
-    .is("deleted_at", null);
+  // 1. Fetch all agencies
+  let query = supabase.from("agencies").select("uid, agency_name");
 
-  if (agenciesError) {
-    return NextResponse.json({ error: agenciesError.message }, { status: 500 });
+  // Try to apply filters but handle schema mismatch
+  let { data: agencies, error: agenciesError } = await query.is("deleted_at", null);
+
+  if (agenciesError && agenciesError.code === '42703') {
+    // Fallback if deleted_at or status is missing
+    const fallback = await supabase.from("agencies").select("uid, agency_name");
+    agencies = fallback.data;
+    agenciesError = fallback.error;
+  }
+
+  if (agenciesError || !agencies) {
+    return NextResponse.json({ error: agenciesError?.message || "Failed to fetch agencies" }, { status: 500 });
   }
 
   // 2. Fetch all bookings
@@ -43,9 +50,9 @@ export async function GET() {
 
   totalPartners = agencies.length;
   totalBookings = bookings.length;
-  
+
   totalRevenue = bookings.reduce((sum, b) => sum + parsePrice(b.buyingPrice), 0);
-  
+
   // Calculate Total Due Amount
   // Assuming 'paid' status is case-insensitive 'paid'
   totalDueAmount = bookings.reduce((sum, b) => {
